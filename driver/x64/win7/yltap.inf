@@ -1,0 +1,101 @@
+[Version]
+   Signature = "$Windows NT$"
+   CatalogFile = Yltap.cat
+   ClassGUID = {4d36e972-e325-11ce-bfc1-08002be10318}
+   Provider = %Provider%
+   Class = Net
+   DriverVer=01/04/2014,9.00.00.9
+
+[Strings]
+   DeviceDescription = "yltap"
+   Provider = "yltap"
+
+;----------------------------------------------------------------
+;                      Manufacturer + Product Section (Done)
+;----------------------------------------------------------------
+[Manufacturer]
+   %Provider% = Yltap, NTARM64, NTamd64
+
+[Yltap.NTARM64]
+   %DeviceDescription% = Yltap.ndi, Yltap
+
+[Yltap.NTamd64]
+   %DeviceDescription% = Yltap.ndi, Yltap
+
+;---------------------------------------------------------------
+;                             Driver Section (Done)
+;---------------------------------------------------------------
+[Yltap.ndi]
+   CopyFiles       = Yltap.driver, Yltap.files
+   AddReg          = Yltap.reg
+   AddReg          = Yltap.params.reg
+   Characteristics = 0x80
+
+[Yltap.ndi.Services]
+   AddService = Yltap,        2, Yltap.service
+
+[Yltap.reg]
+   HKR, Ndi,            Service,      0, "Yltap"
+   HKR, Ndi\Interfaces, UpperRange,   0, "ndis5"
+   HKR, Ndi\Interfaces, LowerRange,   0, "ethernet"
+   HKR, ,               Manufacturer, 0, "%Provider%"
+   HKR, ,               ProductName,  0, "%DeviceDescription%"
+
+[Yltap.params.reg]
+   HKR, Ndi\params\MTU,                  ParamDesc, 0, "MTU"
+   HKR, Ndi\params\MTU,                  Type,      0, "int"
+   HKR, Ndi\params\MTU,                  Default,   0, "1500"
+   HKR, Ndi\params\MTU,                  Optional,  0, "0"
+   HKR, Ndi\params\MTU,                  Min,       0, "100"
+   HKR, Ndi\params\MTU,                  Max,       0, "1500"
+   HKR, Ndi\params\MTU,                  Step,      0, "1"
+   HKR, Ndi\params\MediaStatus,          ParamDesc, 0, "Media Status"
+   HKR, Ndi\params\MediaStatus,          Type,      0, "enum"
+   HKR, Ndi\params\MediaStatus,          Default,   0, "0"
+   HKR, Ndi\params\MediaStatus,          Optional,  0, "0"
+   HKR, Ndi\params\MediaStatus\enum,     "0",       0, "Application Controlled"
+   HKR, Ndi\params\MediaStatus\enum,     "1",       0, "Always Connected"
+   HKR, Ndi\params\MAC,                  ParamDesc, 0, "MAC Address"
+   HKR, Ndi\params\MAC,                  Type,      0, "edit"
+   HKR, Ndi\params\MAC,                  Optional,  0, "1"
+   HKR, Ndi\params\AllowNonAdmin,        ParamDesc, 0, "Non-Admin Access"
+   HKR, Ndi\params\AllowNonAdmin,        Type,      0, "enum"
+   HKR, Ndi\params\AllowNonAdmin,        Default,   0, "1"
+   HKR, Ndi\params\AllowNonAdmin,        Optional,  0, "0"
+   HKR, Ndi\params\AllowNonAdmin\enum,   "0",       0, "Not Allowed"
+   HKR, Ndi\params\AllowNonAdmin\enum,   "1",       0, "Allowed"
+
+;----------------------------------------------------------------
+;                             Service Section
+;----------------------------------------------------------------
+[Yltap.service]
+   DisplayName = %DeviceDescription%
+   ServiceType = 1
+   StartType = 3
+   ErrorControl = 1
+   LoadOrderGroup = NDIS
+   ServiceBinary = %12%\Yltap.sys
+
+;-----------------------------------------------------------------
+;                                File Installation
+;-----------------------------------------------------------------
+[SourceDisksNames]
+   1 = %DeviceDescription%, Yltap.sys
+
+[SourceDisksFiles]
+Yltap.sys = 1
+
+[DestinationDirs]
+   Yltap.files  = 11
+   Yltap.driver = 12
+
+[Yltap.files]
+;   TapPanel.cpl,,,6   ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+;   cipsrvr.exe,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+
+[Yltap.driver]
+   Yltap.sys,,,6     ; COPYFLG_NOSKIP | COPYFLG_NOVERSIONCHECK
+
+;---------------------------------------------------------------
+;                                      End
+;---------------------------------------------------------------

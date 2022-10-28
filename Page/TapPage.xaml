@@ -1,0 +1,70 @@
+<Page x:Class="holey.Page.TapPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:holey.Page"
+      mc:Ignorable="d"
+      Title="TapPage" >
+ 
+        <Viewbox Stretch="Fill">
+            <Grid>
+               <UniformGrid Rows="2" Columns="2">
+                   <Button  Name="InstallTap" Click="InstallTap_OnClick">
+                       <Button.Background>
+                           <ImageBrush ImageSource="../Img/btncolor.png"></ImageBrush>
+                       </Button.Background>
+                       <Button.Content>
+                           <Label Grid.Row="0"
+                                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                  VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                  Foreground="Black">
+                               TAP
+                           </Label>
+                       </Button.Content> 
+                       </Button>
+                   <Button  Name="InstallService" Click="InstallService_OnClick">
+                       <Button.Background>
+                           <ImageBrush ImageSource="../Img/btnblu.png"></ImageBrush>
+                       </Button.Background>
+                       <Button.Content>
+                           <Label Grid.Row="0"
+                                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                  VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                  Foreground="Black">
+                               service
+                           </Label>
+                       </Button.Content>
+                   </Button>
+                   <Button  Name="UninstallTap" Click="UninstallTap_OnClick">
+                       <Button.Background>
+                           <ImageBrush ImageSource="../Img/btnred.png"></ImageBrush>
+                       </Button.Background>
+                       <Button.Content>
+                           <Label Grid.Row="0"
+                                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                  VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                  Foreground="Black">
+                               UNTAP
+                           </Label>
+                       </Button.Content>
+                   </Button>
+                   <Button  Name="UnInstallService" Click="UnInstallService_OnClick">
+                       <Button.Background>
+                           <ImageBrush ImageSource="../Img/btnzi.png"></ImageBrush>
+                       </Button.Background>
+                       <Button.Content>
+                           <Label Grid.Row="0"
+                                  VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                  VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                  Foreground="Black">
+                               UNservice
+                           </Label>
+                       </Button.Content>
+                   </Button>
+                   
+               </UniformGrid>
+            </Grid>
+        </Viewbox>
+   
+</Page>
