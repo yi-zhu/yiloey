@@ -9,20 +9,22 @@
     </PropertyGroup>
 
     <ItemGroup>
+
       <None Remove="Img\*.png" />
       <Resource Include="Img\*.png">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Resource>
       <None Remove="driver\*\*\*" />
-      <Resource Include="driver\*\*\*">
+      <Content Include="driver\*\*\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Resource>
-    </ItemGroup>
-    <ItemGroup>
-      <None Remove="driver\*" />
-      <Resource Include="driver\*">
+      </Content>
+      <Content Include="Binaries\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Resource>
+      </Content>
+      <None Remove="eyi" />
+      <Content Include="eyi">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Content>
     </ItemGroup>
 
     <ItemGroup>
