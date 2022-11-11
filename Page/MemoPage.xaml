@@ -1,0 +1,31 @@
+<Page x:Class="holey.Page.MemoPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:holey.Page"
+      mc:Ignorable="d"
+      Title="MemoPPage" Height="450" Width="800">
+    <Grid>
+        <Viewbox>
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="50"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                
+                
+                <Menu Grid.Row="0" Grid.Column="1">
+                    <MenuItem Name="SOH" Header="显示" Click="SOH_OnClick"></MenuItem>
+                    
+                </Menu>
+                
+            </Grid>
+            
+        </Viewbox>
+    </Grid>
+</Page>

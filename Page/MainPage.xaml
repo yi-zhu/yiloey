@@ -6,39 +6,115 @@
       xmlns:local="clr-namespace:holey.Page"
       mc:Ignorable="d"
       Title="MainPage">
+    <Page.Triggers>
+        <EventTrigger RoutedEvent="Page.Loaded">
+            <EventTrigger.Actions>
+                <BeginStoryboard>
+                    <Storyboard>
+                        <!--<ThicknessAnimation Duration="0:0:.85" Storyboard.TargetProperty="Margin" From="900,0,-900,0" To="0" DecelerationRatio=".9" />-->
+                        <ThicknessAnimation Duration="0:0:.45" Storyboard.TargetProperty="Margin" From="50,0,-50,0"
+                                            To="0" DecelerationRatio=".9" />
+                        <DoubleAnimation Duration="0:0:.35" Storyboard.TargetProperty="Opacity" From="0" To="1" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger.Actions>
+        </EventTrigger>
+        <EventTrigger RoutedEvent="Page.Unloaded">
+            <EventTrigger.Actions>
+                <BeginStoryboard>
+                    <Storyboard>
+                        <!--<ThicknessAnimation Duration="0:0:.85" Storyboard.TargetProperty="Margin" From="900,0,-900,0" To="0" DecelerationRatio=".9" />-->
+                        <ThicknessAnimation Duration="0:0:.45" Storyboard.TargetProperty="Margin" To="50,0,-50,0"
+                                            From="0" DecelerationRatio=".9" />
+                        <DoubleAnimation Duration="0:0:.35" Storyboard.TargetProperty="Opacity" To="0" From="1" />
+                    </Storyboard>
+                </BeginStoryboard>
+            </EventTrigger.Actions>
+        </EventTrigger>
+    </Page.Triggers>
     <Viewbox Stretch="Fill">
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition Height="3*" />
-                <RowDefinition Height="2*" />
+                <RowDefinition Height="60" />
+                <RowDefinition Height="5" />
+                <RowDefinition Height="40" />
             </Grid.RowDefinitions>
+            <Grid Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="70" />
+                    <ColumnDefinition Width="130" />
+                    <ColumnDefinition Width="70" />
+                </Grid.ColumnDefinitions>
+                <Grid Grid.Column="0" HorizontalAlignment="Left">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="7"/>
+                        <RowDefinition Height="7"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Button Style="{StaticResource NoneButton}" 
+                            Name="VTextBlock" Grid.Row="0"   Foreground="Blue" 
+                            Content="💫专网" Click="VTextBlock_OnClick" FontSize="4"/>
+                    <Button Style="{StaticResource NoneButton}" 
+                            Name="PTextBlock" Grid.Row="1" Foreground="DarkRed"
+                            Content="💫公网" Click="PTextBlock_OnClick" FontSize="4" />
+                    
+                </Grid>
+                <!-- 这是 按钮 -->
+                <Button Grid.Column="1" Name="MainBtn" Click="MainBtn_OnClick">
+                    <Button.Background>
+                        <ImageBrush ImageSource="../Img/buttonBlue.png"></ImageBrush>
+                    </Button.Background>
+                    <Button.Content>
+                        <Label Grid.Row="0" Name="MainStr"
+                               VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                               VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                               Foreground="Black"
+                               >
+                            未连接
+                        </Label>
+                    </Button.Content>
+                </Button>
+              
+                <!-- 这是网卡信息 -->
+                <TextBlock Grid.Column="2" Name="NowAdpter" HorizontalAlignment="Stretch"  TextAlignment="Right"  FontSize="6" VerticalAlignment="Bottom" Text="未连接,
+                           请点击中间按钮进行连接！" >
+                </TextBlock>
+                    
+               
+            </Grid>
 
-            <Button Grid.Row="0" Name="MainBtn" Click="MainBtn_OnClick">
-                <Button.Background>
-                    <ImageBrush ImageSource="../Img/button.png"></ImageBrush>
-                </Button.Background>
-                <Button.Content>
-                    <Label Grid.Row="0"
-                           VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                           VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                           Foreground="Black">
-                        🔗
-                    </Label>
-                </Button.Content>
-            </Button>
 
-            <UniformGrid Grid.Row="1" Columns="2" Rows="2">
+         
+            <Grid Grid.Row="1" OpacityMask="#FF921E1E" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
+                  Background="#66ffffff">
+                <TextBlock Text="     实 时 信 息 ：" FontSize="4" FontFamily="Microsoft YaHei UI"></TextBlock>
+            </Grid>
+            
+            <Grid Row="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="3"/>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="3"/>
+                </Grid.RowDefinitions>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="10"/>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="10"/>
+                </Grid.ColumnDefinitions>
+                <Grid Column="0"> </Grid>
+                <UniformGrid Grid.Row="1" Grid.Column="1" Columns="2" Rows="3"  >
+                    <TextBlock Name="UpSpeed" Text="上行：20kb"></TextBlock>
+                    <TextBlock Name="DownSpeed" Text="下行：0kb"></TextBlock>
+                    <!-- <TextBlock Name="UpSum" Text="上行：20kb"></TextBlock> -->
+                    <!-- <TextBlock Name="DownSum" Text="下行：0kb"></TextBlock> -->
+                    <TextBlock Name="IP" Text="IP：1.1.1.1"></TextBlock>
+                    <TextBlock Name="MAC" Text="MAC：ab:cd:de:fg"></TextBlock>
 
+                </UniformGrid>
+                <!-- <Grid Column="2"></Grid> -->
 
-                <TextBlock Text="上行：20kb"></TextBlock>
-                <TextBlock Text="下行：0kb"></TextBlock>
-
-
-                <TextBlock Text="IP：1.1.1.1"></TextBlock>
-                <TextBlock Text="MAC：ab:cd:de:fg"></TextBlock>
-
-
-            </UniformGrid>
+            </Grid>
+           
 
         </Grid>
 

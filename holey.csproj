@@ -6,14 +6,25 @@
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <ApplicationIcon>ico.ico</ApplicationIcon>
+        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <Copyright>yi</Copyright>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
+      <Optimize>True</Optimize>
     </PropertyGroup>
 
     <ItemGroup>
 
       <None Remove="Img\*.png" />
+      <None Remove="Img\*.gif" />
+      <None Remove="Img\*.psd" />
       <Resource Include="Img\*.png">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Resource>
+     <!-- <Resource Include="Img\*.gif">
+        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      </Resource>-->
       <None Remove="driver\*\*\*" />
       <Content Include="driver\*\*\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -28,9 +39,32 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Compile Update="Properties\Settings.Designer.cs">
+        <DesignTimeSharedInput>True</DesignTimeSharedInput>
+        <AutoGen>True</AutoGen>
+        <DependentUpon>Settings.settings</DependentUpon>
+      </Compile>
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Update="Properties\Settings.settings">
+        <Generator>SettingsSingleFileGenerator</Generator>
+        <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+      </None>
+    </ItemGroup>
+
+    <ItemGroup>
       <Resource Update="Img\btncolor.png">
         <CopyToOutputDirectory>Always</CopyToOutputDirectory>
       </Resource>
+    </ItemGroup>
+
+    <ItemGroup>
+      <EditorConfigFiles Remove="D:\soft\holey\holey\.editorconfig" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <None Include="D:\soft\holey\holey\.editorconfig" />
     </ItemGroup>
 
 </Project>

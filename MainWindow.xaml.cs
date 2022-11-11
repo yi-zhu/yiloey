@@ -1,19 +1,8 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Diagnostics;
-using System.Linq;
 using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 using holey.Page;
 
 namespace holey
@@ -25,13 +14,25 @@ namespace holey
     {
         private MainPage _mainPage;
         private TapPage _tapPage;
-        public static MainWindow YiWindow { get; set; }
+        public static bool IsAlive { get; set; } = true;
+        public static MainWindow Me { get; set; }
+        public static PetWindow? PetWindow;
+        public static MemoWindow? MemoWindow;
 
+        private static string _vname = "eyi";
 
         public MainWindow()
         {
+            if (PetWindow == null)
+            {
+                PetWindow = new PetWindow();
+                PetWindow.Show();
+                this.Hide();
+            }
+
             InitializeComponent();
-            YiWindow = this;
+            IsAlive = true;
+            Me = this;
             _mainPage = new MainPage();
             _tapPage = new TapPage();
             MPage.Content = new Frame() { Content = _mainPage };
@@ -41,50 +42,75 @@ namespace holey
         public static void StarteYi()
         {
             ShowLoading();
-            YiKit.StartProcessSync(
+            NetworkInterface tap = null;
+            YiKit.StartProcessAsync(_vname +
+                                    " -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -s 255.240.0.0 -b  -i 20 -b -l yizhu.space:65533 "
+                , a =>
+                {
+                    YiKit.Print(a);
+                    string? msg = a as string;
+
+                    if (msg.Contains("Open device "))
+                    {
+                        string name = msg.Substring(msg.IndexOf("{"), msg.IndexOf("}") + 1 - msg.IndexOf("{"));
+                        tap = YiKit.GetInterface(name);
+                        YiKit.RunOnUIThread(() => ShowLoading(false));
+                    }
+                    else if (msg.Contains("Rx REGISTER_SUPER_ACK"))
+                    {
+                        YiKit.Print("up:" + tap?.GetIPProperties().UnicastAddresses[0].Address + "down:" +
+                                    tap?.GetIPv4Statistics().BytesReceived);
+                    }
+                    else if (msg.Contains("Re-checking dynamic IP address"))
+                    {
+                        YiKit.StartProcessSync("route delete 0.0.0.0 mask 0.0.0.0 172.27.0.1");
+                    }
+                    else if (msg.Contains("No Windows tap device found"))
+                    {
+                        //执行失败,没有网卡，或者已经运行
+
+                        //执行判断运行网卡，
+                        Process[] processes = Process.GetProcesses();
+                        foreach (Process process in processes)
+                        {
+                            if (process.ProcessName.Equals(_vname))
+                            {
+                                //已在运行
+
+                                YiKit.Print("程序已运行");
+                                YiKit.RunOnUIThread(() => ShowLoading(false));
+                                return;
+                            }
+                        }
+
+                        YiKit.RunOnUIThread(() => ShowLoading(false));
+                    }
+                });
+
+            /*YiKit.StartProcessSync(
                 string.Format("Taskkill /IM {0} /F", "eyi*")
                 , e =>
                 {
-                    YiKit.Print(e);
-                    YiKit.StartProcessAsync(
-                        "eyi -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -b  -i 20 -b -l yizhu.space:65533 "
-                        , a =>
-                        {
-                            YiKit.Print(a);
-                            string? msg = a as string;
-                            NetworkInterface tap=null;
-                            if (msg.Contains("Open device "))
-                            {
-                                string name = msg.Substring(msg.IndexOf("{"), msg.IndexOf("}")+1 - msg.IndexOf("{"));
-                                 tap=  YiKit.GetInterface(name);
-                                YiKit.Print(tap.GetIPv4Statistics());
-                            }
 
-                                YiKit.Print(tap?.GetIPv4Statistics().BytesReceived);
-                        });
-                    YiKit.RunOnUIThread(()=>ShowLoading(false));
 
-                });
-       
+                });*/
         }
 
-        
-        
-        
+
         public static void ShowLoading(bool show = true)
         {
             if (show)
             {
-                if (!YiWindow.LodingGrid.IsVisible)
+                if (!Me.LodingGrid.IsVisible)
                 {
-                    YiWindow.LodingGrid.Visibility = Visibility.Visible;
+                    Me.LodingGrid.Visibility = Visibility.Visible;
                 }
             }
             else
             {
-                if (YiWindow.LodingGrid.IsVisible)
+                if (Me.LodingGrid.IsVisible)
                 {
-                    YiWindow.LodingGrid.Visibility = Visibility.Collapsed;
+                    Me.LodingGrid.Visibility = Visibility.Collapsed;
                 }
             }
         }
@@ -112,6 +138,109 @@ namespace holey
         private void IndexItem_Click(object sender, RoutedEventArgs e)
         {
             MPage.Content = _mainPage;
+        }
+
+        protected override void OnClosed(EventArgs e)
+        {
+            IsAlive = false;
+
+
+            /*
+            //销毁progress进程。
+            if (YiKit.Processes.Count>0)
+            {
+                foreach (Process process in YiKit.Processes)
+                {
+                    process?.Close();
+                }
+           
+           
+            }
+            var collections = Application.Current.Windows;
+
+            foreach (Window window in collections)
+            {
+                if (window != this)
+                    window.Close();
+            }*/
+            base.OnClosed(e);
+        }
+
+
+        private void TopItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (Topmost)
+            {
+                this.Topmost = false;
+
+                TopMenuItem.Header = "📌";
+            }
+            else
+            {
+                this.Topmost = true;
+                TopMenuItem.Header = "🔝";
+            }
+        }
+
+
+        /// <summary>
+        /// 打开右下角宠物窗口
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void PetItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (PetWindow == null)
+            {
+                PetWindow = new PetWindow();
+            }
+
+            if (PresentationSource.FromVisual(PetWindow) == null)
+            {
+                PetWindow=new PetWindow();
+                PetWindow.Show();
+            }
+            else
+            {
+                if (PetWindow.Visibility == Visibility.Visible) PetWindow.Hide();
+                else PetWindow.Show();
+            }
+            
+
+        }
+
+        /// <summary>
+        /// 打开右上角备忘录
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void MemoItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (MemoWindow == null)
+            {
+                MemoWindow = new MemoWindow();
+            }
+
+            if (PresentationSource.FromVisual(MemoWindow) == null)
+            {
+                MemoWindow = new MemoWindow();
+                MemoWindow.Show();
+            }
+            else
+            {
+                if (MemoWindow.Visibility == Visibility.Visible) MemoWindow.Hide();
+                else MemoWindow.Show();
+            }
+        }
+
+
+        /// <summary>
+        /// 设置页面
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void SetItem_OnClick(object sender, RoutedEventArgs e)
+        {
         }
     }
 }

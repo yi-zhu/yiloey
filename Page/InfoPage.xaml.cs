@@ -1,8 +1,3 @@
-using System;
-using System.IO;
-using System.Text;
-using System.Windows.Controls;
-
 namespace holey.Page;
 
 public partial class InfoPage : System.Windows.Controls.Page

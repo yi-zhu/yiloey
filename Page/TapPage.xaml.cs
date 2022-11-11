@@ -1,15 +1,14 @@
 using System;
 using System.Diagnostics;
 using System.Windows;
-using System.Windows.Controls;
 
 namespace holey.Page;
 
 public partial class TapPage : System.Windows.Controls.Page
 {
 
-    private string infName = "yltap.inf";
-    private string tapName = "yltap";
+    private string _infName = "yltap.inf";
+    private string _tapName = "yltap";
     
     public TapPage()
     {
@@ -45,7 +44,7 @@ public partial class TapPage : System.Windows.Controls.Page
             Process process = new Process(); //创建进程对象    
             ProcessStartInfo startInfo =
                 new ProcessStartInfo("Binaries/yitap.exe",
-                    " install  " + driverDir + tapName+".inf "+tapName); // 括号里是(程序名,参数)
+                    " install  " + driverDir + _tapName+".inf "+_tapName); // 括号里是(程序名,参数)
             process.StartInfo = startInfo;
             process.StartInfo.UseShellExecute = false; //是否使用操作系统的shell启动
             startInfo.RedirectStandardInput = true; //接受来自调用程序的输入     
@@ -53,7 +52,7 @@ public partial class TapPage : System.Windows.Controls.Page
             startInfo.RedirectStandardError = true; //重定向标准错误输出
             //startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
             process.Start();
-            YiKit.RunThread(state =>
+            YiKit.RunThread(_ =>
             {
                 string output = process.StandardOutput.ReadToEnd();
                 Console.WriteLine(output);
@@ -69,6 +68,16 @@ public partial class TapPage : System.Windows.Controls.Page
 
     private void InstallService_OnClick(object sender, RoutedEventArgs e)
     {
+    
+        YiKit.StartProcessSync("sc create Edge-V binpath= \"eyi.exe\" start= auto displayname= \"Edge\"",(
+            ret =>
+            {
+                if (ret?.ToString()?.Contains("成功") != null)
+                {
+                    YiKit.StartProcessAsync("sc description Edge-V \"使用 IPv4 转换技术(ISATAP、端口代理和 Teredo)和 IP-HTTPS 提供隧道连接。如果停止该服务，则计算机将不具备这些技术提供的增强连接优势。\"  ");
+
+                }
+            }));
     }
 
     private void UninstallTap_OnClick(object sender, RoutedEventArgs e)
@@ -100,7 +109,7 @@ public partial class TapPage : System.Windows.Controls.Page
             Process process = new Process(); //创建进程对象    
             ProcessStartInfo startInfo =
                 new ProcessStartInfo("Binaries/yitap.exe",
-                    " remove  " + driverDir + tapName+".inf "+tapName); // 括号里是(程序名,参数)
+                    " remove  " + driverDir + _tapName+".inf "+_tapName); // 括号里是(程序名,参数)
             process.StartInfo = startInfo;
             process.StartInfo.UseShellExecute = false; //是否使用操作系统的shell启动
             startInfo.RedirectStandardInput = true; //接受来自调用程序的输入     
@@ -108,7 +117,7 @@ public partial class TapPage : System.Windows.Controls.Page
             startInfo.RedirectStandardError = true; //重定向标准错误输出
             //startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
             process.Start();
-            YiKit.RunThread(state =>
+            YiKit.RunThread(_ =>
             {
                 string output = process.StandardOutput.ReadToEnd();
                 Console.WriteLine(output);
