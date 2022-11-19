@@ -118,12 +118,12 @@ public partial class PetWindow : Window
                         {
                             tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
                         }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
-                        tapas += "速度：" + (nowUp == lastUp ? "  " : "⇡")
+                        tapas += "速：" + (nowUp == lastUp ? "  " : "⇡")
                                        + (nowDown == lastDown ? "  " : "⇣") + " "
                                        + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000 / _sleep)) + "\n";
 
-                        tapas += "上传：" + YiKit.SumByte(nowUp) + (nowUp == lastUp ? "    " : "↑↑") + "\n";
-                        tapas += "下载：" + YiKit.SumByte(nowDown) + (nowDown == lastDown ? "    " : "↓↓") + "\n";
+                        tapas += "上"+ (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
+                        tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown)  + "\n";
                         // tapas += "ip:"+ipaddr.Address + "\n";
                         // tapas += "MAC:"+tap.GetPhysicalAddress() + "\n";
                         YiKit.RunOnUIThread(() =>
@@ -131,6 +131,7 @@ public partial class PetWindow : Window
                             if (!tapas.Equals(MainStr.Content.ToString()))
                             {
                                 MainStr.Content = tapas;
+                            
                                 CpuRectEnd.ToolTip = ipaddr.Address;
                             }
 

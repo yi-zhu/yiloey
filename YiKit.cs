@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -302,10 +303,41 @@ public class YiKit
         return null;
     }
 
-
+    
+    
+    // https://cn.bing.com/HPImageArchive.aspx?format=xml&idx=0&n=1&mkt=zh-CN  图片api
     private static PerformanceCounter? Cpuner;
     private static PerformanceCounter? Memner;
 
+    
+    /// <summary>  
+    /// 设置程序开机自启
+    /// </summary>  
+    /// <param name="isAuto">true:开机启动,false:不开机自启</param> 
+    public static  void SetAutoStart(string name="",bool isAuto = true)
+    {;
+        if (name=="")
+        {
+            name = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
+        }
+        if (isAuto == true)
+        {
+            RegistryKey R_local = Registry.CurrentUser;
+            RegistryKey R_run = R_local.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
+            R_run.SetValue(name, Assembly.GetExecutingAssembly().Location);
+            R_run.Close();
+            R_local.Close();
+        }
+        else
+        {
+            RegistryKey R_local = Registry.CurrentUser;
+            RegistryKey R_run = R_local.CreateSubKey(@"SOFTWARE\Microsoft\Windows\CurrentVersion\Run");
+            R_run.DeleteValue(name, false);
+            R_run.Close();
+            R_local.Close();
+        }
+    }
+    
     public static float CpuUse()
     {
         if (Cpuner == null)

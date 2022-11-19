@@ -56,7 +56,7 @@ public partial class MemoWindow : Window
         Top = r.Bottom * 0.9 - ActualHeight;
         YiKit.Print(Left);
         YiKit.Print(Top);
-        LoadMemo();
+      
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -75,83 +75,7 @@ public partial class MemoWindow : Window
 
     private bool IsAlive { get; set; } = true;
 
-    private void LoadMemo()
-    {
-        YiKit.RunThread(_ =>
-        {
-            long lastUp = 0;
-            long lastDown = 0;
-            int cpuse = 0;
-            while (IsAlive)
-            {
-                var tap = IsVpn ? YiKit.GetInterface(ip: "172.27.") : YiKit.GetInterface(vir: false);
-
-                if (tap == null || tap.OperationalStatus != OperationalStatus.Up)
-                {
-                    IsVpn = !IsVpn;
-                    Thread.Sleep(_sleep / 2);
-                    continue;
-                }
-
-                IPInterfaceProperties ipInterface = tap.GetIPProperties();
-                // string MAC = adapter.GetPhysicalAddress().ToString(); //获取单播地址集
-                UnicastIPAddressInformationCollection ipCollection = ipInterface.UnicastAddresses;
-                string tapas = "";
-                long nowUp;
-                long nowDown;
-
-                foreach (UnicastIPAddressInformation ipaddr in ipCollection)
-                {
-                    if (ipaddr.Address.AddressFamily == AddressFamily.InterNetwork) //判断是否为ipv4
-                    {
-                        //Console.WriteLine(JsonConvert.SerializeObject(adapter));
-                        nowUp = tap.GetIPStatistics().BytesSent;
-                        nowDown = tap.GetIPStatistics().BytesReceived;
-                        if (lastUp == 0)
-                        {
-                            lastDown = nowDown;
-                            lastUp = nowUp;
-                        }
-
-                        /*if (nowUp - lastUp<10)
-                        {
-                            tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
-                        }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
-                        tapas += "速度：" + (nowUp == lastUp ? "  " : "⇡")
-                                       + (nowDown == lastDown ? "  " : "⇣") + " "
-                                       + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000 / _sleep)) + "\n";
-
-                        tapas += "上传：" + YiKit.SumByte(nowUp) + (nowUp == lastUp ? "    " : "↑↑") + "\n";
-                        tapas += "下载：" + YiKit.SumByte(nowDown) + (nowDown == lastDown ? "    " : "↓↓") + "\n";
-                        // tapas += "ip:"+ipaddr.Address + "\n";
-                        // tapas += "MAC:"+tap.GetPhysicalAddress() + "\n";
-                        YiKit.RunOnUIThread(() =>
-                        {
-                            if (!tapas.Equals(MainStr.Content.ToString()))
-                            {
-                                MainStr.Content = tapas;
-                                CpuRectEnd.ToolTip = ipaddr.Address;
-                            }
-
-                            lastDown = nowDown;
-                            lastUp = nowUp;
-                        });
-                        break;
-                    }
-                }
-
-                #region CPU使用率
-
-                cpuse = (int)YiKit.CpuUse();
-                YiKit.RunOnUIThread(() => CpuRect.Width = cpuse);
-                YiKit.Print(YiKit.MemUse());
-
-                #endregion
-
-                Thread.Sleep(_sleep);
-            }
-        });
-    }
+ 
 
 
     protected override void OnClosing(CancelEventArgs e)
@@ -216,10 +140,6 @@ public partial class MemoWindow : Window
         Application.Current.Shutdown();
     }
 
-    private void Control_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
-    {
-        IsVpn = !IsVpn;
-    }
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
     {
@@ -229,9 +149,5 @@ public partial class MemoWindow : Window
         SetWindowLong(new WindowInteropHelper(this).Handle, -20, 0x20);
     }
 
-    private void CpuRectEnd_OnMouseUp(object sender, MouseButtonEventArgs e)
-    {
-        IsVpn = !IsVpn;
-        
-    }
+
 }

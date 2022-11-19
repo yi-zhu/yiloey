@@ -3,16 +3,98 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-        xmlns:local="clr-namespace:holey"
-        mc:Ignorable="d"
+        xmlns:interactivity="http://schemas.microsoft.com/xaml/behaviors"
+        xmlns:local="clr-namespace:holey" xmlns:media="clr-namespace:holey.Kits"
+        xmlns:ukits="clr-namespace:holey.Ukits"
+        mc:Ignorable="d"  
         Title="PetWindow" Height="60" Width="120" Background="Transparent"
         WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
         AllowsTransparency="True" Loaded="FormLoaded" Topmost="True"
         PreviewMouseMove="PetWindow_OnPreviewMouseMove">
     <Grid>
+        <Grid.Resources>
+             <Style TargetType="ProgressBar">
+                <Setter Property="Width" Value="50" />
+                <Setter Property="Height" Value="200" />
+                <Setter Property="Maximum" Value="1" />
+                <Setter Property="Foreground" Value="#36a8e2" />
+                <Setter Property="Template">
+                    <Setter.Value>
+                        <ControlTemplate TargetType="ProgressBar">
+                            <Grid Width="50"
+                                  Height="200"
+                                  HorizontalAlignment="Center"
+                                  VerticalAlignment="Center">
+                                <Grid.Resources>
+                                    <Style TargetType="Rectangle">
+                                        <Setter Property="Fill"
+                                                Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                        <Setter Property="RadiusX" Value="25" />
+                                        <Setter Property="RadiusY" Value="5" />
+                                    </Style>
+                                </Grid.Resources>
+                                <Grid x:Name="Root" Margin="0,5" />
+                                <Rectangle Opacity="0.2" />
+
+                                <Rectangle Height="10"
+                                           VerticalAlignment="Top"
+                                           Opacity="0.1" />
+                                <Rectangle Margin="0,0,0,1" VerticalAlignment="Bottom">
+                                    <interactivity:Interaction.Behaviors>
+                                        <ukits:ProgressToHeightBehavior BasedElement="{Binding ElementName=Root}"
+                                                                         Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                    </interactivity:Interaction.Behaviors>
+                                </Rectangle>
+
+                                <Grid VerticalAlignment="Bottom">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition Height="10" />
+                                    </Grid.RowDefinitions>
+                                    <Grid>
+                                        <interactivity:Interaction.Behaviors>
+                                            <ukits:ProgressToHeightBehavior BasedElement="{Binding ElementName=Root}"
+                                                                             Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                        </interactivity:Interaction.Behaviors>
+                                    </Grid>
+                                    <Rectangle Grid.RowSpan="2" />
+                                </Grid>
+
+                                <Rectangle Opacity="0.6">
+                                    <Rectangle.Fill>
+                                        <LinearGradientBrush StartPoint="0,0.5" EndPoint="1,.5">
+                                            <GradientStop Color="Black" />
+                                            <GradientStop Offset="1" Color="Transparent" />
+                                            <GradientStop Offset="0.6" Color="#41000000" />
+                                        </LinearGradientBrush>
+                                    </Rectangle.Fill>
+                                </Rectangle>
+
+                                <Grid VerticalAlignment="Bottom">
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition />
+                                        <RowDefinition Height="5" />
+                                    </Grid.RowDefinitions>
+                                    <Grid Margin="0,0,0,5">
+                                        <interactivity:Interaction.Behaviors>
+                                            <ukits:ProgressToHeightBehavior BasedElement="{Binding ElementName=Root}"
+                                                                             Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                        </interactivity:Interaction.Behaviors>
+                                    </Grid>
+                                    <Rectangle Grid.RowSpan="2"
+                                               Height="10"
+                                               VerticalAlignment="Top" />
+                                </Grid>
+                            </Grid>
+                        </ControlTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+            
+        </Grid.Resources>
         <!-- <local:GifImage Source="../Img/giphy.gif" Stretch="Uniform" Cursor="Hand"/> -->
-        <Viewbox>
-            <Grid  >
+        <Viewbox Height="60" Width="120">
+            <Grid Margin="0" Height="60" Width="120" >
                 <Grid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
@@ -20,25 +102,45 @@
                         <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                     </ContextMenu>
                 </Grid.ContextMenu>
-                <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" CornerRadius="10,10,10,10"  >
+                <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" CornerRadius="10,10,10,10">
                     <Border.Effect>
                         <BlurEffect Radius="20" RenderingBias="Performance"></BlurEffect>
                     </Border.Effect>
                 </Border>
-                
-                <Button  Name="MainStr"   MouseDoubleClick="Control_OnMouseDoubleClick"  Width="120" Height="50" VerticalContentAlignment="Bottom"
-                            HorizontalAlignment="Left" VerticalAlignment="Bottom" 
-                            Background="Transparent" Foreground="Chocolate"  FontWeight="Bold"
-                            Margin="0,10,0,0" Padding="0" IsHitTestVisible="False"
-                             Style="{StaticResource NoneButton}"  Cursor="Hand">初始化</Button>
-                
-                <Grid >
+                <!-- 主体 -->
+                <Button Name="MainStr" MouseDoubleClick="Control_OnMouseDoubleClick" Width="120" Height="50"
+                        VerticalContentAlignment="Stretch" FontSize="12"  Margin="0" Padding="0"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
+                        Background="Transparent" Foreground="Red" FontWeight="Bold"
+                         IsHitTestVisible="False"
+                        Style="{StaticResource NoneButton}" Cursor="Hand">
+                    121
+                    <!-- 内容 -->
+                    <!--<media:TextShape x:Name="MainStr"
+                                     HorizontalAlignment="Left"
+                                     Fill="Red"
+                                     FontWeight="Heavy"
+                                     FontSize="11.2"
+                                     Stroke="Black"
+                                     StrokeDashOffset="0"
+                                     StrokeThickness="0.1"
+                                     
+                                     Text="正在加载">
+                    </media:TextShape>-->
+                    <Button.Effect>
+                        <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="-0.1" Opacity="1" Direction="9" />
+                    </Button.Effect>
+                </Button>
+                <!-- CPU -->
+                <Grid Margin="0">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="80"/>
-                        <ColumnDefinition Width="20"/>
-                        <ColumnDefinition Width="20"/>
+                        <ColumnDefinition Width="80" />
+                        <ColumnDefinition Width="20" />
+                        <ColumnDefinition Width="20" />
                     </Grid.ColumnDefinitions>
-                    <Rectangle Name="CpuRect"   Grid.Column="0" Grid.ColumnSpan="2" Stroke="Transparent"  Height="10"  Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left" VerticalAlignment="Top"  >
+                    <Rectangle Name="CpuRect" Grid.Column="0" Grid.ColumnSpan="2" Stroke="Transparent" Height="10"
+                               Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left"
+                               VerticalAlignment="Top">
                         <Rectangle.Fill>
                             <LinearGradientBrush>
                                 <LinearGradientBrush.RelativeTransform>
@@ -55,16 +157,48 @@
                                 <GradientStop Color="#ccf0a08f" Offset="1" />
                             </LinearGradientBrush>
                         </Rectangle.Fill>
+                        <FrameworkElement.Effect>
+                            <DropShadowEffect BlurRadius="2"
+                                              RenderingBias="Quality"
+                                              ShadowDepth="0"
+                                              Color="LightCoral" />
+                        </FrameworkElement.Effect>
                     </Rectangle>
-                    <Button   MouseDoubleClick="Control_OnMouseDoubleClick"  Height="10"  Width="10" 
-                            HorizontalAlignment="Right" VerticalAlignment="Top"  Grid.Column="1" 
-                            Background="Transparent" Foreground="Chocolate"  FontWeight="Bold"
-                            
-                             Style="{StaticResource NoneButton}"  Cursor="Hand"  
-                            
-                    >
-                        <Rectangle Name="CpuRectEnd"   Grid.Column="1"  Stroke="Transparent"  Height="10"  Width="10" Cursor="Hand" 
-                                ToolTip="speed" HorizontalAlignment="Right" VerticalAlignment="Top"  >
+                 
+
+
+
+
+                    <Ellipse Grid.Column="2" Stroke="Transparent" Width="10" Height="15" Cursor="Hand"
+                             HorizontalAlignment="Right" Visibility="Collapsed" VerticalAlignment="Top">
+                        <Ellipse.Fill>
+                            <RadialGradientBrush GradientOrigin="0.2,0.8" RadiusX="0.75" RadiusY="0.75">
+                                <RadialGradientBrush.RelativeTransform>
+                                    <TransformGroup>
+                                        <RotateTransform Angle="90" CenterX="0.5" CenterY="0.5" />
+                                        <TranslateTransform />
+                                    </TransformGroup>
+                                </RadialGradientBrush.RelativeTransform>
+                                <GradientStop Color="#33FFFFFF" Offset="0" />
+                                <GradientStop Color="#AA312dea" Offset="0.66" />
+                                <GradientStop Color="#FF1a15ff" Offset="1" />
+                            </RadialGradientBrush>
+                        </Ellipse.Fill>
+                    </Ellipse>
+
+
+                </Grid>
+                <!-- 标识 -->
+                <Button MouseDoubleClick="Control_OnMouseDoubleClick" Height="10" Width="20" Grid.Column="2"
+                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
+                               Padding="0"
+                            Style="{StaticResource NoneButton}" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Top">
+                    <Grid>
+
+                     
+                        <Rectangle Name="CpuRectEnd"  Stroke="Transparent" Width="20" Height="10"
+                                   Cursor="Hand"
+                                   ToolTip="speed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                             <Rectangle.Fill>
                                 <LinearGradientBrush>
 
@@ -77,7 +211,6 @@
                                     </LinearGradientBrush.RelativeTransform>
 
 
-
                                     <GradientStop Color="#ffff0000" Offset="0" />
                                     <GradientStop Color="#ffff0000" Offset="0.1" />
                                     <GradientStop Color="#a0f00000" Offset="0.2" />
@@ -87,70 +220,77 @@
                                     <GradientStop Color="#99ff00ff" Offset="1" />
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
+
                         </Rectangle>
-                    </Button>
-
-                    
-                    <Button x:Name="MemBtn"  MouseDoubleClick="Control_OnMouseDoubleClick"  Width="10" Height="50"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom"  Grid.Column="2" 
-                            Background="Transparent" Foreground="Chocolate"  FontWeight="Bold"
-                            Margin="0,0,0,5"
-                             Style="{StaticResource NoneButton}"  Cursor="Hand">
-                        <Grid>
-                            <Viewbox>
-                                <TextBlock x:Name="MemStr"  FontSize="12" Width="10" TextWrapping="Wrap" Foreground="Black">100%</TextBlock>
-                            </Viewbox>
-                            
-                            <Rectangle   Stroke="Transparent"  Height="50"  Width="10" Cursor="Hand" 
-                                 HorizontalAlignment="Right" VerticalAlignment="Bottom"  >
-                                <Rectangle.Fill>
-                                    <LinearGradientBrush>
-                                        <LinearGradientBrush.RelativeTransform>
-                                            <TransformGroup>
-                                                <RotateTransform Angle="200" CenterX="0.5" CenterY="0.5" />
-                                                <TranslateTransform />
-                                            </TransformGroup>
-                                        </LinearGradientBrush.RelativeTransform>
-                                        <GradientStop Color="#33FF6900" Offset="0" />
-                                        <GradientStop Color="#44FF6900" Offset="0.2" />
-                                        <GradientStop Color="#55FF6900" Offset="0.3" />
-                                        <GradientStop Color="#66FF6900" Offset="0.5" />
-                                        <GradientStop Color="#99FF6900" Offset="0.7" />
-                                        <GradientStop Color="#bbFF6900" Offset="0.9" />
-                                        <GradientStop Color="#ffFF6900" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Rectangle.Fill>
-                            </Rectangle>
-                        </Grid>
-                     
-                    </Button>
-                    
-
-                    <Ellipse Grid.Column="2" Stroke="Transparent" Width="15" Height="15" Cursor="Hand" HorizontalAlignment="Right" Visibility="Collapsed" VerticalAlignment="Top"  >
-                            <Ellipse.Fill>
-                                <RadialGradientBrush GradientOrigin="0.2,0.8" RadiusX="0.75" RadiusY="0.75">
-                                    <RadialGradientBrush.RelativeTransform>
+                        <Viewbox>
+                            <TextBlock x:Name="StatStr"  Width="10" 
+                                           Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">H
+                                <TextBlock.Effect>
+                                    <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3" ShadowDepth="0" Opacity="0.8" Direction="0" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </Viewbox>
+                    </Grid>
+                </Button>
+                <!-- mem -->
+                <Button x:Name="MemBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="12" Height="50"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="2"
+                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
+                            Margin="0,0,0,0"
+                            Style="{StaticResource NoneButton}" Cursor="Hand">
+                    <Grid VerticalAlignment="Bottom">
+                        <Rectangle   Stroke="Transparent"  Height="50"  Width="12" Cursor="Hand" 
+                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"  Margin="0" >
+                            <Rectangle.Fill>
+                                <LinearGradientBrush>
+                                    <LinearGradientBrush.Transform>
                                         <TransformGroup>
-                                            <RotateTransform Angle="90" CenterX="0.5" CenterY="0.5" />
-                                            <TranslateTransform />
+                                            <ScaleTransform/>
+                                            <SkewTransform/>
+                                            <RotateTransform Angle="0"/>
+                                            <TranslateTransform/>
                                         </TransformGroup>
-                                    </RadialGradientBrush.RelativeTransform>
-                                    <GradientStop Color="#33FFFFFF" Offset="0" />
-                                    <GradientStop Color="#AA312dea" Offset="0.66" />
-                                    <GradientStop Color="#FF1a15ff" Offset="1" />
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
+                                    </LinearGradientBrush.Transform>
+                                    <LinearGradientBrush.RelativeTransform>
+                                        <TransformGroup>
+                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
+                                         
+                                          
+                                            <TranslateTransform/>
+                                        </TransformGroup>
+                                    </LinearGradientBrush.RelativeTransform>
+                                    <GradientStop Color="#33f0a08f" Offset="1" />
+                                    <GradientStop Color="#44FF0000" Offset="0.8" />
+                                    <GradientStop Color="#55f0a08f" Offset="0.7" />
+                                    <GradientStop Color="#66f0a08f" Offset="0.5" />
+                                    <GradientStop Color="#99f0a08f" Offset="0.3" />
+                                    <GradientStop Color="#bbf0a08f" Offset="0.2" />
+                                    <GradientStop Color="#f000" Offset="0.1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <FrameworkElement.Effect>
+                                <DropShadowEffect BlurRadius="1"
+                                              RenderingBias="Quality"
+                                              ShadowDepth="0"
+                                              Color="LightCoral" />
+                            </FrameworkElement.Effect>
+                        </Rectangle>
+                        <Viewbox>
+                            <TextBlock x:Name="MemStr" FontSize="13" Width="10" TextWrapping="Wrap"
+                                           Foreground="#ff00" HorizontalAlignment="Stretch" >
+                                    100
+                                <TextBlock.Effect>
+                                    <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="0.8" Direction="0" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </Viewbox>
 
-                  
-                   
-                </Grid>
-                
-             
+                       
+                    </Grid>
 
-
+                </Button>
+         
                
-              
 
             </Grid>
 

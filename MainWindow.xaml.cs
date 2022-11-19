@@ -14,6 +14,7 @@ namespace holey
     {
         private MainPage _mainPage;
         private TapPage _tapPage;
+        private SetPage _setPage;
         public static bool IsAlive { get; set; } = true;
         public static MainWindow Me { get; set; }
         public static PetWindow? PetWindow;
@@ -35,7 +36,7 @@ namespace holey
             Me = this;
             _mainPage = new MainPage();
             _tapPage = new TapPage();
-            MPage.Content = new Frame() { Content = _mainPage };
+            MPage.Content = new Frame { Content = _mainPage };
         }
 
 
@@ -197,7 +198,7 @@ namespace holey
 
             if (PresentationSource.FromVisual(PetWindow) == null)
             {
-                PetWindow=new PetWindow();
+                PetWindow = new PetWindow();
                 PetWindow.Show();
             }
             else
@@ -205,8 +206,6 @@ namespace holey
                 if (PetWindow.Visibility == Visibility.Visible) PetWindow.Hide();
                 else PetWindow.Show();
             }
-            
-
         }
 
         /// <summary>
@@ -241,6 +240,21 @@ namespace holey
         /// <param name="e"></param>
         private void SetItem_OnClick(object sender, RoutedEventArgs e)
         {
+            if (_setPage == null)
+            {
+                _setPage = new SetPage();
+            }
+
+            MPage.Content = _setPage;
+        }
+
+
+        bool _isAuto = true;
+
+        private void AutoItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            YiKit.SetAutoStart(isAuto: _isAuto);
+            _isAuto = !_isAuto;
         }
     }
 }

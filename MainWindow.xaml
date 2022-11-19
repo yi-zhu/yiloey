@@ -17,7 +17,7 @@
             </Grid.RowDefinitions>
             <Grid Grid.Row="0" OpacityMask="#FF921E1E" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"
                   Background="#66ffffff">
-            </Grid>
+            </Grid>  
 
             <Viewbox Grid.Row="0" OpacityMask="#FF921E1E" HorizontalAlignment="Left">
 
@@ -30,6 +30,7 @@
                     <MenuItem Header="编辑">
                         <MenuItem Header="安装" Click="TapItem_Click"></MenuItem>
                         <MenuItem Header="设置" Click="SetItem_OnClick"></MenuItem>
+                        <MenuItem Header="自启" Click="AutoItem_OnClick"></MenuItem>
                     </MenuItem>
                     <MenuItem Header="主题">
                         <MenuItem Header="白"></MenuItem>

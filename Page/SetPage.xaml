@@ -5,16 +5,50 @@
       xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
       xmlns:local="clr-namespace:holey.Page"
       mc:Ignorable="d"
-      Title="SetPage">
-    <Grid>
-        <Viewbox>
-            <Grid>
+      Title="SetPage" >
+    <Grid  HorizontalAlignment="Stretch">
+        
+        <Viewbox Stretch="Fill" >
+            <Grid  HorizontalAlignment="Stretch">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="100"></RowDefinition>
-                    
+                    <RowDefinition Height="100"/>
+                    <RowDefinition Height="100"/>
+                    <RowDefinition Height="100"/>
                 </Grid.RowDefinitions>
+
+                <Grid Row="0" Column="0" Margin="5" HorizontalAlignment="Stretch" VerticalAlignment="Top">
+                    <!-- 系统设置 -->
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="*"/>
+                        <RowDefinition Height="*"/>
+                    </Grid.RowDefinitions>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <StackPanel Grid.Column="0" Grid.Row="0" HorizontalAlignment="Stretch" Background="#cceeeeee"  OpacityMask="#FF921E1E">
+                        <TextBlock Grid.Row="0"  HorizontalAlignment="Stretch" VerticalAlignment="Top"  Background="#cceeeeee"  OpacityMask="#FF921E1E">
+                            系统设置1
+                        </TextBlock>
+                    </StackPanel>
+
+
+                    <StackPanel Grid.Column="0" Grid.Row="1">
+                        <CheckBox Name="AutoCheckBox" Checked="AutoCheckBox_OnChecked" Unchecked="AutoCheckBox_OnUnchecked">
+                            <CheckBox.Foreground>
+                                <LinearGradientBrush EndPoint="0.5,1" StartPoint="0.5,0">
+                                    <GradientStop Color="#FFEF9919"/>
+                                    <GradientStop Color="#FFDE1D1D" Offset="1"/>
+                                </LinearGradientBrush>
+                            </CheckBox.Foreground> 自动启动
+                        </CheckBox>
+                    </StackPanel>
+                  
+                </Grid>
+
+
             </Grid>
-            
         </Viewbox>
+
     </Grid>
 </Page>
