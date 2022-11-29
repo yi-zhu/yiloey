@@ -246,4 +246,9 @@ public partial class PetWindow : Window
         IsVpn = !IsVpn;
         
     }
+
+    private void TaskmgrItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        YiKit.StartProcessSync("taskmgr");
+    }
 }

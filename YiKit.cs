@@ -73,37 +73,60 @@ public class YiKit
         {
             return;
         }
-
+        string arg ="";
+        string exe = cmd.Split(' ')[0];
         if (!cmd.Contains(" "))
         {
-            return;
+            arg = cmd.Substring(exe.Length);
         }
 
-        string exe = cmd.Split(' ')[0];
-        string arg = cmd.Substring(exe.Length);
+       
+        
         start?.DynamicInvoke();
         Process process = new Process(); //创建进程对象    
         YiThreadList.Add(process);
         ProcessStartInfo startInfo = new ProcessStartInfo(exe, arg); // 括号里是(程序名,参数)
         process.StartInfo = startInfo;
-        process.StartInfo.UseShellExecute = false; //是否使用操作系统的shell启动
-        startInfo.RedirectStandardInput = true; //接受来自调用程序的输入     
-        startInfo.RedirectStandardOutput = true; //由调用程序获取输出信息
-        startInfo.RedirectStandardError = true; //重定向标准错误输出
-        //startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
-
-        process.Start();
-        RunThread(_ =>
+        if (end==null)
         {
-            YiThreadList.Remove(process);
-            string output = process.StandardOutput.ReadToEnd();
-            if (output.Length < 3)
-            {
-                process.StandardError.ReadToEnd();
-            }
+            process.StartInfo.UseShellExecute = true; //是否使用操作系统的shell启动
+            startInfo.RedirectStandardInput = false; //接受来自调用程序的输入     
+            startInfo.RedirectStandardOutput = false; //由调用程序获取输出信息
+            startInfo.RedirectStandardError = false; //重定向标准错误输出 
+            startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
+        }
+        else
+        {
+            process.StartInfo.UseShellExecute = false; //是否使用操作系统的shell启动
+            startInfo.RedirectStandardInput = true; //接受来自调用程序的输入     
+            startInfo.RedirectStandardOutput = true; //由调用程序获取输出信息
+            startInfo.RedirectStandardError = true; //重定向标准错误输出
+        }
 
-            end?.DynamicInvoke(output);
-        });
+        /*process.StartInfo.UseShellExecute = true; //是否使用操作系统的shell启动
+        startInfo.RedirectStandardInput = false; //接受来自调用程序的输入     
+        startInfo.RedirectStandardOutput = false; //由调用程序获取输出信息
+        startInfo.RedirectStandardError = false; //重定向标准错误输出
+        //startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 */
+        process.EnableRaisingEvents = true;   //开启
+        process.Exited += ((_, _) => { YiThreadList.Remove(process); });
+       
+        process.Start();
+        
+        if (end!=null)
+        {
+            RunThread(_ =>
+            {
+                string output = process.StandardOutput.ReadToEnd();
+                if (output.Length < 3)
+                {
+                    process.StandardError.ReadToEnd();
+                }
+
+                end?.DynamicInvoke(output);
+            });
+        }
+    
     }
 
     public static void StartProcessAsync(string? cmd, WaitCallback? end = null, Delegate? start = null)
@@ -125,24 +148,39 @@ public class YiKit
         YiThreadList.Add(process);
         ProcessStartInfo startInfo = new ProcessStartInfo(exe, arg); // 括号里是(程序名,参数)
         process.StartInfo = startInfo;
-        process.StartInfo.UseShellExecute = false; //是否使用操作系统的shell启动
-        startInfo.RedirectStandardInput = true; //接受来自调用程序的输入     
-        startInfo.RedirectStandardOutput = true; //由调用程序获取输出信息
-        startInfo.RedirectStandardError = true; //重定向标准错误输出
-        //startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
+   
 
-        process.OutputDataReceived += (_, d) =>
+        if (end==null)
         {
-            if (d.Data != null)
+            process.StartInfo.UseShellExecute = true; //是否使用操作系统的shell启动
+            startInfo.RedirectStandardInput = false; //接受来自调用程序的输入     
+            startInfo.RedirectStandardOutput = false; //由调用程序获取输出信息
+            startInfo.RedirectStandardError = false; //重定向标准错误输出
+            startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
+        }
+        else
+        {
+            process.StartInfo.UseShellExecute = false; //是否使用操作系统的shell启动
+            startInfo.RedirectStandardInput = true; //接受来自调用程序的输入     
+            startInfo.RedirectStandardOutput = true; //由调用程序获取输出信息
+            startInfo.RedirectStandardError = true; //重定向标准错误输出
+            //startInfo.CreateNoWindow = true;             //不显示调用程序的窗口 
+            process.OutputDataReceived += (_, d) =>
             {
-                end?.DynamicInvoke(d.Data);
-            }
-        };
-
-
-        process.Start();
-        process.BeginOutputReadLine();
+                if (d.Data != null)
+                {
+                    end?.DynamicInvoke(d.Data);
+                }
+            };
+        }
+        process.EnableRaisingEvents = true;
         process.Exited += ((_, _) => { YiThreadList.Remove(process); });
+        process.Start();
+        if (end!=null)
+        {
+            process.BeginOutputReadLine();
+        }
+    
     }
 
 
@@ -303,23 +341,24 @@ public class YiKit
         return null;
     }
 
-    
-    
+
     // https://cn.bing.com/HPImageArchive.aspx?format=xml&idx=0&n=1&mkt=zh-CN  图片api
     private static PerformanceCounter? Cpuner;
     private static PerformanceCounter? Memner;
 
-    
+
     /// <summary>  
     /// 设置程序开机自启
     /// </summary>  
     /// <param name="isAuto">true:开机启动,false:不开机自启</param> 
-    public static  void SetAutoStart(string name="",bool isAuto = true)
-    {;
-        if (name=="")
+    public static void SetAutoStart(string name = "", bool isAuto = true)
+    {
+        ;
+        if (name == "")
         {
             name = Path.GetFileName(Assembly.GetExecutingAssembly().Location);
         }
+
         if (isAuto == true)
         {
             RegistryKey R_local = Registry.CurrentUser;
@@ -337,12 +376,30 @@ public class YiKit
             R_local.Close();
         }
     }
-    
+
     public static float CpuUse()
     {
         if (Cpuner == null)
         {
-            Cpuner = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            // Cpuner = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            try
+            {
+                Cpuner = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+            }
+            catch (Exception e)
+            {
+                // 如果是win7，则需要重置 lodctr /R
+                StartProcessSync("lodctr /R");
+                try
+                {
+                    Cpuner = new PerformanceCounter("Processor", "% Processor Time", "_Total");
+                }
+                catch (Exception exception)
+                {
+                    Console.WriteLine(exception);
+                    throw;
+                }
+            }
         }
 
         return Cpuner.NextValue();
@@ -414,31 +471,6 @@ public class YiKit
     #endregion
 
 
-    private void CreateBorderColorAnim()
-    {
-        ColorAnimationUsingKeyFrames colorKeyFrms = new ColorAnimationUsingKeyFrames();
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(245, 104, 5),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(0.5d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(236, 247, 8),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(1d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(10, 124, 238),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(1.5d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(69, 205, 199),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(2d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(8, 83, 158),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(2.5d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(234, 112, 112),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(6, 247, 203),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(3.5d))));
-        colorKeyFrms.KeyFrames.Add(new EasingColorKeyFrame(Color.FromRgb(78, 201, 250),
-            KeyTime.FromTimeSpan(TimeSpan.FromSeconds(4d))));
-
-        colorKeyFrms.RepeatBehavior = RepeatBehavior.Forever;
-        // BeginAnimation(NeonColorProperty, colorKeyFrms);
-    }
-
-    
     /// <summary>
     /// 保存到文件
     /// </summary>
@@ -449,15 +481,17 @@ public class YiKit
     {
         ;
         var file = new FileStream(fileName, FileMode.OpenOrCreate);
-        if (file.Length==data.Length) {
+        if (file.Length == data.Length)
+        {
             YiKit.Print("文件大小：" + file.Length + "数据大小" + data.Length);
             data = null;
             return true;
         }
+
         file.Write(data, 0, data.Length);
         file.Close();
         data = null;
-        YiKit.Print("文件大小：" + file.Length+"创建成功");
+        YiKit.Print("文件大小：" + file.Length + "创建成功");
 
         return true;
     }
@@ -470,7 +504,7 @@ public class YiKit
     /// <param name="val"></param>
     /// <param name="name"></param>
     /// <param name="path"></param>
-    public static void XmlWrite(string val, string name="yi", string? path="")
+    public static void XmlWrite(string val, string name = "yi", string? path = "")
     {
         try
         {
@@ -479,7 +513,7 @@ public class YiKit
             {
                 path ??= "";
 
-                if (path.Length>1&&!path.EndsWith("\\"))
+                if (path.Length > 1 && !path.EndsWith("\\"))
                 {
                     path += "\\";
                 }
@@ -534,7 +568,7 @@ public class YiKit
     }
 
 
-    public static string XmlRead(string key, string path="yi")
+    public static string XmlRead(string key, string path = "yi")
     {
         string ret = "";
 
@@ -568,27 +602,65 @@ public class YiKit
         return ret.Replace("\r\n", "");
     }
 
+    #endregion
 
-    public static string GetConStr(string key, string def = null)
+
+    #region ini读写
+
+    private const int VALUE_MAX_LEN = 1024; //值最大长度
+
+    /// <summary>
+    /// 写配置到ini文件
+    /// </summary>
+    /// <param name="appName">节点名</param>
+    /// <param name="keyName">要写入的key</param>
+    /// <param name="value">要写入的值</param>
+    /// <param name="fileName">要写入ini配置文件路径</param>
+    /// <returns>成功返回非0，失败返回0</returns>
+    [DllImport("kernel32")]
+    private static extern long WritePrivateProfileString(string appName, string keyName,
+        string value, string fileName);
+
+    /// <summary>
+    /// 从ini配置文件读配置
+    /// </summary>
+    /// <param name="appName">节点名</param>
+    /// <param name="keyName">目标key</param>
+    /// <param name="defaultValue">如果找不到目标key就返回这个默认值</param>
+    /// <param name="returnedString">返回目标key对应的值</param>
+    /// <param name="size">returnedString的大小</param>
+    /// <param name="fileName">要读取的ini配置文件路径</param>
+    /// <returns>返回返回字符串的长度</returns>
+    [DllImport("kernel32")]
+    private static extern long GetPrivateProfileString(string appName, string keyName,
+        string defaultValue, StringBuilder returnedString, int size, string fileName);
+
+    /// <summary>
+    /// 外部接口，写配置
+    /// </summary>
+    /// <param name="iniFilePath">ini配置文件路径</param>
+    /// <param name="appName">节点名</param>
+    /// <param name="keyName">key</param>
+    /// <param name="value">值</param>
+    /// <returns>成功返回true，失败返回false</returns>
+    public static bool WriteSetting(string iniFilePath, string appName, string keyName, string value)
     {
-        string val = ConfigurationManager.AppSettings.Get(key);
-        if (null == val)
-        {
-            return def;
-        }
-
-        return val;
+        return (0 == WritePrivateProfileString(appName, keyName, value, iniFilePath) ? false : true);
     }
 
-    public static int GetConInt(string key, int def = 0)
+    /// <summary>
+    /// 读配置
+    /// </summary>
+    /// <param name="iniFilePath">ini配置文件路径</param>
+    /// <param name="appName">节点名</param>
+    /// <param name="keyName">目标key</param>
+    /// <param name="defaultValue">默认值</param>
+    /// <returns>返回key对应的value</returns>
+    public static string ReadSetting(string iniFilePath, string appName, string keyName, string defaultValue)
     {
-        string val = ConfigurationManager.AppSettings.Get(key);
-        if (null == val)
-        {
-            return def;
-        }
-
-        return Int32.Parse(val);
+        StringBuilder result = new StringBuilder(VALUE_MAX_LEN + 1);
+        GetPrivateProfileString(appName, keyName, defaultValue, result, VALUE_MAX_LEN, iniFilePath);
+        return result.ToString();
     }
 
     #endregion

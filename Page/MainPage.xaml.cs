@@ -33,7 +33,6 @@ public partial class MainPage
                     continue;
                 }
                 var tap = IsVpn ? YiKit.GetInterface(ip: "172.27.") : YiKit.GetInterface(vir: false);
-
                 if (tap==null||tap.OperationalStatus != OperationalStatus.Up)
                 {  YiKit.RunOnUIThread(() =>
                     {
@@ -61,7 +60,6 @@ public partial class MainPage
                 long nowUp;
                 long nowDown;
                 tapas += "连接信息\n";
-
                 tapas += "已连接\n";
                 foreach (UnicastIPAddressInformation ipaddr in ipCollection)
                 {
@@ -82,7 +80,6 @@ public partial class MainPage
                         {
                             YiKit.RunOnUIThread(()=>MainStr.Content = "🔗已连接");
                             YiKit.RunOnUIThread(() => {MainBtn.Background =new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Img/buttonBlue.png"))); });
-
                         }
                         if (lastUp==0)
                         {
@@ -104,8 +101,6 @@ public partial class MainPage
                                 IP.Text = "IP：" + ipaddr.Address;
                                 MAC.Text = "MAC："+string.Format("{0:##.##.##.##:##:##}",tap.GetPhysicalAddress());
                             }
-                            
-                            
                             lastDown = nowDown;
                             lastUp = nowUp;
                         });

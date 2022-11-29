@@ -98,6 +98,7 @@
                 <Grid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
+                        <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
                         <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                     </ContextMenu>
