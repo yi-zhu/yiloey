@@ -16,6 +16,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Animation;
 using System.Xml;
+using holey.Dialog;
 using Microsoft.Win32;
 
 namespace holey;
@@ -56,6 +57,27 @@ public class YiKit
     {
         Console.WriteLine(msg);
     }
+
+
+    #region 弹出消息
+
+    private static Toast _toast=null;
+    public static void ShowToast(string msg,int time=5,int l=default,int t=default)
+    {
+   
+        if (_toast==null)
+        {
+            _toast = new Toast(){Message = msg,Time = time,L=l,T=t};
+        }
+        else
+        {
+            _toast.Message = msg;
+            _toast.Time = time;
+        }
+        _toast.ShowT();
+
+    }
+    #endregion
 
     public static void showAni(Control element)
     {
@@ -664,4 +686,52 @@ public class YiKit
     }
 
     #endregion
+
+    #region 进程操作
+ 
+    [DllImport("kernel32.dll")]
+   public static extern IntPtr OpenThread(ThreadAccess dwDesiredAccess, bool bInheritHandle, uint dwThreadId);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint SuspendThread(IntPtr hThread);
+
+    [DllImport("kernel32.dll")]
+    public static extern int ResumeThread(IntPtr hThread);
+
+    [Flags]
+    public enum ThreadAccess : uint
+    {
+        THREAD_SUSPEND_RESUME = 0x0002,
+        THREAD_GET_CONTEXT = 0x0008,
+        THREAD_SET_CONTEXT = 0x0010,
+        THREAD_QUERY_INFORMATION = 0x0040,
+        THREAD_SET_INFORMATION = 0x0020
+    }
+
+    public static void ProgressSuspend(Process process)
+    {
+        foreach (ProcessThread thread in process.Threads)
+        {
+            IntPtr hThread = OpenThread(ThreadAccess.THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
+            SuspendThread(hThread);
+            // do some work
+            // ResumeThread(hThread);
+        }
+    }
+
+    public static void ProgressResume(Process process)
+    {
+        foreach (ProcessThread thread in process.Threads)
+        {
+            IntPtr hThread = OpenThread(ThreadAccess.THREAD_SUSPEND_RESUME, false, (uint)thread.Id);
+            // SuspendThread(hThread);
+            // do some work
+            ResumeThread(hThread);
+        }
+    }
+
+
+    #endregion
+   
+    
 }

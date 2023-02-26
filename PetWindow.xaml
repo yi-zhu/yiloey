@@ -11,7 +11,7 @@
         WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
         AllowsTransparency="True" Loaded="FormLoaded" Topmost="True"
         PreviewMouseMove="PetWindow_OnPreviewMouseMove">
-    <Grid>
+    <Grid Name="Grid">
         <Grid.Resources>
              <Style TargetType="ProgressBar">
                 <Setter Property="Width" Value="50" />
@@ -99,6 +99,8 @@
                     <ContextMenu>
                         <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
                         <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
+                        <MenuItem Header="挂起" Click="PauseItem_OnClick"></MenuItem>
+                        <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem>
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
                         <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                     </ContextMenu>

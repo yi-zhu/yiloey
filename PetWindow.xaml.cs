@@ -1,14 +1,20 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Security.Principal;
 using System.Threading;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using System.Diagnostics;
+using holey.Dialog;
 
 namespace holey;
 
@@ -47,16 +53,18 @@ public partial class PetWindow : Window
 
     #endregion
 
+    private Rect r;
     public PetWindow()
     {
         InitializeComponent();
         Me = this;
-        var r = SystemParameters.WorkArea;
+        r = SystemParameters.WorkArea;
         Left = r.Right * 0.93 - ActualWidth;
         Top = r.Bottom * 0.9 - ActualHeight;
         YiKit.Print(Left);
         YiKit.Print(Top);
         LoadPet();
+       
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -119,11 +127,11 @@ public partial class PetWindow : Window
                             tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
                         }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
                         tapas += "速：" + (nowUp == lastUp ? "  " : "⇡")
-                                       + (nowDown == lastDown ? "  " : "⇣") + " "
-                                       + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000 / _sleep)) + "\n";
+                                      + (nowDown == lastDown ? "  " : "⇣") + " "
+                                      + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000 / _sleep)) + "\n";
 
-                        tapas += "上"+ (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
-                        tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown)  + "\n";
+                        tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
+                        tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
                         // tapas += "ip:"+ipaddr.Address + "\n";
                         // tapas += "MAC:"+tap.GetPhysicalAddress() + "\n";
                         YiKit.RunOnUIThread(() =>
@@ -131,7 +139,7 @@ public partial class PetWindow : Window
                             if (!tapas.Equals(MainStr.Content.ToString()))
                             {
                                 MainStr.Content = tapas;
-                            
+
                                 CpuRectEnd.ToolTip = ipaddr.Address;
                             }
 
@@ -151,10 +159,9 @@ public partial class PetWindow : Window
                 {
                     if (!MemStr.Text.Equals(memuse + ""))
                     {
-                        MemBtn.Height = memuse/2;
-                        MemStr.Text = memuse +""; 
+                        MemBtn.Height = memuse / 2;
+                        MemStr.Text = memuse + "";
                     }
-                     
                 });
                 // YiKit.Print(YiKit.MemUse());
 
@@ -188,9 +195,36 @@ public partial class PetWindow : Window
     /// <param name="e"></param>
     private void ShowItem_OnClick(object sender, RoutedEventArgs e)
     {
-        if (PresentationSource.FromVisual(MainWindow.Me) == null)
+        if (MainWindow.Me == null || PresentationSource.FromVisual(MainWindow.Me) == null)
         {
-            new MainWindow().Show();
+            if (new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
+            {
+                new MainWindow().Show();
+            }
+            else
+            {
+                //创建启动对象
+                ProcessStartInfo startInfo = new ProcessStartInfo();
+                startInfo.UseShellExecute = true;
+                startInfo.WorkingDirectory = Environment.CurrentDirectory;
+                startInfo.FileName = Assembly.GetEntryAssembly()?.Location + " main";
+                ;
+                //设置启动动作,确保以管理员身份运行
+                startInfo.Verb = "runas";
+
+
+                // Start the new process
+                try
+                {
+                    Process.Start(startInfo);
+                }
+                catch (Exception) //用户不同意权限关闭app
+                {
+                    // The user did not allow the application to run as administrator
+                    MessageBox.Show("Sorry, but I don't seem to be able to start " +
+                                    "this program with administrator rights!");
+                }
+            }
         }
         else MainWindow.Me?.Show();
         /*if (MainWindow.IsAlive)
@@ -244,11 +278,176 @@ public partial class PetWindow : Window
     private void CpuRectEnd_OnMouseUp(object sender, MouseButtonEventArgs e)
     {
         IsVpn = !IsVpn;
-        
     }
 
     private void TaskmgrItem_OnClick(object sender, RoutedEventArgs e)
     {
         YiKit.StartProcessSync("taskmgr");
+    }
+
+
+    private List<string> ShowInputDialogInWindow(string name, params string[] names)
+    {
+        InputDialog inputDialog = new InputDialog(name, names);
+        List<string> strs = null;
+
+        inputDialog.Result += (sender, _) => { strs = sender as List<string>; };
+        Point screenCoordinates = this.PointToScreen(new Point(0, 0));
+
+
+        inputDialog.Left = screenCoordinates.X - inputDialog.Width / 2;
+        inputDialog.Top = screenCoordinates.Y - inputDialog.Height;
+        bool? b = inputDialog.ShowDialog();
+        if (b is false)
+        {
+            return null;
+        }
+
+        return strs;
+    }
+
+    private List<string> ShowInputDialog(string name, params string[] names)
+    {
+        InputDialog inputDialog = new InputDialog(name, names);
+        List<string> strs = null;
+
+        inputDialog.Result += (sender, _) => { strs = sender as List<string>; };
+        inputDialog.Left = r.Width/2- inputDialog.Width / 2;
+        inputDialog.Top = r.Height / 2 - inputDialog.Height / 2;
+        bool? b = inputDialog.ShowDialog();
+        if (b is false)
+        {
+            return null;
+        }
+
+        return strs;
+    }
+
+
+    private void PauseItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        Suspend();
+    }
+
+
+    public void Suspend()
+    {
+        WindowsIdentity id = WindowsIdentity.GetCurrent();
+        WindowsPrincipal principal = new WindowsPrincipal(id);
+        if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+        {
+        }
+        else
+        {
+            // 获取当前进程的启动信息
+            var startInfo = new ProcessStartInfo
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Environment.CurrentDirectory,
+                FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                Arguments = "ProgressSuspend",
+                Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
+            };
+
+// 以管理员身份启动当前进程
+            try
+            {
+                Process.Start(startInfo);
+            }
+            catch (Win32Exception)
+            {
+                // 如果用户点击“否”或关闭UAC窗口，则会抛出Win32Exception异常
+                // 此时应该在代码中处理这种情况
+                // 例如给用户提示或者采取其他操作
+                return;
+            }
+
+            this.Close();
+        }
+
+
+        List<string> strs = ShowInputDialog("要暂停的进程名字例：leigod.exe或leigod");
+        if (strs == null || strs.Count == 0)
+        {
+            return;
+        }
+
+        string str = strs[0];
+        if (str.EndsWith(".exe"))
+        {
+            str = str.Substring(0, str.Length - 4);
+        }
+
+// 通过进程名查找并挂起目标进程
+        Process[] targetProcesses = Process.GetProcessesByName(str);
+        foreach (Process p in targetProcesses)
+        {
+            YiKit.ProgressSuspend(p);
+        }
+
+        YiKit.Print("已暂停"+targetProcesses.Length+"个进程！");
+        YiKit.ShowToast("已暂停"+targetProcesses.Length+"个进程！");
+        
+    }
+    public void Resume()
+    {
+        WindowsIdentity id = WindowsIdentity.GetCurrent();
+        WindowsPrincipal principal = new WindowsPrincipal(id);
+        if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+        {
+        }
+        else
+        {
+            // 获取当前进程的启动信息
+            var startInfo = new ProcessStartInfo
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Environment.CurrentDirectory,
+                FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                Arguments = "ProgressResume",
+                Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
+            };
+
+// 以管理员身份启动当前进程
+            try
+            {
+                Process.Start(startInfo);
+            }
+            catch (Win32Exception)
+            {
+                // 如果用户点击“否”或关闭UAC窗口，则会抛出Win32Exception异常
+                // 此时应该在代码中处理这种情况
+                // 例如给用户提示或者采取其他操作
+                return;
+            }
+
+            this.Close();
+        }
+
+
+        List<string> strs = ShowInputDialog("要恢复暂停的进程名字例：leigod.exe或leigod");
+        if (strs == null || strs.Count == 0)
+        {
+            return;
+        }
+
+        string str = strs[0];
+        if (str.EndsWith(".exe"))
+        {
+            str = str.Substring(0, str.Length - 4);
+        }
+
+// 通过进程名查找并挂起目标进程
+        Process[] targetProcesses = Process.GetProcessesByName(str);
+        foreach (Process p in targetProcesses)
+        {
+            YiKit.ProgressResume(p);
+        }
+        
+    }
+
+    private void ResumItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        Resume();
     }
 }
