@@ -54,17 +54,18 @@ public partial class PetWindow : Window
     #endregion
 
     private Rect r;
+
     public PetWindow()
     {
         InitializeComponent();
         Me = this;
         r = SystemParameters.WorkArea;
-        Left = r.Right * 0.93 - ActualWidth;
-        Top = r.Bottom * 0.9 - ActualHeight;
-        YiKit.Print(Left);
-        YiKit.Print(Top);
+        Left = r.Width  - Width-10;
+        Top = r.Bottom  - Height-10;
+        // YiKit.Print(Left);
+        // YiKit.Print(Width);
+        // YiKit.Print(Top);
         LoadPet();
-       
     }
 
     protected override void OnSourceInitialized(EventArgs e)
@@ -195,6 +196,8 @@ public partial class PetWindow : Window
     /// <param name="e"></param>
     private void ShowItem_OnClick(object sender, RoutedEventArgs e)
     {
+        OpenWin();
+        return;
         if (MainWindow.Me == null || PresentationSource.FromVisual(MainWindow.Me) == null)
         {
             if (new WindowsPrincipal(WindowsIdentity.GetCurrent()).IsInRole(WindowsBuiltInRole.Administrator))
@@ -312,7 +315,7 @@ public partial class PetWindow : Window
         List<string> strs = null;
 
         inputDialog.Result += (sender, _) => { strs = sender as List<string>; };
-        inputDialog.Left = r.Width/2- inputDialog.Width / 2;
+        inputDialog.Left = r.Width / 2 - inputDialog.Width / 2;
         inputDialog.Top = r.Height / 2 - inputDialog.Height / 2;
         bool? b = inputDialog.ShowDialog();
         if (b is false)
@@ -329,6 +332,49 @@ public partial class PetWindow : Window
         Suspend();
     }
 
+
+    public void OpenWin()
+    {
+        WindowsIdentity id = WindowsIdentity.GetCurrent();
+        WindowsPrincipal principal = new WindowsPrincipal(id);
+        if (principal.IsInRole(WindowsBuiltInRole.Administrator))
+        {
+            if (MainWindow.Me == null || PresentationSource.FromVisual(MainWindow.Me) == null)
+            {
+                new MainWindow().Show();
+            }
+            else
+
+                MainWindow.Me?.Show();
+        }
+        else
+        {
+            // 获取当前进程的启动信息
+            var startInfo = new ProcessStartInfo
+            {
+                UseShellExecute = true,
+                WorkingDirectory = Environment.CurrentDirectory,
+                FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                Arguments = "main",
+                Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
+            };
+
+// 以管理员身份启动当前进程
+            try
+            {
+                Process.Start(startInfo);
+            }
+            catch (Win32Exception)
+            {
+                // 如果用户点击“否”或关闭UAC窗口，则会抛出Win32Exception异常
+                // 此时应该在代码中处理这种情况
+                // 例如给用户提示或者采取其他操作
+                return;
+            }
+
+            this.Close();
+        }
+    }
 
     public void Suspend()
     {
@@ -385,10 +431,10 @@ public partial class PetWindow : Window
             YiKit.ProgressSuspend(p);
         }
 
-        YiKit.Print("已暂停"+targetProcesses.Length+"个进程！");
-        YiKit.ShowToast("已暂停"+targetProcesses.Length+"个进程！");
-        
+        YiKit.Print("已暂停" + targetProcesses.Length + "个进程！");
+        YiKit.ShowToast("已暂停" + targetProcesses.Length + "个进程！");
     }
+
     public void Resume()
     {
         WindowsIdentity id = WindowsIdentity.GetCurrent();
@@ -443,7 +489,6 @@ public partial class PetWindow : Window
         {
             YiKit.ProgressResume(p);
         }
-        
     }
 
     private void ResumItem_OnClick(object sender, RoutedEventArgs e)

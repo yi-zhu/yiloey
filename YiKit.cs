@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Configuration;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
@@ -79,6 +80,82 @@ public class YiKit
     }
     #endregion
 
+    
+    //发送post请求
+    public static string Post(string url, string data)
+    {
+        try
+        {
+            byte[] byteArray = Encoding.UTF8.GetBytes(data); //转化
+            HttpWebRequest webReq = (HttpWebRequest)WebRequest.Create(url);
+            webReq.Method = "POST";
+            webReq.ContentType = "application/x-www-form-urlencoded";
+            webReq.ContentLength = byteArray.Length;
+            Stream newStream = webReq.GetRequestStream();
+            // Send the data.
+            newStream.Write(byteArray, 0, byteArray.Length); //写入参数
+            newStream.Close();
+            HttpWebResponse response = (HttpWebResponse)webReq.GetResponse();
+            StreamReader sr = new StreamReader(response.GetResponseStream(), Encoding.UTF8);
+            string content = sr.ReadToEnd();
+            sr.Close();
+            response.Close();
+            newStream.Close();
+            return content;
+        }
+        catch (Exception e)
+        {
+            Print(e);
+            return "";
+        }
+    }
+    
+    //发送get请求
+    public static string Get(string url)
+    {
+        try
+        {
+            HttpWebRequest webReq = (HttpWebRequest)WebRequest.Create(url);
+            webReq.Method = "GET";
+            webReq.ContentType = "application/x-www-form-urlencoded";
+            HttpWebResponse response = (HttpWebResponse)webReq.GetResponse();
+            StreamReader sr = new StreamReader(response.GetResponseStream(), Encoding.UTF8);
+            string content = sr.ReadToEnd();
+            sr.Close();
+            response.Close();
+            return content;
+        }
+        catch (Exception e)
+        {
+            Print(e);
+            return "";
+        }
+    }
+    //使用WebClient下载文件
+    
+    
+    
+    /// <summary>
+    /// 下载文件
+    /// </summary>
+    /// <param name="fileName">客户端保存的文件名</param>
+    /// <param name="filePath">保存的文件夹路径</param>
+    /// <returns></returns>
+    public static void FileDownLoad(string url,string fileName,string filePath){
+        //判断保存的文件夹是否存在
+        if (!Directory.Exists(filePath))
+        {
+            //不存在则创建
+            Directory.CreateDirectory(filePath);
+        }
+        //System.Net 中的验证和下载方法
+        WebClient client = new WebClient();
+        client.Credentials = CredentialCache.DefaultCredentials;
+        client.DownloadFile(url, filePath + "\\" + fileName);
+    }
+
+    
+    
     public static void showAni(Control element)
     {
         DoubleAnimation doubleAnimation = new DoubleAnimation(1, 0, new Duration(TimeSpan.FromSeconds(2)));
@@ -102,7 +179,7 @@ public class YiKit
             arg = cmd.Substring(exe.Length);
         }
 
-       
+        Print(cmd);
         
         start?.DynamicInvoke();
         Process process = new Process(); //创建进程对象    
@@ -162,6 +239,7 @@ public class YiKit
         {
             return;
         }
+        Print(cmd);
 
         string exe = cmd.Split(' ')[0];
         string arg = cmd.Substring(exe.Length);
@@ -363,7 +441,23 @@ public class YiKit
         return null;
     }
 
-
+    //获得程序执行目录
+    public static string GetAppPath()
+    {
+        return Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location) ?? string.Empty;
+    }
+    
+    //程序启动目录
+    public static string GetAppStartPath()
+    {
+        return AppDomain.CurrentDomain.BaseDirectory;
+    }
+    
+    //判断当前是X86还是32
+    public static bool IsX86()
+    {
+        return !System.Environment.Is64BitOperatingSystem;
+    }
     // https://cn.bing.com/HPImageArchive.aspx?format=xml&idx=0&n=1&mkt=zh-CN  图片api
     private static PerformanceCounter? Cpuner;
     private static PerformanceCounter? Memner;

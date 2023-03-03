@@ -121,7 +121,7 @@ public partial class Toast : Window
             tbMessage.FontSize,
             Brushes.Black);
 
-        this.Width = formattedText.Width + 20;
+        this.Width = formattedText.Width + 30;
         this.Height = formattedText.Height + 30;
 
         this.Left = L - Width / 2;

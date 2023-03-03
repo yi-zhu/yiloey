@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.Net.NetworkInformation;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using holey.Page;
@@ -37,8 +38,14 @@ namespace holey
             _mainPage = new MainPage();
             _tapPage = new TapPage();
             MPage.Content = new Frame { Content = _mainPage };
+            if (YiKit.IsX86())
+            {
+                _vname = "ey";
+            }
         }
 
+
+        //启动其他应用程序
 
         public static void StarteYi()
         {
@@ -69,7 +76,7 @@ namespace holey
                     else if (msg.Contains("No Windows tap device found"))
                     {
                         //执行失败,没有网卡，或者已经运行
-
+                        Thread.Sleep(300);
                         //执行判断运行网卡，
                         Process[] processes = Process.GetProcesses();
                         foreach (Process process in processes)
@@ -78,13 +85,21 @@ namespace holey
                             {
                                 //已在运行
 
-                                YiKit.Print("程序已运行");
+                                YiKit.Print(process.ProcessName + "程序已运行");
                                 YiKit.RunOnUIThread(() => ShowLoading(false));
                                 return;
                             }
                         }
 
+                       
+
                         YiKit.RunOnUIThread(() => ShowLoading(false));
+                        //安装tap
+                        YiKit.RunThread((state =>
+                        {
+                            TapInstall();
+                            StarteYi();
+                        }));
                     }
                 });
 
@@ -95,6 +110,29 @@ namespace holey
 
 
                 });*/
+        }
+
+        public static void TapInstall()
+        {
+            YiKit.RunOnUIThread(() => ShowLoading(true));
+
+            
+            string prx = "\""+YiKit.GetAppPath()+"\\Drivers";
+
+            
+            YiKit.StartProcessSync("certutil -addstore \"TrustedPublisher\" "+prx+"\\opv.cer\"");
+            if (YiKit.IsX86())
+            {
+                prx += "\\x86\\";
+            }
+            else
+                prx += "\\x64\\";
+
+            YiKit.StartProcessSync(prx+"tapinstall.exe\" install "+prx+"OemVista.inf\" tap0901",end:(state =>
+            {
+                YiKit.RunOnUIThread(() => ShowLoading(false));
+
+            }));
         }
 
 
