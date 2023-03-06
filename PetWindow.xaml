@@ -98,6 +98,7 @@
                 <Grid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
+                        <MenuItem Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
                         <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
                         <MenuItem Header="挂起" Click="PauseItem_OnClick"></MenuItem>
                         <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem>

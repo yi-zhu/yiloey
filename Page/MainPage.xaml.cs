@@ -5,6 +5,8 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using YiKits;
+
 // ReSharper disable FieldCanBeMadeReadOnly.Local
 
 namespace holey.Page;

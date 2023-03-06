@@ -8,7 +8,7 @@
         <GenerateDocumentationFile>True</GenerateDocumentationFile>
         <Copyright>yi</Copyright>
         <LangVersion>latest</LangVersion>
-        <TargetFrameworks>net46;net461</TargetFrameworks>
+        <TargetFramework>net461</TargetFramework>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
@@ -82,6 +82,13 @@
 
     <ItemGroup>
       <Folder Include="Remote" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\YiKits\YiKits\YiKits.csproj">
+        <Private>True</Private>
+        <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
+      </ProjectReference>
     </ItemGroup>
 
 </Project>

@@ -14,7 +14,10 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using System.Diagnostics;
+using System.Net.WebSockets;
+using System.Windows.Controls;
 using holey.Dialog;
+using YiKits;
 
 namespace holey;
 
@@ -31,6 +34,7 @@ public partial class PetWindow : Window
     private const int GWL_EX_STYLE = -20;
     private const int WS_EX_APPWINDOW = 0x00040000, WS_EX_TOOLWINDOW = 0x00000080;
 
+    private int _clipboard = 0;
 
     public static PetWindow Me;
 
@@ -60,8 +64,8 @@ public partial class PetWindow : Window
         InitializeComponent();
         Me = this;
         r = SystemParameters.WorkArea;
-        Left = r.Width  - Width-10;
-        Top = r.Bottom  - Height-10;
+        Left = r.Width - Width - 10;
+        Top = r.Bottom - Height - 10;
         // YiKit.Print(Left);
         // YiKit.Print(Width);
         // YiKit.Print(Top);
@@ -70,8 +74,24 @@ public partial class PetWindow : Window
 
     protected override void OnSourceInitialized(EventArgs e)
     {
+        //无边框
         YiKit.Areo(this, new Thickness(-1));
+
         base.OnSourceInitialized(e);
+        _clipboard = YiKit.IniGetInt("clipboard", area: "ini", def: 0);
+        if (_clipboard == 1)
+        {
+            //开启剪切板监听
+            YiKit.ClipboardMonitor(this, OnClipboardUpdated);
+            clbname = YiKit.IniGet("clbname", "ini", def: "");
+            StartWb();
+        }
+    }
+
+
+    protected override void OnClosed(EventArgs e)
+    {
+        YiKit.CloseClipboardMonitor(OnClipboardUpdated);
     }
 
 
@@ -495,4 +515,151 @@ public partial class PetWindow : Window
     {
         Resume();
     }
+
+    private string clbname = "";
+    private void ClipboardItemOnClick(object sender, RoutedEventArgs e)
+    {
+        if (_clipboard == 1)
+        {
+            _clipboard = 0;
+            ((sender as MenuItem)!).Header = "已关闭剪切板监听";
+            YiKit.CloseClipboardMonitor(OnClipboardUpdated);
+            if (YiWscClient!=null&&YiWscClient.State == WebSocketState.Open)
+            {
+                CloseWb();
+            }
+        }
+        else
+        {
+            _clipboard = 1;
+             
+        
+                clbname = YiKit.ShowInputDialogDefValue("请输入相同的匹配码或者相同的名称,系统会自动记忆", YiKit.IniGet("clbname", "ini", def: ""))[0];
+            if (YiWscClient!=null&&YiWscClient.State != WebSocketState.Open)
+                CloseWb();
+            StartWb();
+
+            YiKit.IniWrite("clbname", clbname, "ini");
+            
+
+            YiKit.ClipboardMonitor(this, OnClipboardUpdated);
+            ((sender as MenuItem)!).Header = "已开启剪切板监听";
+         
+        }
+
+        {
+        }
+        YiKit.IniWrite("clipboard", value: _clipboard + "", area: "ini");
+    }
+
+    private static string lastClipboardText = "";
+
+    private void OnClipboardUpdated(object sender, EventArgs e)
+    {
+        if (Clipboard.ContainsText())
+        {
+            string text = "";
+            try
+            {
+                text = Clipboard.GetText();
+                if (lastClipboardText.Equals(text)) return;
+            }
+            catch (Exception)
+            {
+                Thread.Sleep(10);
+                YiKit.Print("error:--------------------------------------------");
+                try
+                {
+                    text = Clipboard.GetText();
+                    if (lastClipboardText.Equals(text)) return;
+                }
+                catch (Exception)
+                {
+                    YiKit.Print("error2:");
+                }
+            }
+
+            lastClipboardText = text;
+            if (YiWscClient.Send("cpy:"+clbname+":"+text)==false)
+            {
+                YiWscClient.Open();
+                YiWscClient.Send("cpy:" + clbname + ":" + text);
+            }
+
+            ;
+
+            YiKit.Print(text);
+        }
+        // string[] fs = data.GetFormats();
+        // tb.Text += $"\n数据格式：{string.Join("、", fs)}";
+    }
+
+    #region websocket
+
+    public YiWebSocketClient YiWscClient;
+
+    public void CloseWb()
+    {
+        YiWscClient?.Close();
+    }
+
+    public void StartWb()
+    {
+        YiKit.RunThread((state =>
+        {
+            YiWscClient = new YiWebSocketClient("ws://27.221.101.137:10011/",clbname);
+            YiWscClient.OnOpen += YiWscClientOnOpen;
+            YiWscClient.OnMessage += YiWscClientOnMessage;
+            YiWscClient.OnClose += YiWscClientOnClose;
+            YiWscClient.OnError += YiWscClientOnError;
+
+            YiWscClient.Open();
+            
+        }));
+   
+    }
+
+    private void YiWscClientOnError(object sender, Exception ex)
+    {
+    }
+
+    private void YiWscClientOnClose(object sender, EventArgs e)
+    {
+    }
+
+    private void YiWscClientOnMessage(object sender, string data)
+    {
+        //处理的消息错误将会忽略
+        try
+        {
+            //需要优化
+            //处理消息
+            if (data.StartsWith("cpy:"))
+            {
+                
+                /*YiKit.RunThread((delegate(object state)
+                {
+                    YiKit.SetClipboardText(data.Remove(0,4));
+                }));*/
+                Thread th = new Thread(delegate()
+                {
+                    YiKit.SetClipboardText(data.Remove(0,4));
+                });
+                th.TrySetApartmentState(ApartmentState.STA);
+                th.Start();
+                th.Join();
+                
+            }
+        }
+        catch (Exception ex)
+        {
+        }
+    }
+
+    private void YiWscClientOnOpen(object sender, EventArgs e)
+    {
+        YiWscClient.Send("ini:"+clbname);
+    }
+
+    #endregion
 }
