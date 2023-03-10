@@ -516,7 +516,14 @@ public partial class PetWindow : Window
         Resume();
     }
 
+
     private string clbname = "";
+
+    private void UnlockClipboardItemOnClick(object sender, RoutedEventArgs e)
+    {
+        // YiKit.StartProcessSync("adb -d shell appops set space.yizhu.njapp SYSTEM_ALERT_WINDOW allow;adb -d shell pm grant space.yizhu.njapp android.permission.READ_LOGS;adb shell am force-stop space.yizhu.njapp;");
+    }
+
     private void ClipboardItemOnClick(object sender, RoutedEventArgs e)
     {
         if (_clipboard == 1)
@@ -524,7 +531,8 @@ public partial class PetWindow : Window
             _clipboard = 0;
             ((sender as MenuItem)!).Header = "已关闭剪切板监听";
             YiKit.CloseClipboardMonitor(OnClipboardUpdated);
-            if (YiWscClient!=null&&YiWscClient.State == WebSocketState.Open)
+            YiKit.IniWrite("clipboard", area: "ini", value: 0 + "");
+            if (YiWscClient != null && YiWscClient.State == WebSocketState.Open)
             {
                 CloseWb();
             }
@@ -532,19 +540,18 @@ public partial class PetWindow : Window
         else
         {
             _clipboard = 1;
-             
-        
-                clbname = YiKit.ShowInputDialogDefValue("请输入相同的匹配码或者相同的名称,系统会自动记忆", YiKit.IniGet("clbname", "ini", def: ""))[0];
-            if (YiWscClient!=null&&YiWscClient.State != WebSocketState.Open)
+
+            clbname =
+                YiKit.ShowInputDialogDefValue("请输入相同的匹配码或者相同的名称,系统会自动记忆", YiKit.IniGet("clbname", "ini", def: ""))[0];
+            if (YiWscClient != null && YiWscClient.State != WebSocketState.Open)
                 CloseWb();
             StartWb();
 
             YiKit.IniWrite("clbname", clbname, "ini");
-            
+
 
             YiKit.ClipboardMonitor(this, OnClipboardUpdated);
             ((sender as MenuItem)!).Header = "已开启剪切板监听";
-         
         }
 
         {
@@ -580,7 +587,7 @@ public partial class PetWindow : Window
             }
 
             lastClipboardText = text;
-            if (YiWscClient.Send("cpy:"+clbname+":"+text)==false)
+            if (YiWscClient.Send("cpy:" + clbname + ":" + text) == false)
             {
                 YiWscClient.Open();
                 YiWscClient.Send("cpy:" + clbname + ":" + text);
@@ -607,16 +614,13 @@ public partial class PetWindow : Window
     {
         YiKit.RunThread((state =>
         {
-            YiWscClient = new YiWebSocketClient("ws://27.221.101.137:10011/",clbname);
+            YiWscClient = new YiWebSocketClient("ws://27.221.101.137:10011/", clbname);
             YiWscClient.OnOpen += YiWscClientOnOpen;
             YiWscClient.OnMessage += YiWscClientOnMessage;
             YiWscClient.OnClose += YiWscClientOnClose;
             YiWscClient.OnError += YiWscClientOnError;
-
             YiWscClient.Open();
-            
         }));
-   
     }
 
     private void YiWscClientOnError(object sender, Exception ex)
@@ -636,29 +640,25 @@ public partial class PetWindow : Window
             //处理消息
             if (data.StartsWith("cpy:"))
             {
-                
                 /*YiKit.RunThread((delegate(object state)
                 {
                     YiKit.SetClipboardText(data.Remove(0,4));
                 }));*/
-                Thread th = new Thread(delegate()
-                {
-                    YiKit.SetClipboardText(data.Remove(0,4));
-                });
+                Thread th = new Thread(delegate() { YiKit.SetClipboardText(data.Remove(0, 4)); });
                 th.TrySetApartmentState(ApartmentState.STA);
                 th.Start();
                 th.Join();
-                
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
+            // ignored
         }
     }
 
     private void YiWscClientOnOpen(object sender, EventArgs e)
     {
-        YiWscClient.Send("ini:"+clbname);
+        YiWscClient.Send("ini:" + clbname);
     }
 
     #endregion
