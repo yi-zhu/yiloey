@@ -69,6 +69,7 @@ public partial class PetWindow : Window
         // YiKit.Print(Left);
         // YiKit.Print(Width);
         // YiKit.Print(Top);
+        // YiKit.GetAllCate();
         LoadPet();
     }
 
@@ -143,6 +144,7 @@ public partial class PetWindow : Window
                             lastUp = nowUp;
                         }
 
+
                         /*if (nowUp - lastUp<10)
                         {
                             tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
@@ -184,6 +186,8 @@ public partial class PetWindow : Window
                         MemStr.Text = memuse + "";
                     }
                 });
+                YiKit.CpuTem((b) => { YiKit.RunOnUIThread(() => { CpuStr.Text = b + ""; }); });
+                YiKit.GpuTem((b) => { YiKit.RunOnUIThread(() => { StatStr.Text = b + ""; }); });
                 // YiKit.Print(YiKit.MemUse());
 
                 #endregion
@@ -396,6 +400,8 @@ public partial class PetWindow : Window
         }
     }
 
+    private List<string> suspendsList = new List<string>();
+
     public void Suspend()
     {
         WindowsIdentity id = WindowsIdentity.GetCurrent();
@@ -432,7 +438,7 @@ public partial class PetWindow : Window
         }
 
 
-        List<string> strs = ShowInputDialog("要暂停的进程名字例：leigod.exe或leigod");
+        List<string> strs = ShowInputDialog("要暂停的进程名字例：window.exe或window");
         if (strs == null || strs.Count == 0)
         {
             return;
@@ -446,13 +452,33 @@ public partial class PetWindow : Window
 
 // 通过进程名查找并挂起目标进程
         Process[] targetProcesses = Process.GetProcessesByName(str);
-        foreach (Process p in targetProcesses)
+        if (targetProcesses.Length == 0)
         {
-            YiKit.ProgressSuspend(p);
+            targetProcesses = Process.GetProcessesByName(str + "64");
         }
 
-        YiKit.Print("已暂停" + targetProcesses.Length + "个进程！");
-        YiKit.ShowToast("已暂停" + targetProcesses.Length + "个进程！");
+        bool isSuspend = false;
+        foreach (Process p in targetProcesses)
+        {
+            if (suspendsList.Contains(p.ProcessName))
+            {
+                YiKit.ProgressResume(p);
+                suspendsList.Remove(p.ProcessName);
+            }
+            else
+            {
+                isSuspend = true;
+                YiKit.ProgressSuspend(p);
+                suspendsList.Add(p.ProcessName);
+            }
+        }
+
+        if (isSuspend)
+        {
+            YiKit.ShowToast("已挂起" + targetProcesses.Length + "个" + str + "进程！");
+        }
+        else
+            YiKit.ShowToast("已恢复" + targetProcesses.Length + "个" + str + "进程！");
     }
 
     public void Resume()
@@ -559,6 +585,8 @@ public partial class PetWindow : Window
         YiKit.IniWrite("clipboard", value: _clipboard + "", area: "ini");
     }
 
+    //读取cpu温度
+
     private static string lastClipboardText = "";
 
     private void OnClipboardUpdated(object sender, EventArgs e)
@@ -662,4 +690,52 @@ public partial class PetWindow : Window
     }
 
     #endregion
+
+    private List<string> hiddenList = new List<string>();
+
+    private void HideItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = ShowInputDialog("要隐藏的进程名字例：window.exe或window");
+        if (strs == null || strs.Count == 0)
+        {
+            return;
+        }
+
+        string str = strs[0];
+        if (str.EndsWith(".exe"))
+        {
+            str = str.Substring(0, str.Length - 4);
+        }
+
+// 通过进程名查找并挂起目标进程
+        Process[] targetProcesses = Process.GetProcessesByName(str);
+        if (targetProcesses.Length == 0)
+        {
+            targetProcesses = Process.GetProcessesByName(str + "64");
+        }
+
+        bool isHidden = false;
+
+        foreach (Process p in targetProcesses)
+        {
+            if (hiddenList.Contains(p.ProcessName))
+            {
+                YiKit.ShowWindow(p);
+                hiddenList.Remove(p.ProcessName);
+            }
+            else
+            {
+                hiddenList.Add(p.ProcessName);
+                YiKit.ShowWindow(p, false);
+                isHidden = true;
+            }
+        }
+
+        if (isHidden)
+        {
+            YiKit.ShowToast("已隐藏" + targetProcesses.Length + "个" + str + "窗口！");
+        }
+        else
+            YiKit.ShowToast("已恢复" + targetProcesses.Length + "个" + str + "窗口！");
+    }
 }

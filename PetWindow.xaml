@@ -101,8 +101,9 @@
                         <MenuItem Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
                         <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem>
                         <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
-                        <MenuItem Header="挂起" Click="PauseItem_OnClick"></MenuItem>
-                        <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem>
+                        <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
+                        <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
+                        <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
                         <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                     </ContextMenu>
@@ -143,33 +144,49 @@
                         <ColumnDefinition Width="20" />
                         <ColumnDefinition Width="20" />
                     </Grid.ColumnDefinitions>
-                    <Rectangle Name="CpuRect" Grid.Column="0" Grid.ColumnSpan="2" Stroke="Transparent" Height="10"
-                               Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left"
-                               VerticalAlignment="Top">
-                        <Rectangle.Fill>
-                            <LinearGradientBrush>
-                                <LinearGradientBrush.RelativeTransform>
-                                    <TransformGroup>
-                                        <RotateTransform Angle="0" CenterX="1" CenterY="1" />
-                                        <TranslateTransform />
-                                    </TransformGroup>
+                    <Grid Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
+                        <Rectangle Name="CpuRect"  Stroke="Transparent" Height="10"
+                               Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left"   
+                               VerticalAlignment="Top" StrokeThickness="2">
+                            <Rectangle.Fill>
+                                <LinearGradientBrush MappingMode="Absolute" StartPoint="100,0" EndPoint="0,0" SpreadMethod="Pad">
+                                    <LinearGradientBrush.RelativeTransform>
+                                        <TransformGroup>
+                                            <RotateTransform Angle="0" CenterX="0" CenterY="0" />
+                                            <TranslateTransform />
+                                        </TransformGroup>
+                                    </LinearGradientBrush.RelativeTransform>
 
-                                </LinearGradientBrush.RelativeTransform>
-
-                                <GradientStop Color="#44f0a08f" Offset="0" />
-                                <GradientStop Color="#66f0a08f" Offset="0.2" />
-                                <GradientStop Color="#aaf0a08f" Offset="0.66" />
-                                <GradientStop Color="#ccf0a08f" Offset="1" />
-                            </LinearGradientBrush>
-                        </Rectangle.Fill>
-                        <FrameworkElement.Effect>
-                            <DropShadowEffect BlurRadius="2"
+                                    <GradientStop Color="#f00" Offset="0"  />
+                                    <GradientStop Color="#ef0010" Offset=".09" />
+                                    <GradientStop Color="#fff" Offset=".1" />
+                                    <GradientStop Color="#df0020" Offset=".12" />
+                                    <GradientStop Color="#af0050" Offset=".48" />
+                                    <GradientStop Color="#800080" Offset=".5" />
+                                    <GradientStop Color="#5000af" Offset=".52" />
+                                    <GradientStop Color="#00f" Offset="1" />
+                                </LinearGradientBrush>
+                            </Rectangle.Fill>
+                            <FrameworkElement.Effect>
+                                <DropShadowEffect BlurRadius="2"
                                               RenderingBias="Quality"
                                               ShadowDepth="0"
-                                              Color="LightCoral" />
-                        </FrameworkElement.Effect>
-                    </Rectangle>
-                 
+                                              Color="Black" />
+                            </FrameworkElement.Effect>
+                        </Rectangle>
+
+
+                        <Viewbox>
+                            <TextBlock x:Name="CpuStr" FontSize="8"  Width="100"  Padding="1.5,0,0,0"
+                                           Foreground="#fff" HorizontalAlignment="Stretch" >
+                                     80
+                                <TextBlock.Effect>
+                                    <DropShadowEffect x:Name="CpuStrShadow" Color="#f00" BlurRadius="2" ShadowDepth=".4" Opacity="1" Direction="0" />
+                                </TextBlock.Effect>
+                            </TextBlock>
+                        </Viewbox>
+                    </Grid>
+            
 
 
 
@@ -216,19 +233,19 @@
                                     </LinearGradientBrush.RelativeTransform>
 
 
-                                    <GradientStop Color="#ffff0000" Offset="0" />
-                                    <GradientStop Color="#ffff0000" Offset="0.1" />
+                                    <GradientStop Color="#ff0000ff" Offset="0" />
+                                    <!--<GradientStop Color="#ffff0000" Offset="0.1" />
                                     <GradientStop Color="#a0f00000" Offset="0.2" />
                                     <GradientStop Color="#a0f00000" Offset="0.5" />
                                     <GradientStop Color="#88ff0000" Offset="0.5" />
-                                    <GradientStop Color="#99ff0000" Offset="0.9" />
+                                    <GradientStop Color="#99ff0000" Offset="0.9" />-->
                                     <GradientStop Color="#99ff00ff" Offset="1" />
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
 
                         </Rectangle>
                         <Viewbox>
-                            <TextBlock x:Name="StatStr"  Width="10" 
+                            <TextBlock x:Name="StatStr"   FontSize="13"
                                            Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">H
                                 <TextBlock.Effect>
                                     <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3" ShadowDepth="0" Opacity="0.8" Direction="0" />
@@ -245,47 +262,35 @@
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                     <Grid VerticalAlignment="Bottom">
                         <Rectangle   Stroke="Transparent"  Height="50"  Width="12" Cursor="Hand" 
-                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"  Margin="0" >
+                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"  Margin="0" StrokeThickness="0" >
                             <Rectangle.Fill>
-                                <LinearGradientBrush>
-                                    <LinearGradientBrush.Transform>
-                                        <TransformGroup>
-                                            <ScaleTransform/>
-                                            <SkewTransform/>
-                                            <RotateTransform Angle="0"/>
-                                            <TranslateTransform/>
-                                        </TransformGroup>
-                                    </LinearGradientBrush.Transform>
+                                <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50" SpreadMethod="Pad">
                                     <LinearGradientBrush.RelativeTransform>
                                         <TransformGroup>
-                                            <ScaleTransform ScaleX="1" ScaleY="1"/>
-                                         
-                                          
-                                            <TranslateTransform/>
+                                            <RotateTransform Angle="0" CenterX="0" CenterY="0" />
+                                            <TranslateTransform />
                                         </TransformGroup>
                                     </LinearGradientBrush.RelativeTransform>
-                                    <GradientStop Color="#33f0a08f" Offset="1" />
-                                    <GradientStop Color="#44FF0000" Offset="0.8" />
-                                    <GradientStop Color="#55f0a08f" Offset="0.7" />
-                                    <GradientStop Color="#66f0a08f" Offset="0.5" />
-                                    <GradientStop Color="#99f0a08f" Offset="0.3" />
-                                    <GradientStop Color="#bbf0a08f" Offset="0.2" />
-                                    <GradientStop Color="#f000" Offset="0.1" />
+
+                                
+                                    <GradientStop Color="#f00" Offset="0"  />
+                                    <GradientStop Color="#ef0010" Offset=".09" />
+                                    <GradientStop Color="#fff" Offset=".1" />
+                                    <GradientStop Color="#df0020" Offset=".12" />
+                                    <GradientStop Color="#af0050" Offset=".48" />
+                                    <GradientStop Color="#800080" Offset=".5" />
+                                    <GradientStop Color="#5000af" Offset=".52" />
+                                    <GradientStop Color="#00f" Offset="1" />
                                 </LinearGradientBrush>
                             </Rectangle.Fill>
-                            <FrameworkElement.Effect>
-                                <DropShadowEffect BlurRadius="1"
-                                              RenderingBias="Quality"
-                                              ShadowDepth="0"
-                                              Color="LightCoral" />
-                            </FrameworkElement.Effect>
+                     
                         </Rectangle>
                         <Viewbox>
-                            <TextBlock x:Name="MemStr" FontSize="13" Width="10" TextWrapping="Wrap"
-                                           Foreground="#ff00" HorizontalAlignment="Stretch" >
+                            <TextBlock x:Name="MemStr" FontSize="13" Width="8" TextWrapping="Wrap"
+                                           Foreground="#ffff" HorizontalAlignment="Stretch" >
                                     100
                                 <TextBlock.Effect>
-                                    <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="0.8" Direction="0" />
+                                    <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="1" Direction="0" />
                                 </TextBlock.Effect>
                             </TextBlock>
                         </Viewbox>
