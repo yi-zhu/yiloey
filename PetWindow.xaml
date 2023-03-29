@@ -120,7 +120,7 @@
                         Background="Transparent" Foreground="Red" FontWeight="Bold"
                          IsHitTestVisible="False"
                         Style="{StaticResource NoneButton}" Cursor="Hand">
-                    121
+                    网络.by yi
                     <!-- 内容 -->
                     <!--<media:TextShape x:Name="MainStr"
                                      HorizontalAlignment="Left"
@@ -176,12 +176,14 @@
                         </Rectangle>
 
 
-                        <Viewbox>
-                            <TextBlock x:Name="CpuStr" FontSize="8"  Width="100"  Padding="1.5,0,0,0"
-                                           Foreground="#fff" HorizontalAlignment="Stretch" >
-                                     80
+                        <Viewbox Width="100">
+                            <TextBlock x:Name="CpuStr" FontSize="9"  Height="10"
+                               Width="100" Cursor="Hand" ToolTip="speed"  
+                               VerticalAlignment="Top"  Padding="1.5,0,0,0"  FontWeight="Bold" 
+                                           Foreground="#fff" HorizontalAlignment="Center" TextAlignment="Center" Background="#100f" >
+                                      
                                 <TextBlock.Effect>
-                                    <DropShadowEffect x:Name="CpuStrShadow" Color="#f00" BlurRadius="2" ShadowDepth=".4" Opacity="1" Direction="0" />
+                                    <DropShadowEffect x:Name="CpuStrShadow" Color="#000" BlurRadius="5" ShadowDepth="0" Opacity=".9" Direction="0" />
                                 </TextBlock.Effect>
                             </TextBlock>
                         </Viewbox>

@@ -186,7 +186,7 @@ public partial class PetWindow : Window
                         MemStr.Text = memuse + "";
                     }
                 });
-                YiKit.CpuTem((b) => { YiKit.RunOnUIThread(() => { CpuStr.Text = b + ""; }); });
+                YiKit.CpuTem((b) => { YiKit.RunOnUIThread(() => { CpuStr.Text = b + "℃"; }); });
                 YiKit.GpuTem((b) => { YiKit.RunOnUIThread(() => { StatStr.Text = b + ""; }); });
                 // YiKit.Print(YiKit.MemUse());
 
