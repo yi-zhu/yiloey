@@ -134,7 +134,7 @@
                                      Text="正在加载">
                     </media:TextShape>-->
                     <Button.Effect>
-                        <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="-0.1" Opacity="1" Direction="9" />
+                        <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="3" ShadowDepth="1" Opacity="1" Direction="300" />
                     </Button.Effect>
                 </Button>
                 <!-- CPU -->
@@ -177,13 +177,27 @@
 
 
                         <Viewbox Width="100">
-                            <TextBlock x:Name="CpuStr" FontSize="9"  Height="10"
-                               Width="100" Cursor="Hand" ToolTip="speed"  
-                               VerticalAlignment="Top"  Padding="1.5,0,0,0"  FontWeight="Bold" 
-                                           Foreground="#fff" HorizontalAlignment="Center" TextAlignment="Center" Background="#100f" >
-                                      
+                            <TextBlock x:Name="CpuStr" FontSize="13"   Margin="0,-3,0,0" Padding="9,0,0,0"
+                               Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"  
+                               VerticalAlignment="Center"   FontWeight="Bold"  
+                                            HorizontalAlignment="Center" TextAlignment="Center" >
+                                       
+                                <TextBlock.Foreground>
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,1" EndPoint="0,0" SpreadMethod="Pad">
+                                        <LinearGradientBrush.RelativeTransform>
+                                            <TransformGroup>
+                                                <RotateTransform Angle="0" CenterX="0" CenterY="0" />
+                                                <TranslateTransform />
+                                            </TransformGroup>
+                                        </LinearGradientBrush.RelativeTransform>
+
+                                        <GradientStop Color="#f00" Offset="0"  />
+                                     
+                                        <GradientStop Color="#fff" Offset="1" />
+                                    </LinearGradientBrush>
+                                </TextBlock.Foreground>
                                 <TextBlock.Effect>
-                                    <DropShadowEffect x:Name="CpuStrShadow" Color="#000" BlurRadius="5" ShadowDepth="0" Opacity=".9" Direction="0" />
+                                    <DropShadowEffect x:Name="CpuStrShadow" Color="#00f" BlurRadius="3" ShadowDepth="1" Opacity="1" Direction="270" />
                                 </TextBlock.Effect>
                             </TextBlock>
                         </Viewbox>
@@ -220,7 +234,7 @@
                     <Grid>
 
                      
-                        <Rectangle Name="CpuRectEnd"  Stroke="Transparent" Width="20" Height="10"
+                        <Rectangle Name="StatStrRect"  Stroke="Transparent" Width="20" Height="10"
                                    Cursor="Hand"
                                    ToolTip="speed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                             <Rectangle.Fill>

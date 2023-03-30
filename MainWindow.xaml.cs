@@ -22,11 +22,14 @@ namespace holey
         public static PetWindow? PetWindow;
         public static MemoWindow? MemoWindow;
 
+        /// <summary>
+        /// 默认运行64位程序
+        /// </summary>
         private static string _vname = "eyi";
 
         public MainWindow()
         {
-            if (PetWindow == null)
+            if (PetWindow.Me == null)
             {
                 PetWindow = new PetWindow();
                 PetWindow.Show();

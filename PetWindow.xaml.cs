@@ -12,12 +12,12 @@ using System.Windows;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Windows.Controls;
+using System.Windows.Media.Effects;
 using holey.Dialog;
 using YiKits;
+using Point = System.Windows.Point;
 
 namespace holey;
 
@@ -111,8 +111,7 @@ public partial class PetWindow : Window
         {
             long lastUp = 0;
             long lastDown = 0;
-            int cpuse = 0;
-            int memuse = 0;
+       
             while (IsAlive)
             {
                 var tap = IsVpn ? YiKit.GetInterface(ip: "172.27.") : YiKit.GetInterface(vir: false);
@@ -163,7 +162,7 @@ public partial class PetWindow : Window
                             {
                                 MainStr.Content = tapas;
 
-                                CpuRectEnd.ToolTip = ipaddr.Address;
+                                StatStrRect.ToolTip = ipaddr.Address;
                             }
 
                             lastDown = nowDown;
@@ -173,8 +172,21 @@ public partial class PetWindow : Window
                     }
                 }
 
-                #region CPU使用率
 
+                Thread.Sleep(_sleep);
+            }
+        });
+        YiKit.RunThread(_ =>
+        {
+         
+            int cpuse = 0;
+            int memuse = 0;
+            while (IsAlive)
+            {
+               
+
+                #region CPU使用率
+                
                 cpuse = (int)YiKit.CpuUse();
                 memuse = (int)YiKit.MemUse();
                 YiKit.RunOnUIThread(() => CpuRect.Width = cpuse);
@@ -186,8 +198,83 @@ public partial class PetWindow : Window
                         MemStr.Text = memuse + "";
                     }
                 });
-                YiKit.CpuTem((b) => { YiKit.RunOnUIThread(() => { CpuStr.Text = b + "℃"; }); });
-                YiKit.GpuTem((b) => { YiKit.RunOnUIThread(() => { StatStr.Text = b + ""; }); });
+                YiKit.CpuTem((b) =>
+                {
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        if (!ReferenceEquals(b + "℃", CpuStr.Text))
+                        {
+                            CpuStr.Text = b + "℃";
+                            if (b is float bf)
+                            {
+                                if (CpuStr.Foreground is LinearGradientBrush)
+                                {
+                                    (CpuStr.Foreground as LinearGradientBrush)!.StartPoint =
+                                        new Point(0, (100 - bf) / 2);
+                                }
+                            }
+                        }
+                    });
+                });
+                YiKit.GpuTem((b) =>
+                {
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        if (!ReferenceEquals(b, StatStr.Text))
+                        {
+                            if ((float)b > 80)
+                            {
+                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                {
+                                    linearGradientBrush.GradientStops[0].Color = Colors.Red;
+                                    linearGradientBrush.GradientStops[1].Color = Colors.Red;
+                                }
+                            }
+                            else if ((float)b > 70)
+                            {
+                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                {
+                                    linearGradientBrush.GradientStops[0].Color = Colors.Firebrick;
+                                    linearGradientBrush.GradientStops[1].Color = Colors.Red;
+                                }
+                            }
+                            else if ((float)b > 60)
+                            {
+                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                {
+                                    linearGradientBrush.GradientStops[0].Color = Colors.Fuchsia;
+                                    linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
+                                }
+                            }
+                            else if ((float)b > 50)
+                            {
+                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                {
+                                    linearGradientBrush.GradientStops[0].Color = Colors.BlueViolet;
+                                    linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
+                                }
+                            }
+                            else if ((float)b > 40)
+                            {
+                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                {
+                                    linearGradientBrush.GradientStops[0].Color = Colors.Blue;
+                                    linearGradientBrush.GradientStops[1].Color = Colors.Fuchsia;
+                                }
+                            }
+                            else
+                            {
+                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                {
+                                    linearGradientBrush.GradientStops[0].Color = Colors.Blue;
+                                    linearGradientBrush.GradientStops[1].Color = Colors.Blue;
+                                }
+                            }
+
+                            StatStr.Text = b + "";
+                        }
+                    });
+                });
                 // YiKit.Print(YiKit.MemUse());
 
                 #endregion
@@ -196,12 +283,12 @@ public partial class PetWindow : Window
             }
         });
     }
+    //调用英伟达的显卡
 
 
     protected override void OnClosing(CancelEventArgs e)
     {
         IsAlive = false;
-
         base.OnClosing(e);
     }
 
@@ -209,7 +296,7 @@ public partial class PetWindow : Window
     {
         if (e.LeftButton == MouseButtonState.Pressed)
         {
-            this.DragMove();
+            DragMove();
         }
     }
 
@@ -274,7 +361,7 @@ public partial class PetWindow : Window
         else MainWindow.Me?.Show();
 
         //退出
-        this.Close();
+        Close();
     }
 
     /// <summary>
@@ -285,7 +372,7 @@ public partial class PetWindow : Window
     private void ExitItem_OnClick(object sender, RoutedEventArgs e)
     {
         //退出
-        this.Close();
+        Close();
         Application.Current.Shutdown();
     }
 
@@ -296,7 +383,7 @@ public partial class PetWindow : Window
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
     {
-        this.AllowsTransparency = !AllowsTransparency;
+        AllowsTransparency = !AllowsTransparency;
         YiKit.Print("dsds");
         //鼠标穿透
         SetWindowLong(new WindowInteropHelper(this).Handle, -20, 0x20);
@@ -319,7 +406,7 @@ public partial class PetWindow : Window
         List<string> strs = null;
 
         inputDialog.Result += (sender, _) => { strs = sender as List<string>; };
-        Point screenCoordinates = this.PointToScreen(new Point(0, 0));
+        Point screenCoordinates = PointToScreen(new Point(0, 0));
 
 
         inputDialog.Left = screenCoordinates.X - inputDialog.Width / 2;
@@ -378,7 +465,7 @@ public partial class PetWindow : Window
             {
                 UseShellExecute = true,
                 WorkingDirectory = Environment.CurrentDirectory,
-                FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                FileName = Process.GetCurrentProcess().MainModule.FileName,
                 Arguments = "main",
                 Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
             };
@@ -396,7 +483,7 @@ public partial class PetWindow : Window
                 return;
             }
 
-            this.Close();
+            Close();
         }
     }
 
@@ -416,7 +503,7 @@ public partial class PetWindow : Window
             {
                 UseShellExecute = true,
                 WorkingDirectory = Environment.CurrentDirectory,
-                FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                FileName = Process.GetCurrentProcess().MainModule.FileName,
                 Arguments = "ProgressSuspend",
                 Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
             };
@@ -434,7 +521,7 @@ public partial class PetWindow : Window
                 return;
             }
 
-            this.Close();
+            Close();
         }
 
 
@@ -495,7 +582,7 @@ public partial class PetWindow : Window
             {
                 UseShellExecute = true,
                 WorkingDirectory = Environment.CurrentDirectory,
-                FileName = System.Diagnostics.Process.GetCurrentProcess().MainModule.FileName,
+                FileName = Process.GetCurrentProcess().MainModule.FileName,
                 Arguments = "ProgressResume",
                 Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
             };
@@ -513,7 +600,7 @@ public partial class PetWindow : Window
                 return;
             }
 
-            this.Close();
+            Close();
         }
 
 
