@@ -43,7 +43,7 @@ public partial class InputDialog : Window
     void acceptButton_Click(object sender, RoutedEventArgs e)
     {
         // Accept the dialog and return the dialog result
-        this.DialogResult = true;
+        DialogResult = true;
     }
 
     private void Ok_OnClick(object sender, RoutedEventArgs e)
@@ -56,13 +56,13 @@ public partial class InputDialog : Window
         }
 
         if (Result != null) Result(list, EventArgs.Empty);
-        this.DialogResult = true;
-        this.Close();
+        DialogResult = true;
+        Close();
     }
 
     private void Close_OnClick(object sender, RoutedEventArgs e)
     {
-        this.DialogResult = false;
-        this.Close();
+        DialogResult = false;
+        Close();
     }
 }

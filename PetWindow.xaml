@@ -98,12 +98,13 @@
                 <Grid.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
-                        <MenuItem Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
-                        <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem>
+                        <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
+                        <!-- <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem> -->
                         <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
                         <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
                         <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
                         <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
+                        <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
                         <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                     </ContextMenu>

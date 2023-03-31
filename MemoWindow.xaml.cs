@@ -90,7 +90,7 @@ public partial class MemoWindow : Window
     {
         if (e.LeftButton == MouseButtonState.Pressed)
         {
-            this.DragMove();
+            DragMove();
         }
     }
 
@@ -126,7 +126,7 @@ public partial class MemoWindow : Window
         else MainWindow.Me?.Show();
 
         //退出
-        this.Close();
+        Close();
     }
 
     /// <summary>
@@ -137,14 +137,14 @@ public partial class MemoWindow : Window
     private void ExitItem_OnClick(object sender, RoutedEventArgs e)
     {
         //退出
-        this.Close();
+        Close();
         Application.Current.Shutdown();
     }
 
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
     {
-        this.AllowsTransparency = !AllowsTransparency;
+        AllowsTransparency = !AllowsTransparency;
         YiKit.Print("dsds");
         //鼠标穿透
         SetWindowLong(new WindowInteropHelper(this).Handle, -20, 0x20);

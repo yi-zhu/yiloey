@@ -31,7 +31,7 @@ namespace holey
     }
 
 
-    public class GifImage : System.Windows.Controls.UserControl
+    public class GifImage : UserControl
     {
         private GifAnimation gifAnimation = null;
         private Image image = null;
@@ -45,8 +45,8 @@ namespace holey
 
         public bool ForceGifAnim
         {
-            get { return (bool)this.GetValue(ForceGifAnimProperty); }
-            set { this.SetValue(ForceGifAnimProperty, value); }
+            get { return (bool)GetValue(ForceGifAnimProperty); }
+            set { SetValue(ForceGifAnimProperty, value); }
         }
 
         public static readonly DependencyProperty SourceProperty = DependencyProperty.Register("Source", typeof(string),
@@ -64,8 +64,8 @@ namespace holey
 
         public string Source
         {
-            get { return (string)this.GetValue(SourceProperty); }
-            set { this.SetValue(SourceProperty, value); }
+            get { return (string)GetValue(SourceProperty); }
+            set { SetValue(SourceProperty, value); }
         }
 
 
@@ -90,8 +90,8 @@ namespace holey
 
         public Stretch Stretch
         {
-            get { return (Stretch)this.GetValue(StretchProperty); }
-            set { this.SetValue(StretchProperty, value); }
+            get { return (Stretch)GetValue(StretchProperty); }
+            set { SetValue(StretchProperty, value); }
         }
 
         public static readonly DependencyProperty StretchDirectionProperty = DependencyProperty.Register(
@@ -115,8 +115,8 @@ namespace holey
 
         public StretchDirection StretchDirection
         {
-            get { return (StretchDirection)this.GetValue(StretchDirectionProperty); }
-            set { this.SetValue(StretchDirectionProperty, value); }
+            get { return (StretchDirection)GetValue(StretchDirectionProperty); }
+            set { SetValue(StretchDirectionProperty, value); }
         }
 
         public delegate void ExceptionRoutedEventHandler(object sender, GifImageExceptionRoutedEventArgs args);
@@ -148,13 +148,13 @@ namespace holey
         {
             if (image != null)
             {
-                this.RemoveLogicalChild(image);
+                RemoveLogicalChild(image);
                 image = null;
             }
 
             if (gifAnimation != null)
             {
-                this.RemoveLogicalChild(gifAnimation);
+                RemoveLogicalChild(gifAnimation);
                 gifAnimation = null;
             }
         }
@@ -167,7 +167,7 @@ namespace holey
             image.Source = src;
             image.Stretch = Stretch;
             image.StretchDirection = StretchDirection;
-            this.AddChild(image);
+            AddChild(image);
         }
 
 
@@ -177,7 +177,7 @@ namespace holey
             gifAnimation.CreateGifAnimation(memoryStream);
             gifAnimation.Stretch = Stretch;
             gifAnimation.StretchDirection = StretchDirection;
-            this.AddChild(gifAnimation);
+            AddChild(gifAnimation);
         }
 
 
@@ -254,7 +254,7 @@ namespace holey
             }
             catch (WebException exp)
             {
-                this.Dispatcher.Invoke(DispatcherPriority.Render, new WebRequestErrorDelegate(WebRequestError), exp);
+                Dispatcher.Invoke(DispatcherPriority.Render, new WebRequestErrorDelegate(WebRequestError), exp);
             }
         }
 
@@ -272,13 +272,13 @@ namespace holey
                 }
                 catch (WebException exp)
                 {
-                    this.Dispatcher.Invoke(DispatcherPriority.Render, new WebRequestErrorDelegate(WebRequestError),
+                    Dispatcher.Invoke(DispatcherPriority.Render, new WebRequestErrorDelegate(WebRequestError),
                         exp);
                 }
             }
             else
             {
-                this.Dispatcher.Invoke(DispatcherPriority.Render, new WebRequestFinishedDelegate(WebRequestFinished),
+                Dispatcher.Invoke(DispatcherPriority.Render, new WebRequestFinishedDelegate(WebRequestFinished),
                     webReadState.memoryStream);
             }
         }
@@ -398,7 +398,7 @@ namespace holey
         public GifAnimation()
         {
             canvas = new Canvas();
-            this.Child = canvas;
+            Child = canvas;
         }
 
         private void Reset()
@@ -546,7 +546,7 @@ namespace holey
             returnOffset = offset + length + 2 + 1;
             if (gifData[offset + 1] == 0xFF && length > 10)
             {
-                string netscape = System.Text.ASCIIEncoding.ASCII.GetString(gifData, offset + 3, 8);
+                string netscape = System.Text.Encoding.ASCII.GetString(gifData, offset + 3, 8);
                 if (netscape == "NETSCAPE")
                 {
                     numberOfLoops = BitConverter.ToUInt16(gifData, offset + 16);
@@ -569,7 +569,7 @@ namespace holey
 
         private int ParseHeader(byte[] gifData, int offset)
         {
-            string str = System.Text.ASCIIEncoding.ASCII.GetString(gifData, offset, 3);
+            string str = System.Text.Encoding.ASCII.GetString(gifData, offset, 3);
             if (str != "GIF")
             {
                 throw new Exception("Not a proper GIF file: missing GIF header");
@@ -617,7 +617,7 @@ namespace holey
                 canvas.Children.Add(frameList[i]);
                 Canvas.SetLeft(frameList[i], frameList[i].left);
                 Canvas.SetTop(frameList[i], frameList[i].top);
-                Canvas.SetZIndex(frameList[i], i);
+                Panel.SetZIndex(frameList[i], i);
             }
 
             canvas.Height = logicalHeight;
@@ -632,7 +632,7 @@ namespace holey
                     numberOfLoops = 1;
                 }
 
-                frameTimer = new System.Windows.Threading.DispatcherTimer();
+                frameTimer = new DispatcherTimer();
                 frameTimer.Tick += NextFrame;
                 frameTimer.Interval = new TimeSpan(0, 0, 0, 0, frameList[0].delayTime * 10);
                 frameTimer.Start();

@@ -56,7 +56,7 @@ public partial class Toast : Window
         };
 
         Storyboard.SetTarget(fadeUpAnimation, LayoutRoot);
-        Storyboard.SetTargetProperty(fadeUpAnimation, new PropertyPath(Window.TopProperty));
+        Storyboard.SetTargetProperty(fadeUpAnimation, new PropertyPath(TopProperty));
         _showStoryboard.Children.Add(fadeUpAnimation);
 
         Storyboard.SetTarget(fadeInAnimation, LayoutRoot);
@@ -122,12 +122,12 @@ public partial class Toast : Window
             tbMessage.FontSize,
             Brushes.Black);
 
-        this.Width = formattedText.Width + 30;
-        this.Height = formattedText.Height + 30;
+        Width = formattedText.Width + 30;
+        Height = formattedText.Height + 30;
 
-        this.Left = L - Width / 2;
+        Left = L - Width / 2;
 
-        this.Top = T - Height / 2;
+        Top = T - Height / 2;
         YiKit.Print(Left);
         YiKit.Print(Top);
         return new Size(formattedText.Width, formattedText.Height);
@@ -136,7 +136,7 @@ public partial class Toast : Window
     public void ShowT()
     {
         MeasureString();
-        this.Show();
+        Show();
         _showStoryboard.Begin();
         _UpStoryboard.Begin();
         YiKit.RunThread((state =>
@@ -154,7 +154,7 @@ public partial class Toast : Window
     public void HideT()
     {
         _hideStoryboard.Begin();
-        this.Hide();
+        Hide();
         YiKit.RunThread((state =>
         {
             Thread.Sleep(Time * 1000);

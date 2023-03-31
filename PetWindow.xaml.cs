@@ -38,6 +38,8 @@ public partial class PetWindow : Window
 
     public static PetWindow Me;
 
+    public bool _close = false;
+
     /// <summary>
     ///  此方法为隐藏Alt+Tab；隐藏窗口在toolbar 请设置ShowInTaskbar
     /// </summary>
@@ -70,6 +72,20 @@ public partial class PetWindow : Window
         // YiKit.Print(Width);
         // YiKit.Print(Top);
         // YiKit.GetAllCate();
+        try
+        {
+            _sleep = (int)(Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
+        }
+        catch (Exception e)
+        {
+            _sleep = 1000;
+        }
+
+        if (_sleep <= 1)
+        {
+            _sleep = 1000;
+        }
+
         LoadPet();
     }
 
@@ -92,11 +108,18 @@ public partial class PetWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
+    
+
         YiKit.CloseClipboardMonitor(OnClipboardUpdated);
+        base.OnClosed(e);
+        if (MainWindow.Me==null||!MainWindow.Me.IsVisible)
+        {
+            Environment.Exit(0);
+        }
     }
 
 
-    private int _sleep = 900;
+    private int _sleep = 1000;
 
     /// <summary>
     /// 默认
@@ -107,11 +130,13 @@ public partial class PetWindow : Window
 
     private void LoadPet()
     {
+        Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
+        Thread.CurrentThread.Priority = ThreadPriority.Lowest;
         YiKit.RunThread(_ =>
         {
             long lastUp = 0;
             long lastDown = 0;
-       
+
             while (IsAlive)
             {
                 var tap = IsVpn ? YiKit.GetInterface(ip: "172.27.") : YiKit.GetInterface(vir: false);
@@ -119,7 +144,7 @@ public partial class PetWindow : Window
                 if (tap == null || tap.OperationalStatus != OperationalStatus.Up)
                 {
                     IsVpn = !IsVpn;
-                    Thread.Sleep(_sleep / 2);
+                    Thread.Sleep(_sleep);
                     continue;
                 }
 
@@ -143,14 +168,13 @@ public partial class PetWindow : Window
                             lastUp = nowUp;
                         }
 
-
                         /*if (nowUp - lastUp<10)
                         {
                             tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
                         }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
                         tapas += "速：" + (nowUp == lastUp ? "  " : "⇡")
                                       + (nowDown == lastDown ? "  " : "⇣") + " "
-                                      + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000 / _sleep)) + "\n";
+                                      + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "\n";
 
                         tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
                         tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
@@ -161,12 +185,10 @@ public partial class PetWindow : Window
                             if (!tapas.Equals(MainStr.Content.ToString()))
                             {
                                 MainStr.Content = tapas;
-
                                 StatStrRect.ToolTip = ipaddr.Address;
+                                lastDown = nowDown;
+                                lastUp = nowUp;
                             }
-
-                            lastDown = nowDown;
-                            lastUp = nowUp;
                         });
                         break;
                     }
@@ -178,15 +200,12 @@ public partial class PetWindow : Window
         });
         YiKit.RunThread(_ =>
         {
-         
             int cpuse = 0;
             int memuse = 0;
             while (IsAlive)
             {
-               
-
                 #region CPU使用率
-                
+
                 cpuse = (int)YiKit.CpuUse();
                 memuse = (int)YiKit.MemUse();
                 YiKit.RunOnUIThread(() => CpuRect.Width = cpuse);
@@ -354,11 +373,11 @@ public partial class PetWindow : Window
     /// <param name="e"></param>
     private void CloseItem_OnClick(object sender, RoutedEventArgs e)
     {
-        if (PresentationSource.FromVisual(MainWindow.Me) == null)
+        /*if (PresentationSource.FromVisual(MainWindow.Me) == null)
         {
             new MainWindow().Show();
         }
-        else MainWindow.Me?.Show();
+        else MainWindow.Me?.Show();*/
 
         //退出
         Close();
@@ -374,11 +393,13 @@ public partial class PetWindow : Window
         //退出
         Close();
         Application.Current.Shutdown();
+        Environment.Exit(0);
     }
 
     private void Control_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         IsVpn = !IsVpn;
+        YiKit.ShowToast(IsVpn?"切换专网":"显示公网",l:(int)((int)Left+Width/2),t:(int)((int)Top-Height/2));
     }
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
@@ -630,7 +651,7 @@ public partial class PetWindow : Window
     }
 
 
-    private string clbname = "";
+    private string? clbname = "";
 
     private void UnlockClipboardItemOnClick(object sender, RoutedEventArgs e)
     {
@@ -653,22 +674,22 @@ public partial class PetWindow : Window
         else
         {
             _clipboard = 1;
-
             clbname =
-                YiKit.ShowInputDialogDefValue("请输入相同的匹配码或者相同的名称,系统会自动记忆", YiKit.IniGet("clbname", "ini", def: ""))[0];
+                YiKit.ShowInputDialogDefValue("请输入相同的匹配码或者相同的名称,系统会自动记忆", YiKit.IniGet("clbname", "ini", def: ""))?[0];
+            if (string.IsNullOrEmpty(clbname)) //如果没有输入或者输入为空
+            {
+                return;
+            }
+
             if (YiWscClient != null && YiWscClient.State != WebSocketState.Open)
                 CloseWb();
             StartWb();
 
             YiKit.IniWrite("clbname", clbname, "ini");
-
-
             YiKit.ClipboardMonitor(this, OnClipboardUpdated);
-            ((sender as MenuItem)!).Header = "已开启剪切板监听";
+            // ((sender as MenuItem)!).Header = "已开启剪切板监听";
         }
 
-        {
-        }
         YiKit.IniWrite("clipboard", value: _clipboard + "", area: "ini");
     }
 
@@ -678,6 +699,11 @@ public partial class PetWindow : Window
 
     private void OnClipboardUpdated(object sender, EventArgs e)
     {
+        if (_clipboard == 0) //剪贴板已关闭
+        {
+            return;
+        }
+
         if (Clipboard.ContainsText())
         {
             string text = "";
@@ -707,8 +733,6 @@ public partial class PetWindow : Window
                 YiWscClient.Open();
                 YiWscClient.Send("cpy:" + clbname + ":" + text);
             }
-
-            ;
 
             YiKit.Print(text);
         }
@@ -744,6 +768,11 @@ public partial class PetWindow : Window
 
     private void YiWscClientOnClose(object sender, EventArgs e)
     {
+        YiKit.RunOnUIThread(() =>
+        {
+            ClipboardMenuItem.Header = "剪切板已关闭";
+            YiKit.ShowToastWaring("剪切板共享已关闭");
+        });
     }
 
     private void YiWscClientOnMessage(object sender, string data)
@@ -774,6 +803,11 @@ public partial class PetWindow : Window
     private void YiWscClientOnOpen(object sender, EventArgs e)
     {
         YiWscClient.Send("ini:" + clbname);
+        YiKit.RunOnUIThread(() =>
+        {
+            ClipboardMenuItem.Header = "已开启剪切板";
+            YiKit.ShowToast("已开启剪切板共享");
+        });
     }
 
     #endregion
@@ -824,5 +858,33 @@ public partial class PetWindow : Window
         }
         else
             YiKit.ShowToast("已恢复" + targetProcesses.Length + "个" + str + "窗口！");
+    }
+
+    private void SleepItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        string? s = YiKit.ShowInputDialogDefValue("监控刷新时间(秒)", YiKit.IniGet("sleep", "ini", def: "1"))?[0];
+        if (string.IsNullOrEmpty(s))
+        {
+            return;
+        }
+
+        try
+        {
+            if (Convert.ToSingle(s) <= 0f)
+            {
+                YiKit.ShowToastWaring("时间不能小于0, 设置失败!");
+                return;
+            }
+
+            _sleep = (int)(Convert.ToSingle(s) * 1000);
+        }
+        catch (Exception exception)
+        {
+            YiKit.ShowToastError("时间只可为数字, 设置失败!");
+            return;
+        }
+
+
+        YiKit.IniWrite("sleep", s, "ini");
     }
 }

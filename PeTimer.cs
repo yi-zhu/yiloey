@@ -536,11 +536,11 @@ public class PeTimer {
         public int Count;
 
         public PeTimeTask(int tid, Action<int> callback, double destTime, double delay, int count) {
-            this.Tid = tid;
-            this.Callback = callback;
-            this.DestTime = destTime;
-            this.Delay = delay;
-            this.Count = count;
+            Tid = tid;
+            Callback = callback;
+            DestTime = destTime;
+            Delay = delay;
+            Count = count;
         }
     }
 
@@ -552,11 +552,11 @@ public class PeTimer {
         public int Count;
 
         public PeFrameTask(int tid, Action<int> callback, int destFrame, int delay, int count) {
-            this.Tid = tid;
-            this.Callback = callback;
-            this.DestFrame = destFrame;
-            this.Delay = delay;
-            this.Count = count;
+            Tid = tid;
+            Callback = callback;
+            DestFrame = destFrame;
+            Delay = delay;
+            Count = count;
         }
     }
 }

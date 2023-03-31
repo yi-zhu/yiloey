@@ -33,7 +33,7 @@ namespace holey
             {
                 PetWindow = new PetWindow();
                 PetWindow.Show();
-                this.Hide();
+                Hide();
             }
 
             InitializeComponent();
@@ -186,8 +186,6 @@ namespace holey
         protected override void OnClosed(EventArgs e)
         {
             IsAlive = false;
-
-
             /*
             //销毁progress进程。
             if (YiKit.Processes.Count>0)
@@ -207,6 +205,11 @@ namespace holey
                     window.Close();
             }*/
             base.OnClosed(e);
+            if (PetWindow.Me==null||!PetWindow.Me.IsVisible)
+            {
+                Environment.Exit (0); 
+            }
+
         }
 
 
@@ -214,13 +217,12 @@ namespace holey
         {
             if (Topmost)
             {
-                this.Topmost = false;
-
+                Topmost = false;
                 TopMenuItem.Header = "📌";
             }
             else
             {
-                this.Topmost = true;
+                Topmost = true;
                 TopMenuItem.Header = "🔝";
             }
         }
