@@ -6,12 +6,13 @@
         xmlns:interactivity="http://schemas.microsoft.com/xaml/behaviors"
         xmlns:local="clr-namespace:holey" xmlns:media="clr-namespace:holey.Kits"
         xmlns:ukits="clr-namespace:holey.Ukits"
+        xmlns:shockwaveFlashObjects="clr-namespace:ShockwaveFlashObjects;assembly=Interop.ShockwaveFlashObjects"
         mc:Ignorable="d"  
         Title="PetWindow" Height="60" Width="120" Background="Transparent"
         WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
         AllowsTransparency="True" Loaded="FormLoaded" Topmost="True"
         PreviewMouseMove="PetWindow_OnPreviewMouseMove">
-    <Grid Name="Grid">
+    <Viewbox Stretch="Fill"> <Grid Name="Grid">
         <Grid.Resources>
              <Style TargetType="ProgressBar">
                 <Setter Property="Width" Value="50" />
@@ -93,7 +94,8 @@
             
         </Grid.Resources>
         <!-- <local:GifImage Source="../Img/giphy.gif" Stretch="Uniform" Cursor="Hand"/> -->
-        <Viewbox Height="60" Width="120">
+        <Viewbox Height="60" Width="120" Name="Viewbox">
+          
             <Grid Margin="0" Height="60" Width="120" >
                 <Grid.ContextMenu>
                     <ContextMenu>
@@ -104,16 +106,21 @@
                         <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
                         <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
                         <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
+                        <MenuItem Header="放大/缩小" Click="ZoomItem_OnClick"></MenuItem>
                         <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
+                        <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem>
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
                         <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                     </ContextMenu>
                 </Grid.ContextMenu>
+                <WindowsFormsHost>
+                </WindowsFormsHost>
                 <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" CornerRadius="10,10,10,10">
                     <Border.Effect>
                         <BlurEffect Radius="20" RenderingBias="Performance"></BlurEffect>
                     </Border.Effect>
                 </Border>
+            
                 <!-- 主体 -->
                 <Button Name="MainStr" MouseDoubleClick="Control_OnMouseDoubleClick" Width="120" Height="50"
                         VerticalContentAlignment="Stretch" FontSize="12"  Margin="0" Padding="0"
@@ -325,5 +332,6 @@
 
         <!-- Viewport3D is the rendering surface. -->
 
-    </Grid>
+    </Grid></Viewbox>
+   
 </Window>

@@ -16,6 +16,7 @@ using System.Net.WebSockets;
 using System.Windows.Controls;
 using System.Windows.Media.Effects;
 using holey.Dialog;
+using ShockwaveFlashObjects;
 using YiKits;
 using Point = System.Windows.Point;
 
@@ -39,6 +40,11 @@ public partial class PetWindow : Window
     public static PetWindow Me;
 
     public bool _close = false;
+    private double w = 120;
+    private double h = 60;
+    private double _zoom = 1;
+    private double l = 0;
+    private double t = 0;
 
     /// <summary>
     ///  此方法为隐藏Alt+Tab；隐藏窗口在toolbar 请设置ShowInTaskbar
@@ -65,9 +71,17 @@ public partial class PetWindow : Window
     {
         InitializeComponent();
         Me = this;
-        r = SystemParameters.WorkArea;
-        Left = r.Width - Width - 10;
-        Top = r.Bottom - Height - 10;
+        _zoom = YiKit.IniGetDouble("zoompet", 1);
+        if (Width != w * _zoom)
+        {
+            this.Width = w * _zoom;
+        }
+
+        if (Height != h * _zoom)
+        {
+            this.Height = h * _zoom;
+        }
+
         // YiKit.Print(Left);
         // YiKit.Print(Width);
         // YiKit.Print(Top);
@@ -85,6 +99,48 @@ public partial class PetWindow : Window
         {
             _sleep = 1000;
         }
+
+        r = SystemParameters.WorkArea;
+
+        l = YiKit.IniGetDouble("petleft", r.Width - Width - 10);
+        t = YiKit.IniGetDouble("pettop", r.Bottom - Height - 10);
+
+
+
+        if (this.Left != l)
+        {
+            Left = l;
+        }
+
+        if (this.Top != t)
+        {
+            Top = t;
+        }
+
+        //屏蔽贴边放大
+        this.ResizeMode = ResizeMode.NoResize;
+
+        //屏蔽贴边
+        PreviewMouseLeftButtonDown += (sender, args) =>
+        {
+            // this.ResizeMode = ResizeMode.NoResize; 
+            l = this.Left;
+            t = this.Top;
+        };
+        PreviewMouseLeftButtonUp += (sender, args) =>
+        {
+            // this.ResizeMode = ResizeMode.CanResize;
+            
+            if (this.Left != l)
+            {
+                YiKit.IniWrite("petleft", this.Left.ToString(), "ini");
+            }
+
+            if (this.Top != t)
+            {
+                YiKit.IniWrite("pettop", this.Top.ToString(), "ini");
+            }
+        };
 
         LoadPet();
     }
@@ -108,11 +164,9 @@ public partial class PetWindow : Window
 
     protected override void OnClosed(EventArgs e)
     {
-    
-
         YiKit.CloseClipboardMonitor(OnClipboardUpdated);
         base.OnClosed(e);
-        if (MainWindow.Me==null||!MainWindow.Me.IsVisible)
+        if (MainWindow.Me == null || !MainWindow.Me.IsVisible)
         {
             Environment.Exit(0);
         }
@@ -399,7 +453,7 @@ public partial class PetWindow : Window
     private void Control_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         IsVpn = !IsVpn;
-        YiKit.ShowToast(IsVpn?"切换专网":"显示公网",l:(int)((int)Left+Width/2),t:(int)((int)Top-Height/2));
+        YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int)((int)Left + Width / 2), t: (int)((int)Top - Height / 2));
     }
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
@@ -886,5 +940,41 @@ public partial class PetWindow : Window
 
 
         YiKit.IniWrite("sleep", s, "ini");
+    }
+
+    private void ZoomItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        string? s = YiKit.ShowInputDialogDefValue("设置放大或缩小倍数", YiKit.IniGet("zoompet", "ini", def: "1"))?[0];
+        if (string.IsNullOrEmpty(s))
+        {
+            return;
+        }
+
+        try
+        {
+            if (Convert.ToSingle(s) <= 0f)
+            {
+                YiKit.ShowToastWaring("倍数不能小于0, 设置失败!");
+                return;
+            }
+
+            _zoom = (Convert.ToSingle(s));
+        }
+        catch (Exception exception)
+        {
+            YiKit.ShowToastError("时间只可为数字, 设置失败!");
+            return;
+        }
+
+
+        YiKit.IniWrite("zoompet", s, "ini");
+        this.Width = w * _zoom;
+        this.Height = h * _zoom;
+    }
+
+    private void RuxingItem_OnClick(object sender, RoutedEventArgs e)
+    {
+   
+
     }
 }

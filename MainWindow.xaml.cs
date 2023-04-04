@@ -55,7 +55,7 @@ namespace holey
         {
             ShowLoading();
             NetworkInterface tap = null;
-            YiKit.StartProcessAsync(_vname +
+            YiKit.StartProcessSync(_vname +
                                     " -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -s 255.240.0.0 -b  -i 20 -b -l yizhu.space:65533 "
                 , a =>
                 {
@@ -124,18 +124,17 @@ namespace holey
             string prx = "\""+YiKit.GetAppPath()+"\\Drivers";
 
             
-            YiKit.StartProcessSync("certutil -addstore \"TrustedPublisher\" "+prx+"\\opv.cer\"");
             if (YiKit.IsX86())
             {
                 prx += "\\x86\\";
             }
             else
-                prx += "\\x64\\";
+                prx += "\\x64\\";   
+            YiKit.StartProcessSync("certutil -addstore \"TrustedPublisher\" "+prx+"\\der.cer\"");
 
             YiKit.StartProcessSync(prx+"tapinstall.exe\" install "+prx+"OemVista.inf\" tap0901",end:(state =>
             {
                 YiKit.RunOnUIThread(() => ShowLoading(false));
-
             }));
         }
 
