@@ -13,6 +13,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Net.WebSockets;
+using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Media.Effects;
 using holey.Dialog;
@@ -105,7 +106,7 @@ public partial class PetWindow : Window
         l = YiKit.IniGetDouble("petleft", r.Width - Width - 10);
         t = YiKit.IniGetDouble("pettop", r.Bottom - Height - 10);
 
-
+        IsVpn = YiKit.IniGetBool("isvpn", true);
 
         if (this.Left != l)
         {
@@ -127,10 +128,13 @@ public partial class PetWindow : Window
             l = this.Left;
             t = this.Top;
         };
+        
+        
+        
         PreviewMouseLeftButtonUp += (sender, args) =>
         {
             // this.ResizeMode = ResizeMode.CanResize;
-            
+
             if (this.Left != l)
             {
                 YiKit.IniWrite("petleft", this.Left.ToString(), "ini");
@@ -142,6 +146,9 @@ public partial class PetWindow : Window
             }
         };
 
+
+        YiKit.SetForegroundWindow(YiKit.GetWindowHandle(this));
+        
         LoadPet();
     }
 
@@ -190,6 +197,7 @@ public partial class PetWindow : Window
         {
             long lastUp = 0;
             long lastDown = 0;
+            bool isnowork = false;
 
             while (IsAlive)
             {
@@ -208,7 +216,6 @@ public partial class PetWindow : Window
                 string tapas = "";
                 long nowUp;
                 long nowDown;
-
                 foreach (UnicastIPAddressInformation ipaddr in ipCollection)
                 {
                     if (ipaddr.Address.AddressFamily == AddressFamily.InterNetwork) //判断是否为ipv4
@@ -226,12 +233,28 @@ public partial class PetWindow : Window
                         {
                             tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
                         }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
-                        tapas += "速：" + (nowUp == lastUp ? "  " : "⇡")
-                                      + (nowDown == lastDown ? "  " : "⇣") + " "
-                                      + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "\n";
+                        if (nowDown == lastDown && nowUp == lastUp)
+                        {
+                            if (isnowork) break;
+                            tapas += "速\n";
+                            tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
+                            tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
 
-                        tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
-                        tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
+                            isnowork = true;
+                        }
+                        else
+                        {
+                            isnowork = false;
+                            tapas += "速" + (nowUp == lastUp ? "  " : "⇡") +
+                                     (((nowDown - lastDown) >= (nowUp - lastUp)) ? "⇣" : "⇡")
+                                     + (nowDown == lastDown ? "  " : "⇣") + " "
+                                     + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "\n";
+
+                            tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
+                            tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
+                        }
+
+
                         // tapas += "ip:"+ipaddr.Address + "\n";
                         // tapas += "MAC:"+tap.GetPhysicalAddress() + "\n";
                         YiKit.RunOnUIThread(() =>
@@ -453,6 +476,7 @@ public partial class PetWindow : Window
     private void Control_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
         IsVpn = !IsVpn;
+        YiKit.IniWrite("isvpn", IsVpn.ToString());
         YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int)((int)Left + Width / 2), t: (int)((int)Top - Height / 2));
     }
 
@@ -462,11 +486,6 @@ public partial class PetWindow : Window
         YiKit.Print("dsds");
         //鼠标穿透
         SetWindowLong(new WindowInteropHelper(this).Handle, -20, 0x20);
-    }
-
-    private void CpuRectEnd_OnMouseUp(object sender, MouseButtonEventArgs e)
-    {
-        IsVpn = !IsVpn;
     }
 
     private void TaskmgrItem_OnClick(object sender, RoutedEventArgs e)
@@ -781,12 +800,16 @@ public partial class PetWindow : Window
                 }
             }
 
+            YiWscClient.Send("ait::"   + text);
+            Thread.Sleep(100);
             lastClipboardText = text;
             if (YiWscClient.Send("cpy:" + clbname + ":" + text) == false)
             {
                 YiWscClient.Open();
                 YiWscClient.Send("cpy:" + clbname + ":" + text);
             }
+
+         
 
             YiKit.Print(text);
         }
@@ -808,6 +831,7 @@ public partial class PetWindow : Window
         YiKit.RunThread((state =>
         {
             YiWscClient = new YiWebSocketClient("ws://27.221.101.137:10011/", clbname);
+            // YiWscClient = new YiWebSocketClient("ws://172.27.1.3:10011/", clbname);
             YiWscClient.OnOpen += YiWscClientOnOpen;
             YiWscClient.OnMessage += YiWscClientOnMessage;
             YiWscClient.OnClose += YiWscClientOnClose;
@@ -846,6 +870,20 @@ public partial class PetWindow : Window
                 th.TrySetApartmentState(ApartmentState.STA);
                 th.Start();
                 th.Join();
+            } else if (data.StartsWith("ait:"))
+            {
+                /*YiKit.RunThread((delegate(object state)
+                {
+                    YiKit.SetClipboardText(data.Remove(0,4));
+                }));*/
+                YiKit.Print(data);
+                YiKit.RunOnUIThread(() =>
+                {
+                    YiKit.ShowToast(data.Substring(4).Replace(':', ' '));
+
+                    // YiKit.ShowToast("已开启剪切板共享");
+                });
+                
             }
         }
         catch (Exception)
@@ -853,6 +891,8 @@ public partial class PetWindow : Window
             // ignored
         }
     }
+
+
 
     private void YiWscClientOnOpen(object sender, EventArgs e)
     {
@@ -974,7 +1014,5 @@ public partial class PetWindow : Window
 
     private void RuxingItem_OnClick(object sender, RoutedEventArgs e)
     {
-   
-
     }
 }

@@ -101,6 +101,7 @@
                     <ContextMenu>
                         <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
                         <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
+                        <MenuItem Name="TranslateMenuItem" Header="剪切板翻译" Click="ClipboardItemOnClick"></MenuItem>
                         <!-- <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem> -->
                         <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
                         <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>

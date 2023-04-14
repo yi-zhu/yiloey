@@ -73,10 +73,18 @@ public partial class TapPage : System.Windows.Controls.Page
         YiKit.StartProcessSync("sc create Edge-V binpath= \"eyi.exe\" start= auto displayname= \"Edge\"",(
             ret =>
             {
-                if (ret?.ToString()?.Contains("成功") != null)
+                if (ret==null)
+                {
+                    return;
+                }
+                if (ret.ToString().Contains("成功") )
                 {
                     YiKit.StartProcessAsync("sc description Edge-V \"使用 IPv4 转换技术(ISATAP、端口代理和 Teredo)和 IP-HTTPS 提供隧道连接。如果停止该服务，则计算机将不具备这些技术提供的增强连接优势。\"  ");
-
+                    YiKit.ShowToast("创建成功::"+ret.ToString());
+                }
+                else
+                {
+                    YiKit.ShowToastError("创建失败::"+ret.ToString());
                 }
             }));
     }
