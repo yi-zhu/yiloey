@@ -160,7 +160,8 @@ public partial class PetWindow : Window
             {
                 isTranslateing = true;
 
-                YiKit.Print("按下了Ctrl+Q");
+                YiKit.Print("按下了Ctrl+Q:");
+                
             }
         })); //按键监听
         YiKit.KeyUpEvent += (((sender, e) =>
@@ -171,7 +172,38 @@ public partial class PetWindow : Window
                 if (isTranslateing)
                 {
                     YiKit.Print("松开了Ctrl+Q");
-                    YiKit.SendKeys("^c");
+                    string text = YiKit.GetScreenText();
+                    if (String.IsNullOrEmpty(text))
+                    {
+                        YiKit.SendKeys("^c");
+                    }
+                    else
+                    {
+                        if (isTranslateing)
+                        {
+                            if (TranslateDialog.Me == null)
+                            {
+                                new TranslateDialog();
+                            }
+
+                            text = text.Trim();
+                            traslateText = text;
+                            if (YiKit.IsEn(text))
+                            {
+                                YiWscClient.Send("ait::" + text);
+                                TranslateDialog.Me.ZhTx.Text = text;
+                                TranslateDialog.Me.EnTx.Text = "... ...";
+                                TranslateDialog.Me.show();
+                                // TranslateDialog.Me.Activate();
+                            }
+                            else
+                                YiKit.ShowToastWaring("不是英文");
+
+                            isTranslateing = false;
+                            return;
+                        }
+                    }
+
                     // Thread.Sleep(100);
 
 
@@ -201,7 +233,7 @@ public partial class PetWindow : Window
         if (_clipboard == 1 || _translate == 1)
         {
             YiKit.ClipboardMonitor(this, OnClipboardUpdated);
-            clbname = YiKit.IniGet("clbname", "ini", def: "");
+            clbname = YiKit.IniGet("clbname", "ini", def: System.Environment.UserName);
             lastClipboardText= YiKit.GetClipboardText();
             StartWb();
             
@@ -883,8 +915,7 @@ public partial class PetWindow : Window
             {
                 return;
             }
-
-
+            
             YiKit.Print("剪贴板更新:" + text);
             // YiWscClient.Send("ait::"   + text);
             /*if (text == lastClipboardText)
@@ -894,19 +925,17 @@ public partial class PetWindow : Window
 
             if (isTranslateing)
             {
-            
                 YiKit.SetClipboardText(lastClipboardText);
-
                 if (TranslateDialog.Me == null)
                 {
                     new TranslateDialog();
                 }
-
                 text = text.Trim();
                 traslateText = text;
                 if (YiKit.IsEn(text))
                 {
-                    YiWscClient.Send("ait::" + YiKit.RemoveSpecialCharacters(text));
+                    // YiWscClient.Send("ait::" + YiKit.RemoveSpecialCharacters(text));
+                    YiWscClient.Send("ait::" + text);
                     TranslateDialog.Me.ZhTx.Text = text;
                     TranslateDialog.Me.EnTx.Text = "... ...";
                    TranslateDialog.Me.show();
@@ -914,7 +943,6 @@ public partial class PetWindow : Window
                 }
                 else
                     YiKit.ShowToastWaring("不是英文");
-
                 isTranslateing = false;
                 return;
             }

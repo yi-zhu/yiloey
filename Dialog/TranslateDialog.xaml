@@ -8,16 +8,16 @@
           WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
         AllowsTransparency="True" Loaded="FormLoaded" Topmost="True"
      
-        Title="TranslateDialog" Height="300" Width="400">
+        Title="TranslateDialog" Height="200" Width="300">
     <Grid  Name="LayoutRoot" MouseLeave="LayoutRoot_OnMouseLeave" MouseEnter="LayoutRoot_OnMouseEnter">
         <Grid.RowDefinitions>
-            <RowDefinition Height="1.2*"></RowDefinition>
-            <RowDefinition Height="20"></RowDefinition>
             <RowDefinition Height="1*"></RowDefinition>
+            <RowDefinition Height="20"></RowDefinition>
+            <RowDefinition Height="1.5*"></RowDefinition>
         </Grid.RowDefinitions>
 
         <TextBox Grid.Row="0" Name="ZhTx"  BorderThickness="0"
-                 Background="#66000000"
+                 Background="#77000000"
                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" 
                  KeyDown="ZhTx_OnKeyDown" TextWrapping="Wrap"></TextBox>
         
@@ -39,7 +39,7 @@
         
         
         <TextBox Grid.Row="2" Name="EnTx" 
-                 Background="#55000000" BorderThickness="0"
+                 Background="#99000000" BorderThickness="0"
                  HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch" 
                  KeyDown="EnTx_OnKeyDown" TextWrapping="Wrap"></TextBox>
     </Grid>
