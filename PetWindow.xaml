@@ -101,6 +101,7 @@
                     <Grid.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
+                            <MenuItem Header="开启桌面" Click="WallPaperItem_OnClick"></MenuItem>
                             <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
                             <MenuItem Name="TranslateMenuItem" Header="开启翻译" Click="TranslateItemOnClick"></MenuItem>
                             <!-- <MenuItem Name="TranslateShowMenuItem" Header="显示翻译" Click="TranslateShowItemOnClick"></MenuItem> -->
@@ -116,8 +117,7 @@
                             <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                         </ContextMenu>
                     </Grid.ContextMenu>
-                    <WindowsFormsHost>
-                    </WindowsFormsHost>
+                   
                     <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" CornerRadius="10,10,10,10">
                         <Border.Effect>
                             <BlurEffect Radius="20" RenderingBias="Performance"></BlurEffect>
@@ -322,8 +322,50 @@
                         </Grid>
 
                     </Button>
+                    <!-- disk -->
+                    <Button x:Name="DiskBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="110" Height="5"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="2"
+                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
+                            Margin="0,0,9,0" Padding="0"
+                            Style="{StaticResource NoneButton}" Cursor="Hand">
+                        <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="-1,0,0,0"  >
+                            <Rectangle   Stroke="Transparent"  Height="10"  Width="106" Cursor="Hand" 
+                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"  Margin="0" StrokeThickness="0" >
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="106,0" SpreadMethod="Pad">
+                                        <LinearGradientBrush.RelativeTransform>
+                                            <TransformGroup>
+                                                <RotateTransform Angle="0" CenterX="0" CenterY="0" />
+                                                <TranslateTransform />
+                                            </TransformGroup>
+                                        </LinearGradientBrush.RelativeTransform>
+                                        
+                                        <GradientStop Color="#CD7F32" Offset="0"  />
+                                        <!-- <GradientStop Color="#CD7F32" Offset=".3" /> -->
+                                        <GradientStop Color="#5000af" Offset=".4" />
+                                        <GradientStop Color="#00f" Offset=".49" />
+                                        <GradientStop Color="#00f" Offset=".51" />
+                                        <GradientStop Color="#5000af" Offset=".6" />
+                                        <!-- <GradientStop Color="#CD7F32" Offset=".7" /> -->
+                                        <GradientStop Color="#CD7F32" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
 
+                            </Rectangle>
+                   
+                            
 
+                        </Grid>
+
+                    </Button>
+
+                    <TextBlock x:Name="DiskStr" FontSize="9"   TextWrapping="Wrap" VerticalAlignment="Bottom"
+                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,10,-2" >
+                        disk
+                        <TextBlock.Effect>
+                            <DropShadowEffect x:Name="DiskStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="1" Direction="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
 
                 </Grid>
 

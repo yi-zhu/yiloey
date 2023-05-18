@@ -17,6 +17,7 @@ using System.Windows.Automation;
 using System.Windows.Forms;
 using System.Windows.Media.Effects;
 using holey.Dialog;
+using holey.Page;
 using ShockwaveFlashObjects;
 using YiKits;
 using Application = System.Windows.Application;
@@ -161,7 +162,6 @@ public partial class PetWindow : Window
                 isTranslateing = true;
 
                 YiKit.Print("按下了Ctrl+Q:");
-                
             }
         })); //按键监听
         YiKit.KeyUpEvent += (((sender, e) =>
@@ -234,9 +234,9 @@ public partial class PetWindow : Window
         {
             YiKit.ClipboardMonitor(this, OnClipboardUpdated);
             clbname = YiKit.IniGet("clbname", "ini", def: System.Environment.UserName);
-            lastClipboardText= YiKit.GetClipboardText();
+            lastClipboardText = YiKit.GetClipboardText();
             StartWb();
-            
+
             if (_translate == 1)
             {
                 //开启翻译
@@ -246,11 +246,8 @@ public partial class PetWindow : Window
                 {
                     new TranslateDialog();
                 }
-
             }
         }
-
-      
     }
 
 
@@ -364,12 +361,16 @@ public partial class PetWindow : Window
         {
             int cpuse = 0;
             int memuse = 0;
+            int diskuse = 0;
+            double diskusebyte = 0d;
             while (IsAlive)
             {
                 #region CPU使用率
 
                 cpuse = (int)YiKit.CpuUse();
                 memuse = (int)YiKit.MemUse();
+                diskuse = (int)YiKit.DiskUse();
+                diskusebyte = (int)YiKit.DiskUseByte();
                 YiKit.RunOnUIThread(() => CpuRect.Width = cpuse);
                 YiKit.RunOnUIThread(() =>
                 {
@@ -377,6 +378,15 @@ public partial class PetWindow : Window
                     {
                         MemBtn.Height = memuse / 2;
                         MemStr.Text = memuse + "";
+                    }
+                });
+                YiKit.RunOnUIThread(() =>
+                {
+                    if (!DiskStr.Text.Equals(diskusebyte + ""))
+                    {
+                        
+                        DiskStr.Text = YiKit.SumByte(diskusebyte)+"";
+                        DiskBtn.Width = diskuse;
                     }
                 });
                 YiKit.CpuTem((b) =>
@@ -863,7 +873,7 @@ public partial class PetWindow : Window
 
             YiKit.IniWrite("clbname", clbname, "ini");
             YiKit.ClipboardMonitor(this, OnClipboardUpdated);
-            lastClipboardText= YiKit.GetClipboardText();
+            lastClipboardText = YiKit.GetClipboardText();
             // ((sender as MenuItem)!).Header = "已开启剪切板监听";
         }
 
@@ -915,7 +925,7 @@ public partial class PetWindow : Window
             {
                 return;
             }
-            
+
             YiKit.Print("剪贴板更新:" + text);
             // YiWscClient.Send("ait::"   + text);
             /*if (text == lastClipboardText)
@@ -930,6 +940,7 @@ public partial class PetWindow : Window
                 {
                     new TranslateDialog();
                 }
+
                 text = text.Trim();
                 traslateText = text;
                 if (YiKit.IsEn(text))
@@ -938,11 +949,12 @@ public partial class PetWindow : Window
                     YiWscClient.Send("ait::" + text);
                     TranslateDialog.Me.ZhTx.Text = text;
                     TranslateDialog.Me.EnTx.Text = "... ...";
-                   TranslateDialog.Me.show();
+                    TranslateDialog.Me.show();
                     // TranslateDialog.Me.Activate();
                 }
                 else
                     YiKit.ShowToastWaring("不是英文");
+
                 isTranslateing = false;
                 return;
             }
@@ -1059,8 +1071,20 @@ public partial class PetWindow : Window
         YiWscClient.Send("ini:" + clbname);
         YiKit.RunOnUIThread(() =>
         {
-            ClipboardMenuItem.Header = "已开启剪切板";
-            YiKit.ShowToast("已开启剪切板共享");
+            string msg = "已开启";
+            if (_clipboard == 1)
+            {
+                ClipboardMenuItem.Header = "已开启剪切板";
+                msg += "剪切板共享 ";
+            }
+
+            if (_translate == 1)
+            {
+                TranslateMenuItem.Header = "已开启翻译";
+                msg += " 实时翻译翻译";
+            }
+
+            YiKit.ShowToast(msg);
         });
     }
 
@@ -1075,6 +1099,7 @@ public partial class PetWindow : Window
         {
             return;
         }
+
         string str = strs[0];
         if (str.EndsWith(".exe"))
         {
@@ -1087,6 +1112,7 @@ public partial class PetWindow : Window
         {
             targetProcesses = Process.GetProcessesByName(str + "64");
         }
+
         bool isHidden = false;
         foreach (Process p in targetProcesses)
         {
@@ -1102,6 +1128,7 @@ public partial class PetWindow : Window
                 isHidden = true;
             }
         }
+
         if (isHidden)
         {
             YiKit.ShowToast("已隐藏" + targetProcesses.Length + "个" + str + "窗口！");
@@ -1117,6 +1144,7 @@ public partial class PetWindow : Window
         {
             return;
         }
+
         try
         {
             if (Convert.ToSingle(s) <= 0f)
@@ -1124,6 +1152,7 @@ public partial class PetWindow : Window
                 YiKit.ShowToastWaring("时间不能小于0, 设置失败!");
                 return;
             }
+
             _sleep = (int)(Convert.ToSingle(s) * 1000);
         }
         catch (Exception exception)
@@ -1181,18 +1210,21 @@ public partial class PetWindow : Window
             YiKit.KeyboardMonStop();
             isTranslate = false;
             YiKit.IniWrite("translate", "0", "ini");
+            ((sender as MenuItem)!).Header = "翻译已关闭";
         }
         else
         {
             isTranslate = true;
             YiKit.KeyboardMon();
-            YiKit.ClipboardMonitor(this,OnClipboardUpdated);
-            lastClipboardText= YiKit.GetClipboardText();
+            YiKit.ClipboardMonitor(this, OnClipboardUpdated);
+            lastClipboardText = YiKit.GetClipboardText();
             if (TranslateDialog.Me == null)
             {
                 new TranslateDialog();
             }
+
             YiKit.IniWrite("translate", "1", "ini");
+            ((sender as MenuItem)!).Header = "已开启翻译";
         }
     }
 
@@ -1208,5 +1240,16 @@ public partial class PetWindow : Window
             TranslateDialog.Me.Show();
             TranslateDialog.Me.Activate();
         }
+    }
+
+    private void WallPaperItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (WallPaper.me == null)
+        {
+            new WallPaper();
+        }
+
+        WallPaper.me.Show();
+        WallPaper.me.Activate();
     }
 }

@@ -1,0 +1,12 @@
+<Window x:Class="holey.Page.WallPaper"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:holey.Page"
+        mc:Ignorable="d" 
+        Title="WallPaper"  Background="Brown" WindowStyle="None" >
+    <Grid>
+        <TextBlock Name="TextBlock" ></TextBlock>
+    </Grid>
+</Window>
