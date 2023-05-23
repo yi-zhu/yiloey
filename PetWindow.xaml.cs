@@ -112,6 +112,16 @@ public partial class PetWindow : Window
         l = YiKit.IniGetDouble("petleft", r.Width - Width - 10);
         t = YiKit.IniGetDouble("pettop", r.Bottom - Height - 10);
 
+        if (l>=r.Width)
+        {
+            l = r.Width - Width - 10;
+        }
+
+        if (t>=r.Height)
+        {
+            t = r.Bottom - Height - 10;
+        }
+     
         IsVpn = YiKit.IniGetBool("isvpn", true);
 
         if (this.Left != l)
@@ -946,7 +956,13 @@ public partial class PetWindow : Window
                 if (YiKit.IsEn(text))
                 {
                     // YiWscClient.Send("ait::" + YiKit.RemoveSpecialCharacters(text));
-                    YiWscClient.Send("ait::" + text);
+                    if (YiWscClient.Send("ait::" + text)==false)
+                    {
+                        YiWscClient.Open();
+                        YiWscClient.Send("ait::" + text);
+                    }
+
+                    ;
                     TranslateDialog.Me.ZhTx.Text = text;
                     TranslateDialog.Me.EnTx.Text = "... ...";
                     TranslateDialog.Me.show();
