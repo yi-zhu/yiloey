@@ -7,7 +7,7 @@
         xmlns:local="clr-namespace:holey" xmlns:media="clr-namespace:holey.Kits"
         xmlns:ukits="clr-namespace:holey.Ukits"
         xmlns:shockwaveFlashObjects="clr-namespace:ShockwaveFlashObjects;assembly=Interop.ShockwaveFlashObjects"
-        mc:Ignorable="d"  
+        mc:Ignorable="d"
         Title="PetWindow" Height="60" Width="120" Background="Transparent"
         WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
         AllowsTransparency="True" Loaded="FormLoaded" Topmost="True"
@@ -24,13 +24,13 @@
                         <Setter.Value>
                             <ControlTemplate TargetType="ProgressBar">
                                 <Grid Width="50"
-                                  Height="200"
-                                  HorizontalAlignment="Center"
-                                  VerticalAlignment="Center">
+                                      Height="200"
+                                      HorizontalAlignment="Center"
+                                      VerticalAlignment="Center">
                                     <Grid.Resources>
                                         <Style TargetType="Rectangle">
                                             <Setter Property="Fill"
-                                                Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                                    Value="{Binding Foreground, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
                                             <Setter Property="RadiusX" Value="25" />
                                             <Setter Property="RadiusY" Value="5" />
                                         </Style>
@@ -39,12 +39,12 @@
                                     <Rectangle Opacity="0.2" />
 
                                     <Rectangle Height="10"
-                                           VerticalAlignment="Top"
-                                           Opacity="0.1" />
+                                               VerticalAlignment="Top"
+                                               Opacity="0.1" />
                                     <Rectangle Margin="0,0,0,1" VerticalAlignment="Bottom">
                                         <interactivity:Interaction.Behaviors>
                                             <ukits:ProgressToHeightBehavior BasedElement="{Binding ElementName=Root}"
-                                                                         Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                                                            Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
                                         </interactivity:Interaction.Behaviors>
                                     </Rectangle>
 
@@ -55,8 +55,9 @@
                                         </Grid.RowDefinitions>
                                         <Grid>
                                             <interactivity:Interaction.Behaviors>
-                                                <ukits:ProgressToHeightBehavior BasedElement="{Binding ElementName=Root}"
-                                                                             Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                                <ukits:ProgressToHeightBehavior
+                                                    BasedElement="{Binding ElementName=Root}"
+                                                    Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
                                             </interactivity:Interaction.Behaviors>
                                         </Grid>
                                         <Rectangle Grid.RowSpan="2" />
@@ -79,13 +80,14 @@
                                         </Grid.RowDefinitions>
                                         <Grid Margin="0,0,0,5">
                                             <interactivity:Interaction.Behaviors>
-                                                <ukits:ProgressToHeightBehavior BasedElement="{Binding ElementName=Root}"
-                                                                             Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
+                                                <ukits:ProgressToHeightBehavior
+                                                    BasedElement="{Binding ElementName=Root}"
+                                                    Progress="{Binding Value, RelativeSource={RelativeSource AncestorType=ProgressBar}}" />
                                             </interactivity:Interaction.Behaviors>
                                         </Grid>
                                         <Rectangle Grid.RowSpan="2"
-                                               Height="10"
-                                               VerticalAlignment="Top" />
+                                                   Height="10"
+                                                   VerticalAlignment="Top" />
                                     </Grid>
                                 </Grid>
                             </ControlTemplate>
@@ -97,7 +99,7 @@
             <!-- <local:GifImage Source="../Img/giphy.gif" Stretch="Uniform" Cursor="Hand"/> -->
             <Viewbox Height="60" Width="120" Name="Viewbox">
 
-                <Grid Margin="0" Height="60" Width="120" >
+                <Grid Margin="0" Height="60" Width="120">
                     <Grid.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
@@ -117,7 +119,7 @@
                             <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                         </ContextMenu>
                     </Grid.ContextMenu>
-                   
+
                     <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" CornerRadius="10,10,10,10">
                         <Border.Effect>
                             <BlurEffect Radius="20" RenderingBias="Performance"></BlurEffect>
@@ -126,12 +128,18 @@
 
                     <!-- 主体 -->
                     <Button Name="MainStr" MouseDoubleClick="Control_OnMouseDoubleClick" Width="120" Height="50"
-                        VerticalContentAlignment="Stretch" FontSize="12"  Margin="0" Padding="0"
-                        HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
-                        Background="Transparent" Foreground="Red" FontWeight="Bold"
-                         IsHitTestVisible="False"
-                        Style="{StaticResource NoneButton}" Cursor="Hand">
-                        网络.by yi
+                            VerticalContentAlignment="Stretch" FontSize="12" Margin="0" Padding="0"
+                            HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
+                            Background="Transparent" Foreground="Red" FontWeight="Bold"
+                            IsHitTestVisible="False"
+                            Style="{StaticResource NoneButton}" Cursor="Hand">
+                        <Button.Content>
+                            <StackPanel Orientation="Vertical" Margin="0,-3,0,0">
+                                <TextBlock Name="MainStrN">power</TextBlock>
+                                <TextBlock Name="MainStrU">by</TextBlock>
+                                <TextBlock Name="MainStrD">yi</TextBlock>
+                            </StackPanel>
+                        </Button.Content>
                         <!-- 内容 -->
                         <!--<media:TextShape x:Name="MainStr"
                                      HorizontalAlignment="Left"
@@ -145,7 +153,8 @@
                                      Text="正在加载">
                     </media:TextShape>-->
                         <Button.Effect>
-                            <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="3" ShadowDepth="1" Opacity="1" Direction="300" />
+                            <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="3" ShadowDepth="1"
+                                              Opacity="1" Direction="300" />
                         </Button.Effect>
                     </Button>
                     <!-- CPU -->
@@ -156,11 +165,12 @@
                             <ColumnDefinition Width="20" />
                         </Grid.ColumnDefinitions>
                         <Grid Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
-                            <Rectangle Name="CpuRect"  Stroke="Transparent" Height="10"
-                               Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left"   
-                               VerticalAlignment="Top" StrokeThickness="2">
+                            <Rectangle Name="CpuRect" Stroke="Transparent" Height="10"
+                                       Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left"
+                                       VerticalAlignment="Top" StrokeThickness="2">
                                 <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="100,0" EndPoint="0,0" SpreadMethod="Pad">
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="100,0" EndPoint="0,0"
+                                                         SpreadMethod="Pad">
                                         <LinearGradientBrush.RelativeTransform>
                                             <TransformGroup>
                                                 <RotateTransform Angle="0" CenterX="0" CenterY="0" />
@@ -168,7 +178,7 @@
                                             </TransformGroup>
                                         </LinearGradientBrush.RelativeTransform>
 
-                                        <GradientStop Color="#f00" Offset="0"  />
+                                        <GradientStop Color="#f00" Offset="0" />
                                         <GradientStop Color="#ef0010" Offset=".09" />
                                         <GradientStop Color="#fff" Offset=".1" />
                                         <GradientStop Color="#df0020" Offset=".12" />
@@ -180,21 +190,22 @@
                                 </Rectangle.Fill>
                                 <FrameworkElement.Effect>
                                     <DropShadowEffect BlurRadius="2"
-                                              RenderingBias="Quality"
-                                              ShadowDepth="0"
-                                              Color="Black" />
+                                                      RenderingBias="Quality"
+                                                      ShadowDepth="0"
+                                                      Color="Black" />
                                 </FrameworkElement.Effect>
                             </Rectangle>
 
 
                             <Viewbox Width="100">
-                                <TextBlock x:Name="CpuStr" FontSize="13"   Margin="0,-3,0,0" Padding="9,0,0,0"
-                               Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"  
-                               VerticalAlignment="Center"   FontWeight="Bold"  
-                                            HorizontalAlignment="Center" TextAlignment="Center" >
+                                <TextBlock x:Name="CpuStr" FontSize="13" Margin="0,-3,0,0" Padding="9,0,0,0"
+                                           Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"
+                                           VerticalAlignment="Center" FontWeight="Bold"
+                                           HorizontalAlignment="Center" TextAlignment="Center">
 
                                     <TextBlock.Foreground>
-                                        <LinearGradientBrush MappingMode="Absolute" StartPoint="0,1" EndPoint="0,0" SpreadMethod="Pad">
+                                        <LinearGradientBrush MappingMode="Absolute" StartPoint="0,1" EndPoint="0,0"
+                                                             SpreadMethod="Pad">
                                             <LinearGradientBrush.RelativeTransform>
                                                 <TransformGroup>
                                                     <RotateTransform Angle="0" CenterX="0" CenterY="0" />
@@ -202,24 +213,22 @@
                                                 </TransformGroup>
                                             </LinearGradientBrush.RelativeTransform>
 
-                                            <GradientStop Color="#f00" Offset="0"  />
+                                            <GradientStop Color="#f00" Offset="0" />
 
                                             <GradientStop Color="#fff" Offset="1" />
                                         </LinearGradientBrush>
                                     </TextBlock.Foreground>
                                     <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="CpuStrShadow" Color="#00f" BlurRadius="3" ShadowDepth="1" Opacity="1" Direction="270" />
+                                        <DropShadowEffect x:Name="CpuStrShadow" Color="#00f" BlurRadius="3"
+                                                          ShadowDepth="1" Opacity="1" Direction="270" />
                                     </TextBlock.Effect>
                                 </TextBlock>
                             </Viewbox>
                         </Grid>
 
 
-
-
-
                         <Ellipse Grid.Column="2" Stroke="Transparent" Width="10" Height="15" Cursor="Hand"
-                             HorizontalAlignment="Right" Visibility="Collapsed" VerticalAlignment="Top">
+                                 HorizontalAlignment="Right" Visibility="Collapsed" VerticalAlignment="Top">
                             <Ellipse.Fill>
                                 <RadialGradientBrush GradientOrigin="0.2,0.8" RadiusX="0.75" RadiusY="0.75">
                                     <RadialGradientBrush.RelativeTransform>
@@ -240,19 +249,21 @@
                     <!-- 标识 -->
                     <Button MouseDoubleClick="Control_OnMouseDoubleClick" Height="10" Width="20" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                               Padding="0"
-                            Style="{StaticResource NoneButton}" Cursor="Hand" HorizontalAlignment="Right" VerticalAlignment="Top">
+                            Padding="0"
+                            Style="{StaticResource NoneButton}" Cursor="Hand" HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
                         <Grid>
 
 
-                            <Rectangle Name="StatStrRect"  Stroke="Transparent" Width="20" Height="10"
-                                   Cursor="Hand"
-                                   ToolTip="speed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Rectangle Name="StatStrRect" Stroke="Transparent" Width="20" Height="10"
+                                       Cursor="Hand"
+                                       ToolTip="speed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
                                 <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute"  StartPoint="0,0" EndPoint="0,0" SpreadMethod="Pad" ColorInterpolationMode="ScRgbLinearInterpolation">
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,0"
+                                                         SpreadMethod="Pad"
+                                                         ColorInterpolationMode="ScRgbLinearInterpolation">
                                         <GradientStop Color="#ff0000ff" Offset="1" />
                                         <GradientStop Color="#ff0000ff" Offset="0.51" />
-                                       
 
 
                                         <!--<GradientStop Color="#ffff0000" Offset="0.1" />
@@ -260,7 +271,7 @@
                                     <GradientStop Color="#a0f00000" Offset="0.5" />
                                     <GradientStop Color="#88ff0000" Offset="0.5" />
                                     <GradientStop Color="#99ff0000" Offset="0.9" />-->
-                                        
+
                                         <GradientStop Color="#ffff0000" Offset="0.49" />
                                         <GradientStop Color="#ffff0000" Offset="0" />
                                     </LinearGradientBrush>
@@ -268,10 +279,12 @@
 
                             </Rectangle>
                             <Viewbox>
-                                <TextBlock x:Name="StatStr"   FontSize="13"
-                                           Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">H
+                                <TextBlock x:Name="StatStr" FontSize="13"
+                                           Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    H
                                     <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3" ShadowDepth="0" Opacity="0.8" Direction="0" />
+                                        <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3"
+                                                          ShadowDepth="0" Opacity="0.8" Direction="0" />
                                     </TextBlock.Effect>
                                 </TextBlock>
                             </Viewbox>
@@ -284,10 +297,12 @@
                             Margin="0,0,0,0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom">
-                            <Rectangle   Stroke="Transparent"  Height="50"  Width="12" Cursor="Hand" 
-                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"  Margin="0" StrokeThickness="0" >
+                            <Rectangle Stroke="Transparent" Height="50" Width="12" Cursor="Hand"
+                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
+                                       StrokeThickness="0">
                                 <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50" SpreadMethod="Pad">
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50"
+                                                         SpreadMethod="Pad">
                                         <LinearGradientBrush.RelativeTransform>
                                             <TransformGroup>
                                                 <RotateTransform Angle="0" CenterX="0" CenterY="0" />
@@ -296,7 +311,7 @@
                                         </LinearGradientBrush.RelativeTransform>
 
 
-                                        <GradientStop Color="#f00" Offset="0"  />
+                                        <GradientStop Color="#f00" Offset="0" />
                                         <GradientStop Color="#ef0010" Offset=".09" />
                                         <GradientStop Color="#fff" Offset=".1" />
                                         <GradientStop Color="#df0020" Offset=".12" />
@@ -310,10 +325,11 @@
                             </Rectangle>
                             <Viewbox>
                                 <TextBlock x:Name="MemStr" FontSize="13" Width="8" TextWrapping="Wrap"
-                                           Foreground="#ffff" HorizontalAlignment="Stretch" >
+                                           Foreground="#ffff" HorizontalAlignment="Stretch">
                                     100
                                     <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="1" Direction="0" />
+                                        <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2"
+                                                          ShadowDepth="1" Opacity="1" Direction="0" />
                                     </TextBlock.Effect>
                                 </TextBlock>
                             </Viewbox>
@@ -323,24 +339,26 @@
 
                     </Button>
                     <!-- disk -->
-                    <Button x:Name="DiskBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="110" Height="5"
+                    <Button x:Name="DiskBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="110" Height="7"
                             HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
                             Margin="0,0,9,0" Padding="0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
-                        <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="-1,0,0,0"  >
-                            <Rectangle   Stroke="Transparent"  Height="10"  Width="106" Cursor="Hand" 
-                                 HorizontalAlignment="Left" VerticalAlignment="Bottom"  Margin="0" StrokeThickness="0" >
+                        <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="-1,0,0,0">
+                            <Rectangle Stroke="Transparent" Height="10" Width="106" Cursor="Hand"
+                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
+                                       StrokeThickness="0">
                                 <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="106,0" SpreadMethod="Pad">
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="106,0"
+                                                         SpreadMethod="Pad">
                                         <LinearGradientBrush.RelativeTransform>
                                             <TransformGroup>
                                                 <RotateTransform Angle="0" CenterX="0" CenterY="0" />
                                                 <TranslateTransform />
                                             </TransformGroup>
                                         </LinearGradientBrush.RelativeTransform>
-                                        
-                                        <GradientStop Color="#CD7F32" Offset="0"  />
+
+                                        <GradientStop Color="#CD7F32" Offset="0" />
                                         <!-- <GradientStop Color="#CD7F32" Offset=".3" /> -->
                                         <GradientStop Color="#5000af" Offset=".4" />
                                         <GradientStop Color="#00f" Offset=".49" />
@@ -352,18 +370,18 @@
                                 </Rectangle.Fill>
 
                             </Rectangle>
-                   
-                            
+
 
                         </Grid>
 
                     </Button>
 
-                    <TextBlock x:Name="DiskStr" FontSize="9"   TextWrapping="Wrap" VerticalAlignment="Bottom"
-                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,10,-2" >
+                    <TextBlock x:Name="DiskStr" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
+                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,10,-2">
                         disk
                         <TextBlock.Effect>
-                            <DropShadowEffect x:Name="DiskStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="1" Direction="0" />
+                            <DropShadowEffect x:Name="DiskStrShadow" Color="#f000" BlurRadius="2" ShadowDepth="1"
+                                              Opacity="1" Direction="0" />
                         </TextBlock.Effect>
                     </TextBlock>
 

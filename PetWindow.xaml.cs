@@ -290,7 +290,9 @@ public partial class PetWindow : Window
             long lastUp = 0;
             long lastDown = 0;
             bool isnowork = false;
-
+            string tapas = "";
+            string tapasU = "";
+            string tapasD = "";
             while (IsAlive)
             {
                 var tap = IsVpn ? YiKit.GetInterface(ip: "172.27.") : YiKit.GetInterface(vir: false);
@@ -305,7 +307,7 @@ public partial class PetWindow : Window
                 IPInterfaceProperties ipInterface = tap.GetIPProperties();
                 // string MAC = adapter.GetPhysicalAddress().ToString(); //获取单播地址集
                 UnicastIPAddressInformationCollection ipCollection = ipInterface.UnicastAddresses;
-                string tapas = "";
+              
                 long nowUp;
                 long nowDown;
                 foreach (UnicastIPAddressInformation ipaddr in ipCollection)
@@ -328,22 +330,22 @@ public partial class PetWindow : Window
                         if (nowDown == lastDown && nowUp == lastUp)
                         {
                             if (isnowork) break;
-                            tapas += "速\n";
-                            tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
-                            tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
+                            tapas = "速";
+                            tapasU = "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
+                            tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown)  ;
 
                             isnowork = true;
                         }
                         else
                         {
                             isnowork = false;
-                            tapas += "速" + (nowUp == lastUp ? "  " : "⇡") +
+                            tapas = "速" + (nowUp == lastUp ? "  " : "⇡") +
                                      (((nowDown - lastDown) >= (nowUp - lastUp)) ? "⇣" : "⇡")
                                      + (nowDown == lastDown ? "  " : "⇣") + " "
-                                     + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "\n";
+                                     + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "";
 
-                            tapas += "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "\n";
-                            tapas += "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "\n";
+                            tapasU = "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
+                            tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "";
                         }
 
 
@@ -351,11 +353,20 @@ public partial class PetWindow : Window
                         // tapas += "MAC:"+tap.GetPhysicalAddress() + "\n";
                         YiKit.RunOnUIThread(() =>
                         {
-                            if (!tapas.Equals(MainStr.Content.ToString()))
+                            if (!tapas.Equals(MainStrN.Text))
                             {
-                                MainStr.Content = tapas;
+                                MainStrN.Text = tapas;
                                 StatStrRect.ToolTip = ipaddr.Address;
                                 lastDown = nowDown;
+                                lastUp = nowUp;
+                            }
+                            if (!tapasU.Equals(MainStrU.Text))
+                            {
+                                MainStrU.Text = tapasU;
+                            }
+                            if (!tapasD.Equals(MainStrD.Text))
+                            {
+                                MainStrD.Text = tapasD;
                                 lastUp = nowUp;
                             }
                         });
@@ -961,8 +972,7 @@ public partial class PetWindow : Window
                         YiWscClient.Open();
                         YiWscClient.Send("ait::" + text);
                     }
-
-                    ;
+                    
                     TranslateDialog.Me.ZhTx.Text = text;
                     TranslateDialog.Me.EnTx.Text = "... ...";
                     TranslateDialog.Me.show();
