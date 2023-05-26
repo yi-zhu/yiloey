@@ -18,7 +18,6 @@ using System.Windows.Forms;
 using System.Windows.Media.Effects;
 using holey.Dialog;
 using holey.Page;
-using ShockwaveFlashObjects;
 using YiKits;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
@@ -1277,5 +1276,60 @@ public partial class PetWindow : Window
 
         WallPaper.me.Show();
         WallPaper.me.Activate();
+    }
+
+    private void ChangeSizeMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小","进程名称","宽","高");
+        if (null==strs||strs.Count!=3)
+        {
+            return;
+        }
+
+
+        try
+        {
+            if (Convert.ToSingle(strs[1]) <= 0f)
+            {
+                YiKit.ShowToastWaring("宽不能小于0, 设置失败!");
+                return;
+            }
+     
+            string str = strs[0];
+            if (str.EndsWith(".exe"))
+            {
+                str = str.Substring(0, str.Length - 4);
+            }
+
+// 通过进程名查找并挂起目标进程
+            Process[] targetProcesses = Process.GetProcessesByName(str);
+            if (targetProcesses.Length == 0)
+            {
+                targetProcesses = Process.GetProcessesByName(str + "64");
+            }
+
+            bool isHidden = false;
+            foreach (Process p in targetProcesses)
+            {
+                p.Refresh();
+                IntPtr hwnd = p.MainWindowHandle;
+                if (hwnd.ToInt32() != 0)
+                {
+                    YiKit.SetWindowPos(hwnd, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
+                
+                }
+                
+                // YiKit.SetWindowPos(p.MainWindowHandle, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
+            }
+
+        
+        }
+        catch (Exception exception)
+        {
+            YiKit.ShowToastError("时间只可为数字, 设置失败!");
+            return;
+        }
+
+
     }
 }
