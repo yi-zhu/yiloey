@@ -18,7 +18,6 @@ using System.Windows.Forms;
 using System.Windows.Media.Effects;
 using holey.Dialog;
 using holey.Page;
-using ShockwaveFlashObjects;
 using YiKits;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
@@ -112,16 +111,16 @@ public partial class PetWindow : Window
         l = YiKit.IniGetDouble("petleft", r.Width - Width - 10);
         t = YiKit.IniGetDouble("pettop", r.Bottom - Height - 10);
 
-        if (l>=r.Width)
+        if (l >= r.Width)
         {
             l = r.Width - Width - 10;
         }
 
-        if (t>=r.Height)
+        if (t >= r.Height)
         {
             t = r.Bottom - Height - 10;
         }
-     
+
         IsVpn = YiKit.IniGetBool("isvpn", true);
 
         if (this.Left != l)
@@ -307,7 +306,7 @@ public partial class PetWindow : Window
                 IPInterfaceProperties ipInterface = tap.GetIPProperties();
                 // string MAC = adapter.GetPhysicalAddress().ToString(); //获取单播地址集
                 UnicastIPAddressInformationCollection ipCollection = ipInterface.UnicastAddresses;
-              
+
                 long nowUp;
                 long nowDown;
                 foreach (UnicastIPAddressInformation ipaddr in ipCollection)
@@ -332,7 +331,7 @@ public partial class PetWindow : Window
                             if (isnowork) break;
                             tapas = "速";
                             tapasU = "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
-                            tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown)  ;
+                            tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown);
 
                             isnowork = true;
                         }
@@ -340,9 +339,9 @@ public partial class PetWindow : Window
                         {
                             isnowork = false;
                             tapas = "速" + (nowUp == lastUp ? "  " : "⇡") +
-                                     (((nowDown - lastDown) >= (nowUp - lastUp)) ? "⇣" : "⇡")
-                                     + (nowDown == lastDown ? "  " : "⇣") + " "
-                                     + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "";
+                                    (((nowDown - lastDown) >= (nowUp - lastUp)) ? "⇣" : "⇡")
+                                    + (nowDown == lastDown ? "  " : "⇣") + " "
+                                    + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "";
 
                             tapasU = "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
                             tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "";
@@ -360,10 +359,12 @@ public partial class PetWindow : Window
                                 lastDown = nowDown;
                                 lastUp = nowUp;
                             }
+
                             if (!tapasU.Equals(MainStrU.Text))
                             {
                                 MainStrU.Text = tapasU;
                             }
+
                             if (!tapasD.Equals(MainStrD.Text))
                             {
                                 MainStrD.Text = tapasD;
@@ -383,7 +384,14 @@ public partial class PetWindow : Window
             int cpuse = 0;
             int memuse = 0;
             int diskuse = 0;
+            int gpumem = 0;
             double diskusebyte = 0d;
+            double diskusebyteR = 0d;
+            double diskusebyteW = 0d;
+            double gpumemmbU = 0d;
+            double gpumemmbT = 0d;
+            string disktx = "";
+            
             while (IsAlive)
             {
                 #region CPU使用率
@@ -391,25 +399,47 @@ public partial class PetWindow : Window
                 cpuse = (int)YiKit.CpuUse();
                 memuse = (int)YiKit.MemUse();
                 diskuse = (int)YiKit.DiskUse();
-                diskusebyte = (int)YiKit.DiskUseByte();
-                YiKit.RunOnUIThread(() => CpuRect.Width = cpuse);
+                diskusebyteR = (int)YiKit.DiskUseByte("Read");
+                diskusebyteW = (int)YiKit.DiskUseByte("Write");
+                disktx = (diskusebyteW == diskusebyteR ? "" : (diskusebyteW > diskusebyteR ? "✎" : "👁")) +
+                         YiKit.SumByte(diskusebyteW + diskusebyteR);
+                gpumemmbU = YiKit.GpuMem();
+                gpumemmbT = YiKit.GpuMemTol();
+                gpumem = (int)YiKit.GpuMemuse();
                 YiKit.RunOnUIThread(() =>
                 {
+                    //cpu
+                    CpuRect.Width = cpuse;
+                    
+                    //gpumem
+                    if (!GpuMemStr.Text.Equals(gpumem + ""))
+                    {
+                        GpuMemBtn.Height = gpumem / 2;
+                        GpuMemStr.Text = gpumem + "";
+                        GpuMemBtn.ToolTip = gpumemmbU + "MB/" + gpumemmbT + "MB";
+                    }
+                    
+                    
+                    //mem
                     if (!MemStr.Text.Equals(memuse + ""))
                     {
                         MemBtn.Height = memuse / 2;
                         MemStr.Text = memuse + "";
                     }
-                });
-                YiKit.RunOnUIThread(() =>
-                {
-                    if (!DiskStr.Text.Equals(diskusebyte + ""))
+                    
+                    //disk
+                    if (!DiskStrW.Text.Equals(disktx))
                     {
-                        
-                        DiskStr.Text = YiKit.SumByte(diskusebyte)+"";
+                        DiskStrW.Text =disktx;
+                    }
+                    if (DiskBtn.Width != diskuse)
+                    {
                         DiskBtn.Width = diskuse;
                     }
+
                 });
+         
+                
                 YiKit.CpuTem((b) =>
                 {
                     if (b.ToString() == "0")
@@ -967,12 +997,12 @@ public partial class PetWindow : Window
                 if (YiKit.IsEn(text))
                 {
                     // YiWscClient.Send("ait::" + YiKit.RemoveSpecialCharacters(text));
-                    if (YiWscClient.Send("ait::" + text)==false)
+                    if (YiWscClient.Send("ait::" + text) == false)
                     {
                         YiWscClient.Open();
                         YiWscClient.Send("ait::" + text);
                     }
-                    
+
                     TranslateDialog.Me.ZhTx.Text = text;
                     TranslateDialog.Me.EnTx.Text = "... ...";
                     TranslateDialog.Me.show();
