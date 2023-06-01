@@ -1,6 +1,9 @@
 using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Threading;
 using System.Windows;
+using System.Windows.Interop;
 using YiKits;
 
 namespace holey.Page;
@@ -26,12 +29,44 @@ public partial class WallPaper : Window
     {
         base.OnSourceInitialized(e);
         Init();
+        string file = YiKit.IniGet("Source", "WallPaper");
+        if (string.IsNullOrEmpty(file))
+        {
+            ShowFile();
+        }
+        else
+        {
+            BMedia.Source = new Uri(file);
+            BMedia.Volume = YiKit.IniGetInt("Volume", 0, "WallPaper");
+            BMedia.Play();
+        }
 
+
+        BMedia.MediaEnded += ((sender, args) =>
+        {
+            BMedia.Stop();
+            BMedia.Play();
+        });
     }
-    
-    
+
+    public void ShowFile()
+    {
+        List<string> strs = YiKit.ShowInputDialog("桌面背景配置：支持图片、视频。如果不想改变 点【取消】", "文件位置（点击选择）", "音量(0最小-1最大)");
+        if (null == strs || strs.Count != 2)
+        {
+            return;
+        }
+
+        BMedia.Source = new Uri(strs[0]);
+        YiKit.IniWrite("Source", strs[0], "WallPaper");
+        YiKit.IniWrite("Volume", strs[1], "WallPaper");
+        BMedia.Volume = double.Parse(string.IsNullOrEmpty(strs[1]) ? "0" : strs[1]);
+        BMedia.Play();
+    }
+
+
     //窗口显示回调
-    
+
 
     #region MyRegion
 
@@ -82,4 +117,25 @@ public partial class WallPaper : Window
     }
 
     #endregion
+
+    /// <summary>
+    ///  此方法为隐藏Alt+Tab；隐藏窗口在toolbar 请设置ShowInTaskbar
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="args"></param>
+    void FormLoaded(object sender, RoutedEventArgs args)
+    {
+        //Variable to hold the handle for the form
+        var hwnd = new WindowInteropHelper(this).Handle;
+        //Performing some magic to hide the form from Alt+Tab
+        YiKit.SetWindowLong(hwnd, YiKit.GWL_EX_STYLE,
+            (YiKit.GetWindowLong(hwnd, YiKit.GWL_EX_STYLE) | YiKit.WS_EX_TOOLWINDOW) & ~YiKit.WS_EX_APPWINDOW);
+        //鼠标穿透
+        // SetWindowLong(hwnd, GWL_EX_STYLE,0x20);
+        // SetWindowLong(hwnd, GWL_EX_STYLE, (GetWindowLong(hwnd, GWL_EX_STYLE) | 0x00000020));
+        Height = YiKit.GetScreenHeight();
+        Width = YiKit.GetScreenWidth();
+        Left = 0;
+        Top = 0;
+    }
 }

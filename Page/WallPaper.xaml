@@ -4,9 +4,11 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:holey.Page"
-        mc:Ignorable="d" 
-        Title="WallPaper"  Background="Brown" WindowStyle="None" >
+        mc:Ignorable="d"  
+        Title="WallPaper"  Background="Transparent" WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" ShowActivated="False"
+        Loaded="FormLoaded">
     <Grid>
-        <TextBlock Name="TextBlock" ></TextBlock>
+        <!-- <Image Name="BImage" Source="../Img/00013-1306097179.png"></Image> -->
+        <MediaElement Name="BMedia"  LoadedBehavior="Manual"  />
     </Grid>
 </Window>

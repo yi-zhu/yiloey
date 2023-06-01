@@ -102,7 +102,7 @@
                     <Grid.ContextMenu>
                         <ContextMenu>
                             <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
-                            <MenuItem Header="开启桌面" Click="WallPaperItem_OnClick"></MenuItem>
+                            <MenuItem Header="动态桌面" Click="WallPaperItem_OnClick"></MenuItem>
                             <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
                             <MenuItem Name="TranslateMenuItem" Header="开启翻译" Click="TranslateItemOnClick"></MenuItem>
                             <MenuItem Name="ChangeSizeMenuItem" Header="变更窗口大小" Click="ChangeSizeMenuItem_OnClickItemOnClick"></MenuItem>
@@ -130,7 +130,7 @@
                     <Button Name="MainStr" MouseDoubleClick="Control_OnMouseDoubleClick" Width="120" Height="50"
                             VerticalContentAlignment="Stretch" FontSize="12" Margin="0" Padding="0"
                             HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
-                            Background="Transparent" Foreground="Red" FontWeight="Bold"
+                            Background="Transparent" Foreground="Red" FontWeight="Bold" 
                             IsHitTestVisible="False"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Button.Content>
@@ -294,7 +294,7 @@
                     <Button x:Name="MemBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="10" Height="50"
                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Margin="0,0,0,0"
+                            Margin="0,0,10.5,-0.8"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom">
                             <Rectangle Stroke="Transparent" Height="50" Width="12" Cursor="Hand"
@@ -321,7 +321,7 @@
                                         <GradientStop Color="#00f" Offset="1" />
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
-
+                           
                             </Rectangle>
                             <Viewbox>
                                 <TextBlock x:Name="MemStr" FontSize="13" Width="8" TextWrapping="Wrap"
@@ -339,13 +339,13 @@
 
                     </Button>
                     <!-- mem -->
-                    <Button x:Name="GpuMemBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="10" Height="50"
+                    <Button x:Name="GpuMemBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="11" Height="50"
                             HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Margin="0,10,10,0"
+                            Margin="0,8.7,-0.5,0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom">
-                            <Rectangle Stroke="Transparent" Height="50" Width="10" Cursor="Hand"
+                            <Rectangle Stroke="Transparent" Height="50" Width="{Binding ElementName=GpuMemBtn,Path=Width}" Cursor="Hand"
                                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
                                        StrokeThickness="0">
                                 <Rectangle.Fill>
@@ -369,7 +369,10 @@
                                         <GradientStop Color="#00f" Offset="1" />
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
-
+                                <Rectangle.Effect>
+                                    <DropShadowEffect  Color="#ff00" BlurRadius="5" ShadowDepth="5"
+                                                       Opacity="1" Direction="315" />
+                                </Rectangle.Effect>
                             </Rectangle>
                             <Viewbox>
                                 <TextBlock x:Name="GpuMemStr" FontSize="13" Width="8" TextWrapping="Wrap"
@@ -388,14 +391,14 @@
                     </Button>
                     <!-- disk -->
                     <Button x:Name="DiskBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="100" Height="7"
-                            HorizontalAlignment="Left" VerticalAlignment="Bottom" Grid.Column="2"
+                            HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Margin="2,0,0,0" Padding="0"
+                            Margin="-19,0,0,0" Padding="0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0,0,0,0">
-                            <Rectangle Stroke="Transparent" Height="10" Width="100" Cursor="Hand"
+                            <Rectangle Stroke="Transparent"  Height="10" Width="100" Cursor="Hand"
                                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
-                                       StrokeThickness="0">
+                                       StrokeThickness="1">
                                 <Rectangle.Fill>
                                     <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="106,0"
                                                          SpreadMethod="Pad">
@@ -416,6 +419,10 @@
                                         <GradientStop Color="#CD7F32" Offset="1" />
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
+                                <Rectangle.Effect>
+                                    <DropShadowEffect  Color="#ff00" BlurRadius="11" ShadowDepth="1"
+                                                      Opacity="1" Direction="0" />
+                                </Rectangle.Effect>
 
                             </Rectangle>
 
@@ -425,7 +432,7 @@
                     </Button>
 
                     <TextBlock x:Name="DiskStrW" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
-                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,25,-2">
+                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,20,-2">
                         disk
                         <TextBlock.Effect>
                             <DropShadowEffect x:Name="DiskStrShadowW" Color="#f000" BlurRadius="2" ShadowDepth="1"

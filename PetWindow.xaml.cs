@@ -199,14 +199,15 @@ public partial class PetWindow : Window
                             traslateText = text;
                             if (YiKit.IsEn(text))
                             {
-                                YiWscClient.Send("ait::" + text);
-                                TranslateDialog.Me.ZhTx.Text = text;
-                                TranslateDialog.Me.EnTx.Text = "... ...";
-                                TranslateDialog.Me.show();
+                                YiWscClient.Send("ait:e2z:" + text);
+                               
                                 // TranslateDialog.Me.Activate();
                             }
                             else
-                                YiKit.ShowToastWaring("不是英文");
+                                YiWscClient.Send("ait:z2e:" + text);
+                            TranslateDialog.Me.ZhTx.Text = text;
+                            TranslateDialog.Me.EnTx.Text = "... ...";
+                            TranslateDialog.Me.show();
 
                             isTranslateing = false;
                             return;
@@ -226,8 +227,17 @@ public partial class PetWindow : Window
                 }
             }
         }));
-
+        YiKit.SetWindowLong(YiKit.GetWindowHandle(this), YiKit.GWL_EX_STYLE,
+            YiKit.GWL_EXSTYLE | YiKit.WS_EX_TRANSPARENT);
+        
         LoadPet();
+        if (YiKit.IniGetInt("wallpaper", 0 )==1)
+        {
+            new WallPaper();
+            WallPaper.me.Show();
+            WallPaper.me.Activate();
+        }
+        
     }
 
 
@@ -641,7 +651,7 @@ public partial class PetWindow : Window
     {
         IsVpn = !IsVpn;
         YiKit.IniWrite("isvpn", IsVpn.ToString());
-        YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int)((int)Left + Width / 2), t: (int)((int)Top - Height / 2));
+        YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int)((int)Left + Width / 2), t: (int)((int)Top ));
     }
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
@@ -994,23 +1004,28 @@ public partial class PetWindow : Window
 
                 text = text.Trim();
                 traslateText = text;
+                string ty = "e2z";
                 if (YiKit.IsEn(text))
                 {
                     // YiWscClient.Send("ait::" + YiKit.RemoveSpecialCharacters(text));
-                    if (YiWscClient.Send("ait::" + text) == false)
-                    {
-                        YiWscClient.Open();
-                        YiWscClient.Send("ait::" + text);
-                    }
-
-                    TranslateDialog.Me.ZhTx.Text = text;
-                    TranslateDialog.Me.EnTx.Text = "... ...";
-                    TranslateDialog.Me.show();
-                    // TranslateDialog.Me.Activate();
+                    ty = "e2z";
                 }
                 else
-                    YiKit.ShowToastWaring("不是英文");
+                    // YiKit.ShowToastWaring("不是英文");
+                    ty = "z2e";
+                if (YiWscClient.Send("ait:"+ty+":" + text) == false)
+                {
+                    YiWscClient.Open((state =>
+                    {
+                        YiWscClient.Send("ait:" +ty+":"+ text);
+                    }));
+                    
+                }
 
+                TranslateDialog.Me.ZhTx.Text = text;
+                TranslateDialog.Me.EnTx.Text = "... ...";
+                TranslateDialog.Me.show();
+                // TranslateDialog.Me.Activate();
                 isTranslateing = false;
                 return;
             }
@@ -1018,10 +1033,10 @@ public partial class PetWindow : Window
             {
                 return;
             }
-            else if (YiWscClient.Send("cpy:" + clbname + ":" + text) == false)
+            else if (YiWscClient!.Send("cpy:" + clbname + ":" + text) == false)
             {
-                YiWscClient.Open();
-                YiWscClient.Send("cpy:" + clbname + ":" + text);
+                YiWscClient.Open((state => YiWscClient.Send("cpy:" + clbname + ":" + text)));
+                ;
             }
 
             Thread.Sleep(100);
@@ -1303,10 +1318,20 @@ public partial class PetWindow : Window
         if (WallPaper.me == null)
         {
             new WallPaper();
+            WallPaper.me.Show();
+            WallPaper.me.Activate();
+            YiKit.IniWrite("wallpaper", "1" );
+            WallPaper.me.ShowFile();
+
+        }
+        else
+        {
+            YiKit.IniWrite("wallpaper", "0" );
+            WallPaper.me.Close();
+            WallPaper.me = null;
         }
 
-        WallPaper.me.Show();
-        WallPaper.me.Activate();
+      
     }
 
     private void ChangeSizeMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
