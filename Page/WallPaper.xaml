@@ -8,7 +8,10 @@
         Title="WallPaper"  Background="Transparent" WindowStyle="None" AllowsTransparency="True" ShowInTaskbar="False" ShowActivated="False"
         Loaded="FormLoaded">
     <Grid>
-        <!-- <Image Name="BImage" Source="../Img/00013-1306097179.png"></Image> -->
+        
+    
+        <Image Name="BImage" Width="{Binding ElementName=BMedia,Path=Width}" 
+               Height="{Binding ElementName=BMedia,Path=Height}" ></Image>
         <MediaElement Name="BMedia"  LoadedBehavior="Manual"  />
     </Grid>
 </Window>
