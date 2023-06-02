@@ -1119,12 +1119,18 @@ public partial class PetWindow : Window
                 YiKit.Print(data);
                 YiKit.RunOnUIThread(() =>
                 {
+                    data = data.Substring(4);
+                    if (data.IndexOf(":")>-1)
+                    {
+                        data = data.Substring(data.IndexOf(":")+1);
+                    }
+                    
                     if (TranslateDialog.Me != null)
                     {
-                        TranslateDialog.Me.EnTx.Text = data.Substring(4).Replace(':', ' ');
+                        TranslateDialog.Me.EnTx.Text = data.Replace(':', ' ');
                     }
                     else
-                        YiKit.ShowToast(data.Substring(4).Replace(':', ' '));
+                        YiKit.ShowToast(data.Replace(':', ' '));
 
                     // YiKit.ShowToast("已开启剪切板共享");
                 });
