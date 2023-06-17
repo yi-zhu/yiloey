@@ -1,12 +1,16 @@
 ﻿using System;
+using System.ComponentModel.Design;
 using System.Diagnostics;
+using System.IO;
+using System.Linq;
 using System.Net.NetworkInformation;
+using System.Reflection;
+using System.ServiceProcess;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using holey.Page;
 using YiKits;
-
 namespace holey
 {
     /// <summary>
@@ -54,6 +58,30 @@ namespace holey
         public static void StarteYi()
         {
             ShowLoading();
+            /*//获取服务
+            // 获取服务列表
+            ServiceController[] serviceList = ServiceController.GetServices();
+// 按名称排序
+            // serviceList = serviceList.OrderBy(m => m.DisplayName).ToArray();
+// 遍历服务列表
+            foreach (ServiceController service in serviceList)
+            {
+               
+                // 服务信息
+            }*/
+
+            string serviceName = "EsYi";
+            ServiceController sc = new ServiceController(serviceName); //建立服务对象
+            
+            if ((sc.Status.Equals(ServiceControllerStatus.Stopped)) || (sc.Status.Equals(ServiceControllerStatus.StopPending)))
+            {
+                sc.Start();
+                sc.WaitForStatus(ServiceControllerStatus.Running); //等待启动
+                sc.Refresh();
+            }
+            return;
+            
+            
             NetworkInterface tap = null;
             YiKit.StartProcessSync(_vname +
                                     " -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -s 255.240.0.0 -b  -i 20 -b -l yizhu.space:65533 "
@@ -296,7 +324,7 @@ namespace holey
 
         private void AutoItem_OnClick(object sender, RoutedEventArgs e)
         {
-            YiKit.SetAutoStart(isAuto: _isAuto);
+            YiKit.SetAutoStart((Assembly.GetExecutingAssembly().Location),isAuto: _isAuto);
             _isAuto = !_isAuto;
         }
     }

@@ -81,11 +81,11 @@
     </ItemGroup>
 
     <ItemGroup>
-      <EditorConfigFiles Remove="D:\soft\holey\holey\.editorconfig" />
+      <EditorConfigFiles Remove=".editorconfig" />
     </ItemGroup>
 
     <ItemGroup>
-      <None Include="D:\soft\holey\holey\.editorconfig" />
+      <None Include=".editorconfig" />
     </ItemGroup>
 
     <ItemGroup>
@@ -97,7 +97,7 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\YiKits\YiKits\YiKits.csproj">
+      <ProjectReference Include="..\YiKits\YiKits.csproj">
           <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
         <Private>True</Private>
         <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
@@ -117,6 +117,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <Reference Include="System.ServiceProcess" />
       <Reference Include="System.Windows.Forms" />
       <Reference Include="WindowsFormsIntegration" />
     </ItemGroup>

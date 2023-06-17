@@ -1,3 +1,5 @@
+using System.IO;
+using System.Reflection;
 using System.Windows;
 using System.Windows.Controls;
 using YiKits;
@@ -13,12 +15,12 @@ public partial class SetPage : System.Windows.Controls.Page
 
     private void AutoCheckBox_OnChecked(object sender, RoutedEventArgs e)
     {
-        YiKit.SetAutoStart(isAuto:true);
+        YiKit.SetAutoStart((Assembly.GetExecutingAssembly().Location),isAuto:true);
     }
 
     private void AutoCheckBox_OnUnchecked(object sender, RoutedEventArgs e)
     {
-        YiKit.SetAutoStart(isAuto:false);
+        YiKit.SetAutoStart((Assembly.GetExecutingAssembly().Location),isAuto:false);
 
     }
 }
