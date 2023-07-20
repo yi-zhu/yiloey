@@ -7,6 +7,7 @@ using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Interop;
+using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using YiKits;
 using Color = System.Windows.Media.Color;
@@ -60,8 +61,9 @@ public partial class WallPaper : Window
 
     protected override void OnClosed(EventArgs e)
     {
-        base.OnClosed(e);
+        YiKit.RegisterWindowMessage(YiKit.GetWindowHandle(this), false);
         me = null;
+        base.OnClosed(e);
     }
 
 
@@ -69,8 +71,19 @@ public partial class WallPaper : Window
     {
         base.OnSourceInitialized(e);
         Init();
+
+        //注册windows全局消息广播
+        YiKit.RegisterWindowMessage(YiKit.GetWindowHandle(this));
+        HwndSource hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+        if (hwndSource != null)
+        {
+            hwndSource.AddHook(new HwndSourceHook(WndProc));
+        }
+
         string file = YiKit.IniGet("Source", "WallPaper");
         BMedia.Stretch = System.Windows.Media.Stretch.UniformToFill;
+        BMedia.CacheMode = new BitmapCache(1);
+
         if (string.IsNullOrEmpty(file))
         {
             ShowFile();
@@ -97,7 +110,7 @@ public partial class WallPaper : Window
         {
             if (_uris.Count == 1)
             {
-                YiKit.ShowToastError(_uris[0].LocalPath+"格式不支持！");
+                YiKit.ShowToastError(_uris[0].LocalPath + "格式不支持！");
             }
             else
                 NextPlay();
@@ -120,55 +133,55 @@ public partial class WallPaper : Window
 
     private void NextPlay()
     {
-        if (i >= _uris.Count - 1)
+        try
         {
-            i = 0;
-        }
-        else
-        {
-            i = i + 1;
-        }
 
-        if (!_uriBitmaps.ContainsKey(_uris[i]) || _uriBitmaps[_uris[i]] == null)
-        {
-            RenderTargetBitmap bmp = new((int)SystemParameters.PrimaryScreenWidth,
-                (int)SystemParameters.PrimaryScreenHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
-            bmp.Render(BMedia);
-            _uriBitmaps[_uris[i]] = bmp;
-        }
+            if (i >= _uris.Count - 1)
+            {
+                i = 0;
+            }
+            else
+            {
+                i = i + 1;
+            }
 
-        BImage.Source = _uriBitmaps[_uris[i]];
+ 
 
-        /*if (BMedia.HasVideo || BMedia.HasAudio)
+            /*if (BMedia.HasVideo || BMedia.HasAudio)
         {
         }*/
-        if (!BMedia.NaturalDuration.HasTimeSpan)
-        {
-            YiKit.RunThread((state =>
+            if (!BMedia.NaturalDuration.HasTimeSpan)
             {
-                Thread.Sleep((int)(_pictime * 60000));
-                Dispatcher.Invoke(() =>
+                YiKit.RunThread((state =>
                 {
-                    BMedia.Stop();
-                    if (BMedia.Source != _uris[i])
+                    Thread.Sleep((int) (_pictime * 60000));
+                    Dispatcher.Invoke(() =>
                     {
-                        BMedia.Source = _uris[i];
-                    }
+                        BMedia.Stop();
+                        if (BMedia.Source != _uris[i])
+                        {
+                            BMedia.Source = _uris[i];
+                        }
 
-                    PlayMidea();
-                });
-            }));
+                        PlayMidea();
+                    });
+                }));
+            }
+            else if (BMedia.Source != _uris[i])
+            {
+                BMedia.Stop();
+                BMedia.Source = _uris[i];
+                PlayMidea();
+            }
+            else
+            {
+                BMedia.Stop();
+                PlayMidea();
+            }
         }
-        else if (BMedia.Source != _uris[i])
+        catch (Exception e)
         {
-            BMedia.Stop();
-            BMedia.Source = _uris[i];
-            PlayMidea();
-        }
-        else
-        {
-            BMedia.Stop();
-            PlayMidea();
+            Console.WriteLine(e);
         }
     }
 
@@ -276,6 +289,16 @@ public partial class WallPaper : Window
         try
         {
             BMedia.Play();
+            if (!_uriBitmaps.ContainsKey(BMedia.Source) || _uriBitmaps[BMedia.Source] == null)
+            {
+                RenderTargetBitmap bmp = new((int) SystemParameters.PrimaryScreenWidth,
+                    (int) SystemParameters.PrimaryScreenHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                bmp.Render(BMedia);
+                _uriBitmaps[BMedia.Source] = bmp;
+            }
+
+            BImage.Source = _uriBitmaps[BMedia.Source];
+            
         }
         catch
         {
@@ -284,11 +307,52 @@ public partial class WallPaper : Window
         }
     }
 
+    /// <summary>
+    /// 暂停播放
+    /// </summary>
+    /// <param name="pause">默认暂停</param>
+    protected void PausePlay(bool pause = true)
+    {
+        if (pause)
+        {
+            BMedia.Pause();
+        }
+        else
+        {
+            BMedia.Play();
+        }
+    }
+
+
+    protected virtual IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+    {
+        switch (msg)
+        {
+            case YiKit.WM_SIZEING:
+
+                if (wParam.ToInt32() == (int) YiKit.ABNotify.ABN_FULLSCREENAPP)
+                {
+                    if (lParam == (IntPtr) 1)
+                    {
+                        PausePlay();
+                    }
+                    else
+                    {
+                        PausePlay(false);
+                    }
+                }
+                //你的代码
+
+                break;
+        }
+
+        return IntPtr.Zero;
+    }
 
     //窗口显示回调
 
 
-    #region MyRegion
+    #region 初始化设置
 
     private IntPtr programIntPtr = IntPtr.Zero;
     bool inited { get; set; }

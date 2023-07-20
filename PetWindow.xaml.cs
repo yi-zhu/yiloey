@@ -94,7 +94,7 @@ public partial class PetWindow : Window
         // YiKit.GetAllCate();
         try
         {
-            _sleep = (int)(Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
+            _sleep = (int) (Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
         }
         catch (Exception e)
         {
@@ -166,7 +166,12 @@ public partial class PetWindow : Window
         //按键监听
         YiKit.KeyDownEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int)Keys.Q && (int)Control.ModifierKeys == (int)Keys.Control)
+            if (e.KeyValue == (int) Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift && (Control.ModifierKeys & Keys.Control) == Keys.Control)
+            {
+                isTranslateing = true;
+
+                YiKit.Print("按下了Ctrl+alt+Q:");
+            } else if (e.KeyValue == (int) Keys.Q && (int) Control.ModifierKeys == (int) Keys.Control)
             {
                 isTranslateing = true;
 
@@ -175,12 +180,12 @@ public partial class PetWindow : Window
         })); //按键监听
         YiKit.KeyUpEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int)Keys.Q)
+            if (e.KeyValue == (int) Keys.Q)
             {
                 // isTranslateing = true;
                 if (isTranslateing)
                 {
-                    YiKit.Print("松开了Ctrl+Q");
+                    YiKit.Print("松开了Q");
                     string text = YiKit.GetScreenText();
                     if (String.IsNullOrEmpty(text))
                     {
@@ -200,11 +205,12 @@ public partial class PetWindow : Window
                             if (YiKit.IsEn(text))
                             {
                                 YiWscClient.Send("ait:e2z:" + text);
-                               
+
                                 // TranslateDialog.Me.Activate();
                             }
                             else
                                 YiWscClient.Send("ait:z2e:" + text);
+
                             TranslateDialog.Me.ZhTx.Text = text;
                             TranslateDialog.Me.EnTx.Text = "... ...";
                             TranslateDialog.Me.show();
@@ -229,15 +235,14 @@ public partial class PetWindow : Window
         }));
         YiKit.SetWindowLong(YiKit.GetWindowHandle(this), YiKit.GWL_EX_STYLE,
             YiKit.GWL_EXSTYLE | YiKit.WS_EX_TRANSPARENT);
-        
+
         LoadPet();
-        if (YiKit.IniGetInt("wallpaper", 0 )==1)
+        if (YiKit.IniGetInt("wallpaper", 0) == 1)
         {
             new WallPaper();
             WallPaper.me.Show();
             WallPaper.me.Activate();
         }
-        
     }
 
 
@@ -401,26 +406,26 @@ public partial class PetWindow : Window
             double gpumemmbU = 0d;
             double gpumemmbT = 0d;
             string disktx = "";
-            
+
             while (IsAlive)
             {
                 #region CPU使用率
 
-                cpuse = (int)YiKit.CpuUse();
-                memuse = (int)YiKit.MemUse();
-                diskuse = (int)YiKit.DiskUse();
-                diskusebyteR = (int)YiKit.DiskUseByte("Read");
-                diskusebyteW = (int)YiKit.DiskUseByte("Write");
+                cpuse = (int) YiKit.CpuUse();
+                memuse = (int) YiKit.MemUse();
+                diskuse = (int) YiKit.DiskUse();
+                diskusebyteR = (int) YiKit.DiskUseByte("Read");
+                diskusebyteW = (int) YiKit.DiskUseByte("Write");
                 disktx = (diskusebyteW == diskusebyteR ? "" : (diskusebyteW > diskusebyteR ? "✎" : "👁")) +
                          YiKit.SumByte(diskusebyteW + diskusebyteR);
                 gpumemmbU = YiKit.GpuMem();
                 gpumemmbT = YiKit.GpuMemTol();
-                gpumem = (int)YiKit.GpuMemuse();
+                gpumem = (int) YiKit.GpuMemuse();
                 YiKit.RunOnUIThread(() =>
                 {
                     //cpu
                     CpuRect.Width = cpuse;
-                    
+
                     //gpumem
                     if (!GpuMemStr.Text.Equals(gpumem + ""))
                     {
@@ -428,30 +433,35 @@ public partial class PetWindow : Window
                         GpuMemStr.Text = gpumem + "";
                         GpuMemBtn.ToolTip = gpumemmbU + "MB/" + gpumemmbT + "MB";
                     }
-                    
-                    
+
+
                     //mem
                     if (!MemStr.Text.Equals(memuse + ""))
                     {
                         MemBtn.Height = memuse / 2;
                         MemStr.Text = memuse + "";
                     }
-                    
+
                     //disk
                     if (!DiskStrW.Text.Equals(disktx))
                     {
-                        DiskStrW.Text =disktx;
+                        DiskStrW.Text = disktx;
                     }
+
                     if (DiskBtn.Width != diskuse)
                     {
                         DiskBtn.Width = diskuse;
                     }
-
                 });
-         
-                
+
+
                 YiKit.CpuTem((b) =>
                 {
+                    if (null == b)
+                    {
+                        return;
+                    }
+
                     if (b.ToString() == "0")
                     {
                         return;
@@ -492,7 +502,7 @@ public partial class PetWindow : Window
                                     brush.EndPoint = new Point(bf/2.5, 0);
                                 }
                             }*/
-                            if ((float)b > 90)
+                            if ((float) b > 90)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -500,7 +510,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float)b > 80)
+                            else if ((float) b > 80)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -508,7 +518,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float)b > 70)
+                            else if ((float) b > 70)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -516,7 +526,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float)b > 60)
+                            else if ((float) b > 60)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -524,7 +534,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float)b > 50)
+                            else if ((float) b > 50)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -549,7 +559,7 @@ public partial class PetWindow : Window
 
                 #endregion
 
-                Thread.Sleep((int)(_sleep * 1.5));
+                Thread.Sleep((int) (_sleep * 1.5));
             }
         });
     }
@@ -651,7 +661,7 @@ public partial class PetWindow : Window
     {
         IsVpn = !IsVpn;
         YiKit.IniWrite("isvpn", IsVpn.ToString());
-        YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int)((int)Left + Width / 2), t: (int)((int)Top ));
+        YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int) ((int) Left + Width / 2), t: (int) ((int) Top));
     }
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
@@ -1013,13 +1023,10 @@ public partial class PetWindow : Window
                 else
                     // YiKit.ShowToastWaring("不是英文");
                     ty = "z2e";
-                if (YiWscClient.Send("ait:"+ty+":" + text) == false)
+
+                if (YiWscClient.Send("ait:" + ty + ":" + text) == false)
                 {
-                    YiWscClient.Open((state =>
-                    {
-                        YiWscClient.Send("ait:" +ty+":"+ text);
-                    }));
-                    
+                    YiWscClient.Open((state => { YiWscClient.Send("ait:" + ty + ":" + text); }));
                 }
 
                 TranslateDialog.Me.ZhTx.Text = text;
@@ -1120,11 +1127,11 @@ public partial class PetWindow : Window
                 YiKit.RunOnUIThread(() =>
                 {
                     data = data.Substring(4);
-                    if (data.IndexOf(":")>-1)
+                    if (data.IndexOf(":") > -1)
                     {
-                        data = data.Substring(data.IndexOf(":")+1);
+                        data = data.Substring(data.IndexOf(":") + 1);
                     }
-                    
+
                     if (TranslateDialog.Me != null)
                     {
                         TranslateDialog.Me.EnTx.Text = data.Replace(':', ' ');
@@ -1230,7 +1237,7 @@ public partial class PetWindow : Window
                 return;
             }
 
-            _sleep = (int)(Convert.ToSingle(s) * 1000);
+            _sleep = (int) (Convert.ToSingle(s) * 1000);
         }
         catch (Exception exception)
         {
@@ -1318,6 +1325,7 @@ public partial class PetWindow : Window
             TranslateDialog.Me.Activate();
         }
     }
+//获取是否有全屏应用
 
     private void WallPaperItem_OnClick(object sender, RoutedEventArgs e)
     {
@@ -1326,24 +1334,25 @@ public partial class PetWindow : Window
             new WallPaper();
             WallPaper.me.Show();
             WallPaper.me.Activate();
-            YiKit.IniWrite("wallpaper", "1" );
-            WallPaper.me.ShowFile();
-
+            YiKit.IniWrite("wallpaper", "1");
+            if (!string.IsNullOrEmpty(YiKit.IniGet("Source", "WallPaper")))
+            {
+                WallPaper.me.ShowFile();
+            }
+            // WallPaper.me.ShowFile();
         }
         else
         {
-            YiKit.IniWrite("wallpaper", "0" );
+            YiKit.IniWrite("wallpaper", "0");
             WallPaper.me.Close();
             WallPaper.me = null;
         }
-
-      
     }
 
     private void ChangeSizeMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
     {
-        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小","进程名称","宽","高");
-        if (null==strs||strs.Count!=3)
+        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小", "进程名称", "宽", "高");
+        if (null == strs || strs.Count != 3)
         {
             return;
         }
@@ -1356,7 +1365,7 @@ public partial class PetWindow : Window
                 YiKit.ShowToastWaring("宽不能小于0, 设置失败!");
                 return;
             }
-     
+
             string str = strs[0];
             if (str.EndsWith(".exe"))
             {
@@ -1378,20 +1387,15 @@ public partial class PetWindow : Window
                 if (hwnd.ToInt32() != 0)
                 {
                     YiKit.SetWindowPos(hwnd, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
-                
                 }
-                
+
                 // YiKit.SetWindowPos(p.MainWindowHandle, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
             }
-
-        
         }
         catch (Exception exception)
         {
             YiKit.ShowToastError("时间只可为数字, 设置失败!");
             return;
         }
-
-
     }
 }

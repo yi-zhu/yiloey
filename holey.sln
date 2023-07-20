@@ -2,7 +2,7 @@
 Microsoft Visual Studio Solution File, Format Version 12.00
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "holey", "holey.csproj", "{A8014E3B-38D2-44B8-AB2F-4B0751FFFAE6}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YiKits", "..\..\YiKits\YiKits\YiKits.csproj", "{F09AA247-CF95-4815-943B-DD32B0D26D64}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YiKits", "..\YiKits\YiKits.csproj", "{F09AA247-CF95-4815-943B-DD32B0D26D64}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
