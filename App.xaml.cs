@@ -1,11 +1,14 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Configuration.Install;
 using System.Diagnostics;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.ServiceProcess;
 using System.Threading;
 using System.Windows;
+using holey.Services;
 using YiKits;
 
 namespace holey
@@ -97,6 +100,10 @@ namespace holey
         
         private void App_OnStartup(object sender, StartupEventArgs e)
         {
+          
+         
+  
+           
             if (!CheckNetFramework())
             {
                 YiKit.ShowToastError("未检测到程序必须组件，【NDP461-KB3102436-x86-x64-AllOS-ENU】正在下载。。。\nUntested program must be installed, and the [NDP461-KB3102436-x86-x64-AllOS-ENU] file is being downloaded...",time:120);
@@ -187,6 +194,10 @@ namespace holey
 
                
             }
+            
+            int i = 0;
+
+
         }
     }
 }

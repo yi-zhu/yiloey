@@ -448,7 +448,7 @@ public partial class PetWindow : Window
                         DiskStrW.Text = disktx;
                     }
 
-                    if (DiskBtn.Width != diskuse)
+                    if (DiskBtn.Width != diskuse&&diskuse>-1)
                     {
                         DiskBtn.Width = diskuse;
                     }

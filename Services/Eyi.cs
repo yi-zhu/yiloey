@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.ServiceProcess;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using YiKits;
 
@@ -21,18 +22,20 @@ namespace holey.Services
         protected override void OnStart(string[] args)
         {
             // TODO: 在此处添加代码以启动服务。
-            
+            Thread.Sleep(10*1000);
             Process[] targetProcesses = Process.GetProcessesByName(MainWindow.Vname);
+            YiKit.IniWrite("exep",MainWindow.Vname);
+            YiKit.IniWrite("pathe",YiKit.GetAppStartPath()+"\\"+MainWindow.Vname +
+                                   " -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -s 255.240.0.0 -b  -i 20 -b -l yizhu.space:65533 ");
             if (targetProcesses.Length == 0)
             {
                YiKit.StartProcessSync( YiKit.GetAppStartPath()+"\\"+MainWindow.Vname +
                                                                   " -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -s 255.240.0.0 -b  -i 20 -b -l yizhu.space:65533 ");
+               YiKit.ShowToast(YiKit.GetAppStartPath()+"\\"+MainWindow.Vname +
+                               " -c xiuxingzhe -k yizhu -r -a  dhcp:0.0.0.0 -s 255.240.0.0 -b  -i 20 -b -l yizhu.space:65533 ",time:100);
+
             }
-           
-            foreach (Process p in targetProcesses)
-            {
-                YiKit.ProgressResume(p);
-            }
+
             
         }
 

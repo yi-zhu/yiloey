@@ -37,6 +37,17 @@ namespace holey
         /// 默认运行64位程序
         /// </summary>
         private static string _vname = "eyi";
+        private static string _svname = "Edge-V";
+
+        /// <summary>
+        /// 服务名称
+        /// </summary>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static string Svname
+        {
+            get => _svname;
+            set => _svname = value ?? throw new ArgumentNullException(nameof(value));
+        }
 
         /// <summary>
         /// 获取holey v程序名称
@@ -44,7 +55,7 @@ namespace holey
         /// <exception cref="ArgumentNullException"></exception>
         public static string Vname
         {
-            get => (YiKit.IsX86()?"ey":"eyi");
+            get => (YiKit.IsX86() ? "ey" : "eyi");
             set => _vname = value ?? throw new ArgumentNullException(nameof(value));
         }
 
@@ -62,7 +73,7 @@ namespace holey
             Me = this;
             _mainPage = new MainPage();
             _tapPage = new TapPage();
-            MPage.Content = new Frame {Content = _mainPage};
+            MPage.Content = new Frame { Content = _mainPage };
             if (YiKit.IsX86())
             {
                 _vname = "ey";
@@ -89,7 +100,9 @@ namespace holey
             int i = 0;
             //执行
             YiKit.IsCanConnectedToInternet();
-        
+
+            YiKit.RunThread((state =>
+            {
                 RegistryKey adapterRegistry = Registry.LocalMachine.OpenSubKey("SYSTEM")
                     ?.OpenSubKey("CurrentControlSet")
                     ?.OpenSubKey("Control")
@@ -103,7 +116,7 @@ namespace holey
                     RegistryKey subKeyrs;
                     try
                     {
-                        subKeyrs = adapterRegistry.OpenSubKey(s,true);
+                        subKeyrs = adapterRegistry.OpenSubKey(s, true);
                     }
                     catch (Exception e)
                     {
@@ -111,7 +124,10 @@ namespace holey
                     }
 
                     string[] ns = subKeyrs.GetValueNames();
-                    string[] ks = {"ProductName", "ProviderName", "DriverDesc", "ComponentId","MatchingDeviceId","Manufacturer"};
+                    string[] ks =
+                    {
+                        "ProductName", "ProviderName", "DriverDesc", "ComponentId", "MatchingDeviceId", "Manufacturer"
+                    };
 
 
                     foreach (string k in ks)
@@ -130,7 +146,7 @@ namespace holey
                                 {
                                     subKeyrs.SetValue(k1, "yitap");
                                 }
-                                
+
 
                                 isTap = true;
                                 break;
@@ -144,9 +160,9 @@ namespace holey
                     //安装tap
                     string path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
                                   "\\";
-                    YiKit.StartProcessAsync(path + "tapinstall.exe install "+path+"OemWin2k.inf tap0901", (obj =>
+                    YiKit.StartProcessAsync(path + "tapinstall.exe install " + path + "OemWin2k.inf tap0901", (obj =>
                     {
-                      var  ret = obj.ToString();
+                        var ret = obj.ToString();
                         if (ret.Contains("failed"))
                         {
                             //安装失败
@@ -169,7 +185,7 @@ namespace holey
                                 }
 
                                 string[] ns = subKeyrs.GetValueNames();
-                                string[] ks = {"ProductName", "ProviderName", "DriverDesc", "ComponentId"};
+                                string[] ks = { "ProductName", "ProviderName", "DriverDesc", "ComponentId" };
 
 
                                 foreach (string k in ks)
@@ -191,7 +207,7 @@ namespace holey
                             }
                         }
                     }));
-                    
+
                     return;
                     // Process process=   Process.Start(path, " install OemWin2k.inf tap0901");
                     Process process = new Process
@@ -232,7 +248,7 @@ namespace holey
                             }
 
                             string[] ns = subKeyrs.GetValueNames();
-                            string[] ks = {"ProductName", "ProviderName", "DriverDesc", "ComponentId"};
+                            string[] ks = { "ProductName", "ProviderName", "DriverDesc", "ComponentId" };
 
 
                             foreach (string k in ks)
@@ -256,13 +272,14 @@ namespace holey
                 }
 
 
-                string serviceName = "EsYi";
+               
                 ServiceController mSc = null; //建立服务对象
                 ServiceController[] services = ServiceController.GetServices();
                 foreach (ServiceController sc in services)
                 {
-                    if (sc.ServiceName.ToLower() == serviceName.ToLower())
+                    if (sc.DisplayName.ToLower() == Svname.ToLower())
                     {
+                        YiKit.ShowToast("正在启动");
                         mSc = sc;
                     }
                 }
@@ -270,17 +287,32 @@ namespace holey
                 if (mSc == null)
                 {
                     
+                    YiKit.StartProcessSync(YiKit.GetAppStartPath()+Vname+".exe --install");
+                    
+                    
+                    /*
                     AssemblyInstaller installer = new AssemblyInstaller();
+                    IDictionary mDictionary = new Hashtable();
                     installer.UseNewContext = true;
                     installer.Path = Assembly.GetExecutingAssembly().Location;
-                    installer.Install(null);
-                    installer.Commit(null);
-                    installer.AfterInstall += (((sender, args) =>
+                    installer.CommandLine = new string[1] { "eyi" };
+                    try
                     {
-                        YiKit.ShowToast("安装结束");
-                    }));
+                        installer.Install(mDictionary);
+                        installer.Commit(mDictionary);
+                    }
+                    catch (Exception e)
+                    {
+                        installer.Uninstall(mDictionary);
+                        // installer.Commit(null);
+                        installer.Install(mDictionary);
+                        installer.Commit(mDictionary);
+                    }
+
+                    installer.AfterInstall += (((sender, args) => { YiKit.ShowToast("安装结束"); }));
                     installer.Dispose();
-                    
+                    */
+
                     /*
                     using (AssemblyInstaller installer = new AssemblyInstaller())
                     {
@@ -291,25 +323,24 @@ namespace holey
                         installer.Install(savedState);
                         installer.Commit(savedState);
                     }*/
-                    mSc = new ServiceController(serviceName);
-                    
+                    mSc = new ServiceController(Svname);
                 }
-return;
+
                 if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
                 {
                     mSc.Start();
-                    YiKit.IniWrite("eyi","1");
+                    YiKit.IniWrite("eyi", "1");
                 }
                 else if (mSc.Status == ServiceControllerStatus.Running ||
                          mSc.Status == ServiceControllerStatus.StartPending)
                 {
                     mSc.Stop();
-                    YiKit.IniWrite("eyi","0");
+                    YiKit.IniWrite("eyi", "0");
                 }
 
                 YiKit.ShowToast(mSc.Status == ServiceControllerStatus.Running ? "已启动" : "已停止");
-         
-                
+                YiKit.RunOnUIThread(() => { ShowLoading(false); });
+            }));
 
             /*using (AssemblyInstaller installer = new AssemblyInstaller())
             {
