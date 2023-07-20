@@ -10,6 +10,12 @@
         <LangVersion>latest</LangVersion>
         <TargetFramework>net461</TargetFramework>
         <PackageIcon>ico.png</PackageIcon>
+        <Version>2.9</Version>
+        <Title>holey</Title>
+        <Authors>yizhu</Authors>
+        <Description>yizhu.space</Description>
+        <PackageProjectUrl>yizhu.space</PackageProjectUrl>
+        <PackageLicenseUrl>yizhu.space</PackageLicenseUrl>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">

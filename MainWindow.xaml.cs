@@ -79,8 +79,7 @@ namespace holey
             int i = 0;
             //执行
             YiKit.IsCanConnectedToInternet();
-            try
-            {
+        
                 RegistryKey adapterRegistry = Registry.LocalMachine.OpenSubKey("SYSTEM")
                     ?.OpenSubKey("CurrentControlSet")
                     ?.OpenSubKey("Control")
@@ -94,7 +93,7 @@ namespace holey
                     RegistryKey subKeyrs;
                     try
                     {
-                        subKeyrs = adapterRegistry.OpenSubKey(s);
+                        subKeyrs = adapterRegistry.OpenSubKey(s,true);
                     }
                     catch (Exception e)
                     {
@@ -102,7 +101,7 @@ namespace holey
                     }
 
                     string[] ns = subKeyrs.GetValueNames();
-                    string[] ks = {"ProductName", "ProviderName", "DriverDesc", "ComponentId"};
+                    string[] ks = {"ProductName", "ProviderName", "DriverDesc", "ComponentId","MatchingDeviceId","Manufacturer"};
 
 
                     foreach (string k in ks)
@@ -114,10 +113,17 @@ namespace holey
                                 isTap = true;
                                 break;
                             }
-                            else if (subKeyrs.GetValue(k).Equals("TAP-Win32 Adapter V9"))
+                            else if (subKeyrs.GetValue(k).Equals("tap0901"))
                             {
-                                subKeyrs.SetValue(k, "yitap");
+                                // subKeyrs.SetValue(k, "yitap");
+                                foreach (string k1 in ks)
+                                {
+                                    subKeyrs.SetValue(k1, "yitap");
+                                }
+                                
+
                                 isTap = true;
+                                break;
                             }
                         }
                     }
@@ -127,8 +133,56 @@ namespace holey
                 {
                     //安装tap
                     string path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
-                                  "\\tapinstall.exe";
+                                  "\\";
+                    YiKit.StartProcessAsync(path + "tapinstall.exe install "+path+"OemWin2k.inf tap0901", (obj =>
+                    {
+                      var  ret = obj.ToString();
+                        if (ret.Contains("failed"))
+                        {
+                            //安装失败
+                            YiKit.ShowToastError("安装失败：" + ret);
+                            return;
+                        }
+                        else
+                        {
+                            YiKit.ShowToast("安装成功");
+                            foreach (string s in list)
+                            {
+                                RegistryKey subKeyrs;
+                                try
+                                {
+                                    subKeyrs = adapterRegistry.OpenSubKey(s);
+                                }
+                                catch (Exception e)
+                                {
+                                    continue;
+                                }
 
+                                string[] ns = subKeyrs.GetValueNames();
+                                string[] ks = {"ProductName", "ProviderName", "DriverDesc", "ComponentId"};
+
+
+                                foreach (string k in ks)
+                                {
+                                    if (ns.Contains(k))
+                                    {
+                                        if (subKeyrs.GetValue(k).Equals("yitap"))
+                                        {
+                                            isTap = true;
+                                            break;
+                                        }
+                                        else if (subKeyrs.GetValue(k).Equals("tap0901"))
+                                        {
+                                            subKeyrs.SetValue(k, "yitap");
+                                            isTap = true;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }));
+                    
+                    return;
                     // Process process=   Process.Start(path, " install OemWin2k.inf tap0901");
                     Process process = new Process
                     {
@@ -205,34 +259,47 @@ namespace holey
 
                 if (mSc == null)
                 {
+                    
+                    AssemblyInstaller installer = new AssemblyInstaller();
+                    installer.UseNewContext = true;
+                    installer.Path = Assembly.GetExecutingAssembly().Location;
+                    installer.Install(null);
+                    installer.Commit(null);
+                    installer.AfterInstall += (((sender, args) =>
+                    {
+                        YiKit.ShowToast("安装结束");
+                    }));
+                    installer.Dispose();
+                    
+                    /*
                     using (AssemblyInstaller installer = new AssemblyInstaller())
                     {
                         installer.UseNewContext = true;
-                        installer.Path = YiKit.GetAppStartPath() + "/" + _vname +
-                                         ".exe -c xiuxingzhe -k yizhu  -r -a dhcp:0.0.0.0 -l yizhu.space:65533";
+                        installer.Path = Assembly.GetExecutingAssembly().Location;
+                
                         IDictionary savedState = new Hashtable();
                         installer.Install(savedState);
                         installer.Commit(savedState);
-                    }
+                    }*/
+                    mSc = new ServiceController(serviceName);
+                    
                 }
-
+return;
                 if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
                 {
                     mSc.Start();
+                    YiKit.IniWrite("eyi","1");
                 }
                 else if (mSc.Status == ServiceControllerStatus.Running ||
                          mSc.Status == ServiceControllerStatus.StartPending)
                 {
                     mSc.Stop();
+                    YiKit.IniWrite("eyi","0");
                 }
 
                 YiKit.ShowToast(mSc.Status == ServiceControllerStatus.Running ? "已启动" : "已停止");
-            }
-            catch (Exception e)
-            {
-                YiKit.SetClipboardText(e.ToString() + i);
-                YiKit.ShowToast(e.ToString());
-            }
+         
+                
 
             /*using (AssemblyInstaller installer = new AssemblyInstaller())
             {
