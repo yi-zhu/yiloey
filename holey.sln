@@ -1,5 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.32126.315
+MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "holey", "holey.csproj", "{A8014E3B-38D2-44B8-AB2F-4B0751FFFAE6}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YiKits", "..\YiKits\YiKits.csproj", "{F09AA247-CF95-4815-943B-DD32B0D26D64}"
@@ -18,5 +21,11 @@ Global
 		{F09AA247-CF95-4815-943B-DD32B0D26D64}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F09AA247-CF95-4815-943B-DD32B0D26D64}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F09AA247-CF95-4815-943B-DD32B0D26D64}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F8600D6C-EE2D-4975-A8F9-3C4C1D131B50}
 	EndGlobalSection
 EndGlobal

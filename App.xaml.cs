@@ -73,7 +73,7 @@ namespace holey
             process.Start();
             process.WaitForExit();
         }
-
+        
         //后台安装.NET Framework 4.6.1
         private static void InstallNetFramework(string dotnetfx461FullSetupExe)
         {

@@ -38,6 +38,16 @@ namespace holey
         /// </summary>
         private static string _vname = "eyi";
 
+        /// <summary>
+        /// 获取holey v程序名称
+        /// </summary>
+        /// <exception cref="ArgumentNullException"></exception>
+        public static string Vname
+        {
+            get => (YiKit.IsX86()?"ey":"eyi");
+            set => _vname = value ?? throw new ArgumentNullException(nameof(value));
+        }
+
         public MainWindow()
         {
             if (PetWindow.Me == null)
