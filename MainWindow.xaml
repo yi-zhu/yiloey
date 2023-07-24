@@ -55,6 +55,8 @@
                     </MenuItem>
                     <MenuItem Header="副页" Click="TapItem_Click">
                     </MenuItem>
+                    <MenuItem Header="SD" Click="SdItem_Click">
+                    </MenuItem>
                 </Menu>
             </Viewbox>
 

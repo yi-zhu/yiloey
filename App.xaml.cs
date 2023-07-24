@@ -18,6 +18,22 @@ namespace holey
     /// </summary>
     public partial class App : Application
     {
+        
+        
+        
+        
+      
+
+     
+
+    
+        
+        
+        
+        
+        
+        
+        
         //检查系统是否安装了.NET Framework 4.6.1
         private static bool CheckNetFramework()
         {
@@ -100,8 +116,25 @@ namespace holey
         
         private void App_OnStartup(object sender, StartupEventArgs e)
         {
-          
-         
+
+           
+
+            if (YiKit.IniGetInt("eyi",0)==1)
+            {
+              YiKit.RunThread((state =>
+              {
+                  try
+                  {
+                      holey.MainWindow.StartEyi();
+                  }
+                  catch (Exception exception)
+                  {
+                      YiKit.ShowToastError("网络启动失败！");
+                  }
+                  
+              }));
+            }
+            
   
            
             if (!CheckNetFramework())

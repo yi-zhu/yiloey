@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Linq;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
@@ -94,7 +95,7 @@ public partial class PetWindow : Window
         // YiKit.GetAllCate();
         try
         {
-            _sleep = (int) (Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
+            _sleep = (int)(Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
         }
         catch (Exception e)
         {
@@ -166,12 +167,14 @@ public partial class PetWindow : Window
         //按键监听
         YiKit.KeyDownEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int) Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift && (Control.ModifierKeys & Keys.Control) == Keys.Control)
+            if (e.KeyValue == (int)Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift &&
+                (Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 isTranslateing = true;
 
                 YiKit.Print("按下了Ctrl+alt+Q:");
-            } else if (e.KeyValue == (int) Keys.Q && (int) Control.ModifierKeys == (int) Keys.Control)
+            }
+            else if (e.KeyValue == (int)Keys.Q && (int)Control.ModifierKeys == (int)Keys.Control)
             {
                 isTranslateing = true;
 
@@ -180,7 +183,7 @@ public partial class PetWindow : Window
         })); //按键监听
         YiKit.KeyUpEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int) Keys.Q)
+            if (e.KeyValue == (int)Keys.Q)
             {
                 // isTranslateing = true;
                 if (isTranslateing)
@@ -235,7 +238,20 @@ public partial class PetWindow : Window
         }));
         YiKit.SetWindowLong(YiKit.GetWindowHandle(this), YiKit.GWL_EX_STYLE,
             YiKit.GWL_EXSTYLE | YiKit.WS_EX_TRANSPARENT);
-
+YiKit.SetWindowListen(callback:(state =>
+{
+    
+        if (state==(object)YiKit.SC_MAXIMIZE)
+        {
+            //全屏
+            this.Topmost = false;
+        }else if (state==(object)YiKit.SC_RESTORE)
+        {
+            this.Topmost = false;
+            this.Topmost = true;
+        }
+ 
+}));
         LoadPet();
         if (YiKit.IniGetInt("wallpaper", 0) == 1)
         {
@@ -294,11 +310,13 @@ public partial class PetWindow : Window
     private bool IsVpn { get; set; } = true;
 
     private bool IsAlive { get; set; } = true;
+    private NetworkInterface? tap;
 
     private void LoadPet()
     {
         Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
         Thread.CurrentThread.Priority = ThreadPriority.Lowest;
+        long cot = 0;
         YiKit.RunThread(_ =>
         {
             long lastUp = 0;
@@ -307,13 +325,26 @@ public partial class PetWindow : Window
             string tapas = "";
             string tapasU = "";
             string tapasD = "";
+            tap = YiKit.GetInterface(sequence: true);
+
             while (IsAlive)
             {
-                var tap = IsVpn ? YiKit.GetInterface(ip: "172.27.") : YiKit.GetInterface(vir: false);
-
+                cot += 1;
+                if (cot%60==1)
+                {
+                    
+                        YiKit.RunOnUIThread(() =>
+                        {
+                            this.Topmost = false;
+                            this.Topmost = true;
+                        });
+                       
+                    
+                }
                 if (tap == null || tap.OperationalStatus != OperationalStatus.Up)
                 {
-                    IsVpn = !IsVpn;
+                    tap = YiKit.GetInterface(sequence: true);
+                    // IsVpn = !IsVpn;
                     Thread.Sleep(_sleep);
                     continue;
                 }
@@ -370,9 +401,13 @@ public partial class PetWindow : Window
                             if (!tapas.Equals(MainStrN.Text))
                             {
                                 MainStrN.Text = tapas;
-                                StatStrRect.ToolTip = ipaddr.Address;
                                 lastDown = nowDown;
                                 lastUp = nowUp;
+                            }
+
+                            if (!ipaddr.Address.Equals(StatStrRect.ToolTip))
+                            {
+                                StatStrRect.ToolTip = ipaddr.Address;
                             }
 
                             if (!tapasU.Equals(MainStrU.Text))
@@ -411,16 +446,16 @@ public partial class PetWindow : Window
             {
                 #region CPU使用率
 
-                cpuse = (int) YiKit.CpuUse();
-                memuse = (int) YiKit.MemUse();
-                diskuse = (int) YiKit.DiskUse();
-                diskusebyteR = (int) YiKit.DiskUseByte("Read");
-                diskusebyteW = (int) YiKit.DiskUseByte("Write");
+                cpuse = (int)YiKit.CpuUse();
+                memuse = (int)YiKit.MemUse();
+                diskuse = (int)YiKit.DiskUse();
+                diskusebyteR = (int)YiKit.DiskUseByte("Read");
+                diskusebyteW = (int)YiKit.DiskUseByte("Write");
                 disktx = (diskusebyteW == diskusebyteR ? "" : (diskusebyteW > diskusebyteR ? "✎" : "👁")) +
                          YiKit.SumByte(diskusebyteW + diskusebyteR);
                 gpumemmbU = YiKit.GpuMem();
                 gpumemmbT = YiKit.GpuMemTol();
-                gpumem = (int) YiKit.GpuMemuse();
+                gpumem = (int)YiKit.GpuMemuse();
                 YiKit.RunOnUIThread(() =>
                 {
                     //cpu
@@ -448,7 +483,7 @@ public partial class PetWindow : Window
                         DiskStrW.Text = disktx;
                     }
 
-                    if (DiskBtn.Width != diskuse&&diskuse>-1)
+                    if (DiskBtn.Width != diskuse && diskuse > -1)
                     {
                         DiskBtn.Width = diskuse;
                     }
@@ -502,7 +537,7 @@ public partial class PetWindow : Window
                                     brush.EndPoint = new Point(bf/2.5, 0);
                                 }
                             }*/
-                            if ((float) b > 90)
+                            if ((float)b > 90)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -510,7 +545,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float) b > 80)
+                            else if ((float)b > 80)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -518,7 +553,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float) b > 70)
+                            else if ((float)b > 70)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -526,7 +561,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float) b > 60)
+                            else if ((float)b > 60)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -534,7 +569,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float) b > 50)
+                            else if ((float)b > 50)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -559,7 +594,7 @@ public partial class PetWindow : Window
 
                 #endregion
 
-                Thread.Sleep((int) (_sleep * 1.5));
+                Thread.Sleep((int)(_sleep * 1.5));
             }
         });
     }
@@ -659,10 +694,17 @@ public partial class PetWindow : Window
 
     private void Control_OnMouseDoubleClick(object sender, MouseButtonEventArgs e)
     {
-        IsVpn = !IsVpn;
-        YiKit.IniWrite("isvpn", IsVpn.ToString());
-        YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int) ((int) Left + Width / 2), t: (int) ((int) Top));
+        // IsVpn = !IsVpn;
+        // YiKit.IniWrite("isvpn", IsVpn.ToString());
+        tap = YiKit.GetInterface(sequence: true);
+        int? index = tap?.GetIPProperties()?.UnicastAddresses.Count - 1;
+        if (index == null)
+            return;
+        YiKit.ShowToast(tap?.Name + "\n" + tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address,
+            l: (int)((int)Left + Width / 2), t: (int)((int)Top+30));
+        // YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int) ((int) Left + Width / 2), t: (int) ((int) Top));
     }
+  
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
     {
@@ -1237,7 +1279,7 @@ public partial class PetWindow : Window
                 return;
             }
 
-            _sleep = (int) (Convert.ToSingle(s) * 1000);
+            _sleep = (int)(Convert.ToSingle(s) * 1000);
         }
         catch (Exception exception)
         {

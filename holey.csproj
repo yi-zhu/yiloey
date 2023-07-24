@@ -43,14 +43,7 @@
       <Content Include="Binaries\*">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       </Content>
-      <None Remove="eyi" />
-      <Content Include="eyi">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <None Remove="ey" />
-      <Content Include="ey">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
+      
       <None Remove="eyi.exe" />
       <Content Include="eyi.exe">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
@@ -95,7 +88,12 @@
     </ItemGroup>
 
     <ItemGroup>
+      <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.1905-prerelease" />
       <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39" />
+      <PackageReference Include="Obfuscar" Version="2.2.38">
+        <PrivateAssets>all</PrivateAssets>
+        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+      </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
