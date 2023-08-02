@@ -3,8 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Forms.Integration;
 using System.Windows.Media;
-using Microsoft.Web.WebView2.Core;
-using Microsoft.Web.WebView2.WinForms;
+
 using Microsoft.Win32;
 using YiKits;
 using Control = System.Windows.Forms.Control;
@@ -19,7 +18,7 @@ public partial class WebPage : System.Windows.Controls.Page
         string wbv2v = null;
         try
         {
-             wbv2v = CoreWebView2Environment.GetAvailableBrowserVersionString();
+             // wbv2v = CoreWebView2Environment.GetAvailableBrowserVersionString();
         }
         catch (Exception e)
         {
@@ -36,6 +35,7 @@ public partial class WebPage : System.Windows.Controls.Page
             }));
 
         }
+        
     
         SetWebBrowserEmulationMode();
         AddBrower();
@@ -44,12 +44,12 @@ public partial class WebPage : System.Windows.Controls.Page
 
     private void AddBrower()
     {
-        WebView2 webBrowser = new WebView2();
-        webBrowser.NavigationCompleted += (((sender, args) => { YiKit.Print(args); }));
+        // WebView2 webBrowser = new WebView2();
+        // webBrowser.NavigationCompleted += (((sender, args) => { YiKit.Print(args); }));
         WindowsFormsHost host = new WindowsFormsHost();
         host.HorizontalAlignment = HorizontalAlignment.Stretch;
         host.Background = Brushes.Transparent;
-        host.Child = webBrowser;
+        // host.Child = webBrowser;
         ;
         MyGrid.Children.Add(host);
         // webBrowser.CoreWebView2.Navigate("https://yizhu.space:1443/sd");

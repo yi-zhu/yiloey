@@ -34,7 +34,7 @@ public partial class MainPage
                     Thread.Sleep(_sleep);
                     continue;
                 }
-                var tap = IsVpn ? YiKit.GetInterface(ip: "172.") : YiKit.GetInterface(vir: false);
+                var tap = IsVpn ? YiKit.GetInterface(ip: YiKit.IniGet("showip",def:null)) : YiKit.GetInterface(vir: false);
                 if (tap==null||tap.OperationalStatus != OperationalStatus.Up)
                 {  YiKit.RunOnUIThread(() =>
                     {

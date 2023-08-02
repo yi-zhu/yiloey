@@ -74,14 +74,14 @@ public partial class WallPaper : Window
 
         //注册windows全局消息广播
         YiKit.RegisterWindowMessage(YiKit.GetWindowHandle(this));
-        HwndSource hwndSource = PresentationSource.FromVisual(this) as HwndSource;
+        HwndSource? hwndSource = PresentationSource.FromVisual(this) as HwndSource;
         if (hwndSource != null)
         {
-            hwndSource.AddHook(new HwndSourceHook(WndProc));
+            hwndSource.AddHook(WndProc);
         }
 
         string file = YiKit.IniGet("Source", "WallPaper");
-        BMedia.Stretch = System.Windows.Media.Stretch.UniformToFill;
+        BMedia.Stretch = Stretch.UniformToFill;
         BMedia.CacheMode = new BitmapCache(1);
 
         if (string.IsNullOrEmpty(file))
@@ -90,6 +90,7 @@ public partial class WallPaper : Window
         }
         else
         {
+            
             _pictime = YiKit.IniGetInt("Pictime", 0, "WallPaper");
             BMedia.Volume = _volume = YiKit.IniGetInt("Volume", 0, "WallPaper");
             if (YiKit.IsDir(file))
@@ -284,7 +285,7 @@ public partial class WallPaper : Window
         }
     }
 
-    private void PlayMidea()
+    public void PlayMidea()
     {
         try
         {
@@ -311,7 +312,7 @@ public partial class WallPaper : Window
     /// 暂停播放
     /// </summary>
     /// <param name="pause">默认暂停</param>
-    protected void PausePlay(bool pause = true)
+    public void PausePlay(bool pause = true)
     {
         if (pause)
         {
@@ -322,6 +323,8 @@ public partial class WallPaper : Window
             BMedia.Play();
         }
     }
+    
+
 
 
     protected virtual IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -409,6 +412,7 @@ public partial class WallPaper : Window
     /// <param name="args"></param>
     void FormLoaded(object sender, RoutedEventArgs args)
     {
+        
         //Variable to hold the handle for the form
         var hwnd = new WindowInteropHelper(this).Handle;
         //Performing some magic to hide the form from Alt+Tab

@@ -103,6 +103,8 @@ namespace holey
 
             if (mSc == null)
             {
+                //
+               // sc failure vname reset= 0 actions= restart/3000/restart/3000/restart/3000
                 YiKit.StartProcessSync(YiKit.GetAppStartPath() + Vname + ".exe --install");
 
                 /*

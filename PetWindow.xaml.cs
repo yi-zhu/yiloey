@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Linq;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
@@ -312,6 +313,7 @@ YiKit.SetWindowListen(callback:(state =>
     private bool IsAlive { get; set; } = true;
     private NetworkInterface? tap;
 
+    public bool _isWallPage = false;
     private void LoadPet()
     {
         Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
@@ -325,7 +327,7 @@ YiKit.SetWindowListen(callback:(state =>
             string tapas = "";
             string tapasU = "";
             string tapasD = "";
-            tap = YiKit.GetInterface(sequence: true);
+            tap = YiKit.GetInterface(ip:YiKit.IniGet("showip",def:null));
 
             while (IsAlive)
             {
@@ -447,6 +449,40 @@ YiKit.SetWindowListen(callback:(state =>
                 #region CPU使用率
 
                 cpuse = (int)YiKit.CpuUse();
+                if (cpuse>=90)
+                {
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        if ( WallPaper.me!=null)
+                        {
+                            _isWallPage = true;
+                            WallPaper.me?.Close();
+                        }
+                        
+                    });
+
+                }else
+                if (cpuse>=80){
+                    YiKit.RunOnUIThread(() => WallPaper.me?.PausePlay());
+               
+                }else
+                if (cpuse<=50&&_isWallPage){
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        if (WallPaper.me==null)
+                        {
+                            new WallPaper();
+                            WallPaper.me?.Show();
+                        }
+                       
+                    });
+               
+                }
+                else
+                {
+                    YiKit.RunOnUIThread(() => WallPaper.me?.PlayMidea());
+                }
+
                 memuse = (int)YiKit.MemUse();
                 diskuse = (int)YiKit.DiskUse();
                 diskusebyteR = (int)YiKit.DiskUseByte("Read");
@@ -696,10 +732,24 @@ YiKit.SetWindowListen(callback:(state =>
     {
         // IsVpn = !IsVpn;
         // YiKit.IniWrite("isvpn", IsVpn.ToString());
+         ;
         tap = YiKit.GetInterface(sequence: true);
         int? index = tap?.GetIPProperties()?.UnicastAddresses.Count - 1;
         if (index == null)
             return;
+        IPAddress? add = tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address;
+        if (add != null)
+        {
+            try
+            {
+                YiKit.IniWrite("showip",(add+"").Substring(0,add.ToString().LastIndexOf(".", StringComparison.Ordinal)));
+            }
+            catch (Exception exception)
+            {
+                YiKit.Print(exception);
+            }
+        }
+        
         YiKit.ShowToast(tap?.Name + "\n" + tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address,
             l: (int)((int)Left + Width / 2), t: (int)((int)Top+30));
         // YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int) ((int) Left + Width / 2), t: (int) ((int) Top));
@@ -1379,7 +1429,7 @@ YiKit.SetWindowListen(callback:(state =>
             YiKit.IniWrite("wallpaper", "1");
             if (!string.IsNullOrEmpty(YiKit.IniGet("Source", "WallPaper")))
             {
-                WallPaper.me.ShowFile();
+                // WallPaper.me.ShowFile();
             }
             // WallPaper.me.ShowFile();
         }
