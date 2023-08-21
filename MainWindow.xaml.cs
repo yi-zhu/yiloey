@@ -104,7 +104,7 @@ namespace holey
             if (mSc == null)
             {
                 //
-               // sc failure vname reset= 0 actions= restart/3000/restart/3000/restart/3000
+                // sc failure vname reset= 0 actions= restart/3000/restart/3000/restart/3000
                 YiKit.StartProcessSync(YiKit.GetAppStartPath() + Vname + ".exe --install");
 
                 /*
@@ -135,7 +135,7 @@ namespace holey
                 {
                     installer.UseNewContext = true;
                     installer.Path = Assembly.GetExecutingAssembly().Location;
-            
+
                     IDictionary savedState = new Hashtable();
                     installer.Install(savedState);
                     installer.Commit(savedState);
@@ -197,60 +197,59 @@ namespace holey
                 ?.OpenSubKey("Class")
                 ?.OpenSubKey("{4D36E972-E325-11CE-BFC1-08002bE10318}");*/
 
-            RegistryKey adapterRegistry = Registry.LocalMachine.OpenSubKey("SYSTEM")
+            RegistryKey? adapterRegistry = Registry.LocalMachine.OpenSubKey("SYSTEM")
                 ?.OpenSubKey("CurrentControlSet")
                 ?.OpenSubKey("Enum")
                 ?.OpenSubKey("ROOT")
                 ?.OpenSubKey("NET");
-            IList<string> list = adapterRegistry.GetSubKeyNames().ToList();
+            IList<string>? list = adapterRegistry?.GetSubKeyNames()?.ToList();
             bool isTap = false;
-            foreach (string s in list)
-            {
-                //ProviderName
-                RegistryKey subKeyrs;
-                try
+            if (list != null)
+                foreach (string s in list)
                 {
-                    subKeyrs = adapterRegistry.OpenSubKey(s, true);
-                }
-                catch (Exception e)
-                {
-                    continue;
-                }
-
-                string[] ns = subKeyrs.GetValueNames();
-                string[] ks =
-                {
-                    "FriendlyName", "Mfg", "DeviceDesc",
-                };
-
-
-                foreach (string k in ks)
-                {
-                    if (ns.Contains(k))
+                    //ProviderName
+                    RegistryKey? subKeyrs;
+                    try
                     {
-                        if (subKeyrs.GetValue(k).Equals("YiTap MbE Family Controller"))
-                        {
-                            isTap = true;
-                            break;
-                        }
-                        else if (subKeyrs.GetValue(k).Equals("tap0901"))
-                        {
-                            // subKeyrs.SetValue(k, "yitap");
-
-                            if (ns.Contains("FriendlyName"))
-                                subKeyrs.SetValue("FriendlyName", "YiTap MbE Family Controller");
-                            if (ns.Contains("DeviceDesc"))
-                                subKeyrs.SetValue("DeviceDesc", "YiTap");
-                            if (ns.Contains("Mfg"))
-                                subKeyrs.SetValue("Mfg", "Yi");
-
-
-                            isTap = true;
-                            break;
-                        }
+                        subKeyrs = adapterRegistry?.OpenSubKey(s, true);
                     }
+                    catch (Exception e)
+                    {
+                        continue;
+                    }
+
+                    string[]? ns = subKeyrs?.GetValueNames();
+                    string[] ks =
+                    {
+                        "FriendlyName", "Mfg", "DeviceDesc",
+                    };
+
+                    if (ns != null)
+                        foreach (string k in ks)
+                        {
+                            if (ns.Contains(k))
+                            {
+                                if (subKeyrs != null && subKeyrs.GetValue(k).Equals("YiTap MbE Family Controller"))
+                                {
+                                    isTap = true;
+                                    break;
+                                }
+                                else if (subKeyrs != null &&( subKeyrs.GetValue(k).Equals("tap0901")||subKeyrs.GetValue(k).Equals("TAP-Win32 Adapter V9")))
+                                {
+                                    // subKeyrs.SetValue(k, "yitap");
+
+                                    if (ns.Contains("FriendlyName"))
+                                        subKeyrs.SetValue("FriendlyName", "YiTap MbE Family Controller");
+                                    if (ns.Contains("DeviceDesc"))
+                                        subKeyrs.SetValue("DeviceDesc", "YiTap");
+                                    if (ns.Contains("Mfg"))
+                                        subKeyrs.SetValue("Mfg", "Yi");
+                                    isTap = true;
+                                    break;
+                                }
+                            }
+                        }
                 }
-            }
 
             return isTap;
         }
@@ -267,19 +266,21 @@ namespace holey
 // 遍历服务列表
             foreach (ServiceController service in serviceList)
             {
-               
+
                 // 服务信息
             }*/
             int i = 0;
             //执行
-            YiKit.IsCanConnectedToInternet();
-
+            /*if (!YiKit.IsCanConnectedToInternet())
+            {
+                return;
+            }*/
             YiKit.RunThread((state =>
             {
                 // HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\ROOT\NET\0001
 
                 bool isTap = ChangeAdpter();
-
+                YiKit.ShowToastError("请在接下来在弹框中选择“允许”",time:10);
                 if (!isTap)
                 {
                     //安装tap
@@ -287,23 +288,31 @@ namespace holey
                                   "\\";
                     YiKit.StartProcessAsync(path + "tapinstall.exe install " + path + "OemWin2k.inf tap0901", (obj =>
                     {
-                        var ret = obj.ToString();
-                        if (ret.Contains("failed"))
+                        if (!isTap)
                         {
-                            //安装失败
-                            YiKit.ShowToastError("安装失败：" + ret);
-                            return;
-                        }
-                        else
-                        {
-                            // YiKit.ShowToast("安装成功");
-                            ChangeAdpter();
+                            var ret = obj.ToString();
+                            if (ret.Contains("failed"))
+                            {
+                                //安装失败
+                                YiKit.ShowToastError("安装失败：" + ret);
+                            }
+                            else
+                            {
+                                // YiKit.ShowToast("安装成功");
+                                isTap= ChangeAdpter();
+                            }
                         }
                     }));
 
-                    return;
+                    // return;
                 }
 
+
+                if (!isTap)
+                {
+                    YiKit.ShowToastError("安装失败！请确认是否点击了允许按钮");
+                    return;
+                }
 
                 ServiceController mSc = StartEyi(autochage: true);
                 // mSc.WaitForStatus(ServiceControllerStatus.Running); //等待启动
@@ -411,8 +420,8 @@ namespace holey
                 {
                     process?.Close();
                 }
-           
-           
+
+
             }
             var collections = Application.Current.Windows;
 

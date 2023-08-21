@@ -20,9 +20,12 @@ public partial class MainPage
       
     }
 
+    private NetworkInterface? tap = null;
     private int _sleep = 1000;
     private void LoadTap()
     {
+         tap = IsVpn ? YiKit.GetInterface(vir: true):YiKit.GetInterface(ip: YiKit.IniGet("showip",def:null))  ;
+
         YiKit.RunThread(_ =>
         {
             long lastUp = 0;
@@ -34,7 +37,6 @@ public partial class MainPage
                     Thread.Sleep(_sleep);
                     continue;
                 }
-                var tap = IsVpn ? YiKit.GetInterface(ip: YiKit.IniGet("showip",def:null)) : YiKit.GetInterface(vir: false);
                 if (tap==null||tap.OperationalStatus != OperationalStatus.Up)
                 {  YiKit.RunOnUIThread(() =>
                     {
@@ -131,6 +133,7 @@ public partial class MainPage
     private void VTextBlock_OnClick(object sender, RoutedEventArgs e)
     {
         IsVpn = true;
+        tap = YiKit.GetInterface(vir: true);
         VTextBlock.Foreground = Brushes.Blue;
         PTextBlock.Foreground = Brushes.Brown;
     }
@@ -138,6 +141,7 @@ public partial class MainPage
     private void PTextBlock_OnClick(object sender, RoutedEventArgs e)
     {
         IsVpn = false;
+        tap = YiKit.GetInterface(vir: false);
         PTextBlock.Foreground = Brushes.Blue;
         VTextBlock.Foreground = Brushes.Brown;
 
