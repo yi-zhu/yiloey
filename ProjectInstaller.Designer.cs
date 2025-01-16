@@ -45,6 +45,7 @@ namespace holey
             this.EyiInstaller.DisplayName = "eyi";
             this.EyiInstaller.ServiceName = "Eyi";
             this.EyiInstaller.StartType = System.ServiceProcess.ServiceStartMode.Automatic;
+            this.EyiInstaller.AfterInstall += new System.Configuration.Install.InstallEventHandler(this.EyiInstaller_AfterInstall);
             // 
             // ProjectInstaller
             // 

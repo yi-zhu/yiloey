@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
@@ -96,7 +97,7 @@ public partial class PetWindow : Window
         // YiKit.GetAllCate();
         try
         {
-            _sleep = (int)(Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
+            _sleep = (int) (Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
         }
         catch (Exception e)
         {
@@ -168,28 +169,34 @@ public partial class PetWindow : Window
         //按键监听
         YiKit.KeyDownEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int)Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift &&
+            if (e.KeyValue == (int) Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift &&
                 (Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 isTranslateing = true;
 
-                YiKit.Print("按下了Ctrl+alt+Q:");
+                // YiKit.Print("按下了Ctrl+alt+Q:");
             }
-            else if (e.KeyValue == (int)Keys.Q && (int)Control.ModifierKeys == (int)Keys.Control)
+            else if (e.KeyValue == (int) Keys.Q && (int) Control.ModifierKeys == (int) Keys.Control)
             {
                 isTranslateing = true;
 
-                YiKit.Print("按下了Ctrl+Q:");
+                // YiKit.Print("按下了Ctrl+Q:");
+            }
+            else if (e.KeyValue == (int) Keys.Q)
+            {
+                isTranslateing = false;
+
+                // YiKit.Print("取消Q:");
             }
         })); //按键监听
         YiKit.KeyUpEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int)Keys.Q)
+            if (e.KeyValue == (int) Keys.Q)
             {
                 // isTranslateing = true;
                 if (isTranslateing)
                 {
-                    YiKit.Print("松开了Q");
+                    // YiKit.Print("松开了Q");
                     string text = YiKit.GetScreenText();
                     if (String.IsNullOrEmpty(text))
                     {
@@ -237,22 +244,21 @@ public partial class PetWindow : Window
                 }
             }
         }));
-        YiKit.SetWindowLong(YiKit.GetWindowHandle(this), YiKit.GWL_EX_STYLE,
-            YiKit.GWL_EXSTYLE | YiKit.WS_EX_TRANSPARENT);
-YiKit.SetWindowListen(callback:(state =>
-{
-    
-        if (state==(object)YiKit.SC_MAXIMIZE)
+        YiKit.SetWindowLong(YiKit.GetWindowHandle(this), YiKit.GwlExstyle,
+            YiKit.GwlExstyle | YiKit.WsExTransparent);
+        YiKit.SetWindowListen(callback: (state =>
         {
-            //全屏
-            this.Topmost = false;
-        }else if (state==(object)YiKit.SC_RESTORE)
-        {
-            this.Topmost = false;
-            this.Topmost = true;
-        }
- 
-}));
+            if (state == (object) YiKit.ScMaximize)
+            {
+                //全屏
+                this.Topmost = false;
+            }
+            else if (state == (object) YiKit.ScRestore)
+            {
+                this.Topmost = false;
+                this.Topmost = true;
+            }
+        }));
         LoadPet();
         if (YiKit.IniGetInt("wallpaper", 0) == 1)
         {
@@ -260,13 +266,14 @@ YiKit.SetWindowListen(callback:(state =>
             WallPaper.me.Show();
             WallPaper.me.Activate();
         }
+       
     }
 
 
     protected override void OnSourceInitialized(EventArgs e)
     {
         //无边框
-        YiKit.Areo(this, new Thickness(-1));
+        YiKit.UiAreo(this, new Thickness(-1));
 
         base.OnSourceInitialized(e);
         _clipboard = YiKit.IniGetInt("clipboard", area: "ini", def: 0);
@@ -314,11 +321,13 @@ YiKit.SetWindowListen(callback:(state =>
     private NetworkInterface? tap;
 
     public bool _isWallPage = false;
+
     private void LoadPet()
     {
         Process.GetCurrentProcess().PriorityClass = ProcessPriorityClass.BelowNormal;
         Thread.CurrentThread.Priority = ThreadPriority.Lowest;
         long cot = 0;
+
         YiKit.RunThread(_ =>
         {
             long lastUp = 0;
@@ -327,22 +336,20 @@ YiKit.SetWindowListen(callback:(state =>
             string tapas = "";
             string tapasU = "";
             string tapasD = "";
-            tap = YiKit.GetInterface(ip:YiKit.IniGet("showip",def:null));
+            tap = YiKit.GetInterface(ip: YiKit.IniGet("showip", def: null));
 
             while (IsAlive)
             {
                 cot += 1;
-                if (cot%60==1)
+                if (cot % 60 == 1)
                 {
-                    
-                        YiKit.RunOnUIThread(() =>
-                        {
-                            this.Topmost = false;
-                            this.Topmost = true;
-                        });
-                       
-                    
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        this.Topmost = false;
+                        this.Topmost = true;
+                    });
                 }
+
                 if (tap == null || tap.OperationalStatus != OperationalStatus.Up)
                 {
                     tap = YiKit.GetInterface(sequence: true);
@@ -448,50 +455,47 @@ YiKit.SetWindowListen(callback:(state =>
             {
                 #region CPU使用率
 
-                cpuse = (int)YiKit.CpuUse();
-                if (cpuse>=90)
+                cpuse = (int) YiKit.CpuUse();
+                if (cpuse >= 90)
                 {
                     YiKit.RunOnUIThread(() =>
                     {
-                        if ( WallPaper.me!=null)
+                        if (WallPaper.me != null)
                         {
                             _isWallPage = true;
                             WallPaper.me?.Close();
                         }
-                        
                     });
-
-                }else
-                if (cpuse>=80){
+                }
+                else if (cpuse >= 80)
+                {
                     YiKit.RunOnUIThread(() => WallPaper.me?.PausePlay());
-               
-                }else
-                if (cpuse<=50&&_isWallPage){
+                }
+                else if (cpuse <= 50 && _isWallPage)
+                {
                     YiKit.RunOnUIThread(() =>
                     {
-                        if (WallPaper.me==null)
+                        if (WallPaper.me == null)
                         {
                             new WallPaper();
                             WallPaper.me?.Show();
                         }
-                       
                     });
-               
                 }
                 else
                 {
                     YiKit.RunOnUIThread(() => WallPaper.me?.PlayMidea());
                 }
 
-                memuse = (int)YiKit.MemUse();
-                diskuse = (int)YiKit.DiskUse();
-                diskusebyteR = (int)YiKit.DiskUseByte("Read");
-                diskusebyteW = (int)YiKit.DiskUseByte("Write");
+                memuse = (int) YiKit.MemUse();
+                diskuse = (int) YiKit.DiskUse();
+                diskusebyteR = (int) YiKit.DiskUseByte("Read");
+                diskusebyteW = (int) YiKit.DiskUseByte("Write");
                 disktx = (diskusebyteW == diskusebyteR ? "" : (diskusebyteW > diskusebyteR ? "✎" : "👁")) +
                          YiKit.SumByte(diskusebyteW + diskusebyteR);
                 gpumemmbU = YiKit.GpuMem();
                 gpumemmbT = YiKit.GpuMemTol();
-                gpumem = (int)YiKit.GpuMemuse();
+                gpumem = (int) YiKit.GpuMemuse();
                 YiKit.RunOnUIThread(() =>
                 {
                     //cpu
@@ -545,9 +549,9 @@ YiKit.SetWindowListen(callback:(state =>
                             CpuStr.Text = b + "℃";
                             if (b is float bf)
                             {
-                                if (CpuStr.Foreground is LinearGradientBrush)
+                                if (CpuStr.Foreground is LinearGradientBrush brush)
                                 {
-                                    (CpuStr.Foreground as LinearGradientBrush)!.StartPoint =
+                                    brush.StartPoint =
                                         new Point(0, (125 - bf) / 2);
                                 }
                             }
@@ -573,7 +577,7 @@ YiKit.SetWindowListen(callback:(state =>
                                     brush.EndPoint = new Point(bf/2.5, 0);
                                 }
                             }*/
-                            if ((float)b > 90)
+                            if ((float) b > 90)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -581,7 +585,7 @@ YiKit.SetWindowListen(callback:(state =>
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float)b > 80)
+                            else if ((float) b > 80)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -589,7 +593,7 @@ YiKit.SetWindowListen(callback:(state =>
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float)b > 70)
+                            else if ((float) b > 70)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -597,7 +601,7 @@ YiKit.SetWindowListen(callback:(state =>
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float)b > 60)
+                            else if ((float) b > 60)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -605,7 +609,7 @@ YiKit.SetWindowListen(callback:(state =>
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float)b > 50)
+                            else if ((float) b > 50)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -630,7 +634,7 @@ YiKit.SetWindowListen(callback:(state =>
 
                 #endregion
 
-                Thread.Sleep((int)(_sleep * 1.5));
+                Thread.Sleep((int) (_sleep * 1.5));
             }
         });
     }
@@ -732,29 +736,30 @@ YiKit.SetWindowListen(callback:(state =>
     {
         // IsVpn = !IsVpn;
         // YiKit.IniWrite("isvpn", IsVpn.ToString());
-         ;
+        ;
         tap = YiKit.GetInterface(sequence: true);
         int? index = tap?.GetIPProperties()?.UnicastAddresses.Count - 1;
         if (index == null)
             return;
-        IPAddress? add = tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address;
+        IPAddress? add = tap?.GetIPProperties()?.UnicastAddresses[(int) index]?.Address;
         if (add != null)
         {
             try
             {
-                YiKit.IniWrite("showip",(add+"").Substring(0,add.ToString().LastIndexOf(".", StringComparison.Ordinal)));
+                YiKit.IniWrite("showip",
+                    (add + "").Substring(0, add.ToString().LastIndexOf(".", StringComparison.Ordinal)));
             }
             catch (Exception exception)
             {
                 YiKit.Print(exception);
             }
         }
-        
-        YiKit.ShowToast(tap?.Name + "\n" + tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address,
-            l: (int)((int)Left + Width / 2), t: (int)((int)Top+30));
+
+        YiKit.ShowToast(tap?.Name + "\n" + tap?.GetIPProperties()?.UnicastAddresses[(int) index]?.Address,
+            l: (int) ((int) Left + Width / 2), t: (int) ((int) Top + 30));
         // YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int) ((int) Left + Width / 2), t: (int) ((int) Top));
     }
-  
+
 
     private void PintBtn_OnClick(object sender, RoutedEventArgs e)
     {
@@ -766,7 +771,7 @@ YiKit.SetWindowListen(callback:(state =>
 
     private void TaskmgrItem_OnClick(object sender, RoutedEventArgs e)
     {
-        YiKit.StartProcessSync("taskmgr");
+        YiKit.StartProcessAsync("taskmgr");
     }
 
 
@@ -1329,7 +1334,7 @@ YiKit.SetWindowListen(callback:(state =>
                 return;
             }
 
-            _sleep = (int)(Convert.ToSingle(s) * 1000);
+            _sleep = (int) (Convert.ToSingle(s) * 1000);
         }
         catch (Exception exception)
         {
@@ -1421,12 +1426,26 @@ YiKit.SetWindowListen(callback:(state =>
 
     private void WallPaperItem_OnClick(object sender, RoutedEventArgs e)
     {
+        MouseButtonEventArgs mouseArgs = e as MouseButtonEventArgs;
+        if (mouseArgs != null)
+        {
+            if (mouseArgs.RightButton == MouseButtonState.Pressed)
+            {
+                WallPaper.me.Show();
+                WallPaper.me.Activate();
+                return;
+            }
+            else if (mouseArgs.LeftButton == MouseButtonState.Pressed)
+            { ;
+            }
+        }
         if (WallPaper.me == null)
         {
             new WallPaper();
             WallPaper.me.Show();
             WallPaper.me.Activate();
             YiKit.IniWrite("wallpaper", "1");
+            _isWallPage = true;
             if (!string.IsNullOrEmpty(YiKit.IniGet("Source", "WallPaper")))
             {
                 // WallPaper.me.ShowFile();
@@ -1435,20 +1454,40 @@ YiKit.SetWindowListen(callback:(state =>
         }
         else
         {
+            _isWallPage = false;
             YiKit.IniWrite("wallpaper", "0");
             WallPaper.me.Close();
             WallPaper.me = null;
         }
     }
 
+
+
+
+    private void MemoMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
+    {
+        
+        //内存分析
+        YiKit.StartProcessSync(YiKit.GetAppStartPath()+"Tools/poolmon.exe -p -b",end:(state =>
+        {
+         var ret=   YiKit.ShowInputDialog("输入TAG查找泄漏文件", "tag");
+
+       var o=  YiKit.RunCmd("Set-Location \"C:\\Windows\\System32\\drivers\";Select-String -Path *.sys -Pattern " + ret[0] +
+                      " -CaseSensitive | Select-Object FileName -Unique");
+
+       YiKit.ProgressEnd("poolmon.exe");
+       YiKit.ShowToast(o as string);
+        }));
+        
+    }
+
     private void ChangeSizeMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
     {
-        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小", "进程名称", "宽", "高");
-        if (null == strs || strs.Count != 3)
+        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小", "进程名称", "宽", "高","x","y");
+        if (null == strs || strs.Count <5)
         {
             return;
         }
-
 
         try
         {
@@ -1468,9 +1507,12 @@ YiKit.SetWindowListen(callback:(state =>
             Process[] targetProcesses = Process.GetProcessesByName(str);
             if (targetProcesses.Length == 0)
             {
-                targetProcesses = Process.GetProcessesByName(str + "64");
+                str += "64";
+
+                targetProcesses = Process.GetProcessesByName(str);
             }
 
+            YiKit.IniWrite("changeSize", str + "," + strs[1] + "," + strs[2]);
             bool isHidden = false;
             foreach (Process p in targetProcesses)
             {
@@ -1478,7 +1520,7 @@ YiKit.SetWindowListen(callback:(state =>
                 IntPtr hwnd = p.MainWindowHandle;
                 if (hwnd.ToInt32() != 0)
                 {
-                    YiKit.SetWindowPos(hwnd, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
+                    YiKit.SetWindowPos(hwnd, 0, Convert.ToInt32(strs[3]), Convert.ToInt32(strs[4]), Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
                 }
 
                 // YiKit.SetWindowPos(p.MainWindowHandle, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);

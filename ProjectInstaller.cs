@@ -15,5 +15,10 @@ namespace holey
         {
             InitializeComponent();
         }
+
+        private void EyiInstaller_AfterInstall(object sender, InstallEventArgs e)
+        {
+
+        }
     }
 }

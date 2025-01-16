@@ -31,11 +31,11 @@
             <TextBlock Text="翻译默认上下,回车即可翻译" FontSize="14" FontFamily="Microsoft YaHei UI" 
                        MouseLeave="UIElement_OnMouseLeave" MouseEnter="UIElement_OnMouseEnter"
                        PreviewMouseMove="PetWindow_OnPreviewMouseMove"></TextBlock>
-            <Button Name="Paint" Style="{StaticResource NoneButton}" Grid.Column="1" Content="❌" 
+            <Button Name="Paint" Style="{StaticResource NoneButton}" Grid.Column="1" Content="X" 
                     MouseEnter="Close_OnMouseEnter"
                     MouseLeave="Close_OnMouseLeave"
                     Click="ButtonBase_OnClick"></Button>
-            <Button Name="Close" Style="{StaticResource NoneButton}" Grid.Column="1" Content="❌" 
+            <Button Name="Close" Style="{StaticResource NoneButton}" Grid.Column="1" Content="X" 
                     MouseEnter="Close_OnMouseEnter"
                     MouseLeave="Close_OnMouseLeave"
                     Click="ButtonBase_OnClick"></Button>

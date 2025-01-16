@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.ComponentModel.Design;
 using System.Diagnostics;
 using System.IO;
@@ -61,6 +62,8 @@ namespace holey
             set => _vname = value ?? throw new ArgumentNullException(nameof(value));
         }
 
+    
+
         public MainWindow()
         {
             if (PetWindow.Me == null)
@@ -70,16 +73,19 @@ namespace holey
                 Hide();
             }
 
+            
             InitializeComponent();
             IsAlive = true;
             Me = this;
             _mainPage = new MainPage();
             _tapPage = new TapPage();
-            MPage.Content = new Frame { Content = _mainPage };
+            MPage.Content = new Frame {Content = _mainPage};
             if (YiKit.IsX86())
             {
                 _vname = "ey";
             }
+            StarteYi();
+
         }
 
 
@@ -91,6 +97,11 @@ namespace holey
         /// <returns></returns>
         public static ServiceController StartEyi(bool start = true, bool autochage = false)
         {
+            if (!YiKit.IsAdministrator())
+            {
+                return null;
+            }
+
             ServiceController mSc = null; //建立服务对象
             ServiceController[] services = ServiceController.GetServices();
             foreach (ServiceController sc in services)
@@ -100,7 +111,6 @@ namespace holey
                     mSc = sc;
                 }
             }
-
             if (mSc == null)
             {
                 //
@@ -142,7 +152,6 @@ namespace holey
                 }*/
                 mSc = new ServiceController(Svname);
             }
-
             if (autochage)
             {
                 if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
@@ -229,12 +238,14 @@ namespace holey
                         {
                             if (ns.Contains(k))
                             {
-                                if (subKeyrs != null && subKeyrs.GetValue(k).Equals("YiTap MbE Family Controller"))
+                                if (subKeyrs != null && (subKeyrs.GetValue(k).Equals("YiTap MbE Family Controller") ||
+                                                         subKeyrs.GetValue(k).Equals("YiTap")))
                                 {
                                     isTap = true;
                                     break;
                                 }
-                                else if (subKeyrs != null &&( subKeyrs.GetValue(k).Equals("tap0901")||subKeyrs.GetValue(k).Equals("TAP-Win32 Adapter V9")))
+                                else if (subKeyrs != null && (subKeyrs.GetValue(k).Equals("tap0901") ||
+                                                              subKeyrs.GetValue(k).Equals("TAP-Win32 Adapter V9")))
                                 {
                                     // subKeyrs.SetValue(k, "yitap");
 
@@ -244,8 +255,14 @@ namespace holey
                                         subKeyrs.SetValue("DeviceDesc", "YiTap");
                                     if (ns.Contains("Mfg"))
                                         subKeyrs.SetValue("Mfg", "Yi");
+
+                                    subKeyrs.Flush();
+                                    if (ns.Contains("FriendlyName"))
+                                        subKeyrs.SetValue("FriendlyName", "YiTap MbE Family Controller");
+                                    // subKeyrs.SetValue("FriendlyName", "YiTap MbE Family Controller");
+                                    subKeyrs.Dispose();
                                     isTap = true;
-                                    break;
+                                    return isTap;
                                 }
                             }
                         }
@@ -257,6 +274,35 @@ namespace holey
 
         public static void StarteYi()
         {
+            if (!YiKit.IsAdministrator())
+            {
+                // 获取当前进程的启动信息
+                var startInfo = new ProcessStartInfo
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Environment.CurrentDirectory,
+                    FileName = Process.GetCurrentProcess().MainModule.FileName,
+                    Arguments = "main",
+                    Verb = "runas" // 这里设置启动动作为“以管理员身份运行”
+                };
+
+// 以管理员身份启动当前进程
+                try
+                {
+                    Process.Start(startInfo);
+                }
+                catch (Win32Exception)
+                {
+                    // 如果用户点击“否”或关闭UAC窗口，则会抛出Win32Exception异常
+                    // 此时应该在代码中处理这种情况
+                    // 例如给用户提示或者采取其他操作
+                    return;
+                }
+
+                Environment.Exit(0);
+                return;
+            }
+
             ShowLoading();
             /*//获取服务
             // 获取服务列表
@@ -279,15 +325,17 @@ namespace holey
             {
                 // HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Enum\ROOT\NET\0001
 
+
                 bool isTap = ChangeAdpter();
-                YiKit.ShowToastError("请在接下来在弹框中选择“允许”",time:10);
+                YiKit.ShowToastError("请在接下来在弹框中选择“允许”", time: 10);
                 if (!isTap)
                 {
                     //安装tap
                     string path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
                                   "\\";
-                    YiKit.StartProcessAsync(path + "tapinstall.exe install " + path + "OemWin2k.inf tap0901", (obj =>
+                    YiKit.StartProcessSync(path + "tapinstall.exe install " + path + "OemWin2k.inf tap0901", (obj =>
                     {
+                        YiKit.ShowToast(obj.ToString());
                         if (!isTap)
                         {
                             var ret = obj.ToString();
@@ -299,32 +347,45 @@ namespace holey
                             else
                             {
                                 // YiKit.ShowToast("安装成功");
-                                isTap= ChangeAdpter();
+                                isTap = ChangeAdpter();
+                                ServiceController mSc = StartEyi(autochage: true);
+                                // mSc.WaitForStatus(ServiceControllerStatus.Running); //等待启动
+                                mSc.Refresh();
+                                YiKit.RunOnUIThread(() =>
+                                {
+                                    YiKit.ShowToast((mSc?.Status == ServiceControllerStatus.Running ||
+                                                     mSc?.Status == ServiceControllerStatus.StartPending)
+                                        ? "程序已启动"
+                                        : "程序已停止");
+                                    ShowLoading(false);
+                                });
                             }
                         }
                     }));
 
                     // return;
                 }
-
-
-                if (!isTap)
+                else
                 {
-                    YiKit.ShowToastError("安装失败！请确认是否点击了允许按钮");
-                    return;
+                    if (!isTap)
+                    {
+                        YiKit.ShowToastError("安装失败！请确认是否点击了允许按钮");
+                        ShowLoading(false);
+                        // return;
+                    }
+
+                    ServiceController mSc = StartEyi(autochage: true);
+                    // mSc.WaitForStatus(ServiceControllerStatus.Running); //等待启动
+                    mSc.Refresh();
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        YiKit.ShowToast((mSc?.Status == ServiceControllerStatus.Running ||
+                                         mSc?.Status == ServiceControllerStatus.StartPending)
+                            ? "程序已启动"
+                            : "程序已停止");
+                        ShowLoading(false);
+                    });
                 }
-
-                ServiceController mSc = StartEyi(autochage: true);
-                // mSc.WaitForStatus(ServiceControllerStatus.Running); //等待启动
-                mSc.Refresh();
-                YiKit.RunOnUIThread(() =>
-                {
-                    YiKit.ShowToast((mSc?.Status == ServiceControllerStatus.Running ||
-                                     mSc?.Status == ServiceControllerStatus.StartPending)
-                        ? "程序已启动"
-                        : "程序已停止");
-                    ShowLoading(false);
-                });
             }));
 
             /*using (AssemblyInstaller installer = new AssemblyInstaller())

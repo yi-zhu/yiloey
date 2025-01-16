@@ -109,7 +109,7 @@ public partial class WallPaper : Window
 
         BMedia.MediaFailed += (((sender, args) =>
         {
-            if (_uris.Count == 1)
+            if (_uris.Count <= 1)
             {
                 YiKit.ShowToastError(_uris[0].LocalPath + "格式不支持！");
             }
@@ -132,8 +132,16 @@ public partial class WallPaper : Window
 
     int i = 0;
 
+    
     private void NextPlay()
     {
+        if (_uris==null||_uris.Count < 1)
+        {
+            return;
+        }
+        
+        //判断是否同一个文件，同一个文件时间设为0
+        
         try
         {
 
@@ -153,6 +161,7 @@ public partial class WallPaper : Window
         }*/
             if (!BMedia.NaturalDuration.HasTimeSpan)
             {
+                //图片
                 YiKit.RunThread((state =>
                 {
                     Thread.Sleep((int) (_pictime * 60000));
@@ -170,14 +179,17 @@ public partial class WallPaper : Window
             }
             else if (BMedia.Source != _uris[i])
             {
+                //视频切合上一个不一致
                 BMedia.Stop();
                 BMedia.Source = _uris[i];
                 PlayMidea();
             }
             else
             {
-                BMedia.Stop();
-                PlayMidea();
+                //视频和上一个一直
+                BMedia.Position = TimeSpan.Zero;
+                BMedia.Play();  
+                // PlayMidea();
             }
         }
         catch (Exception e)
@@ -331,9 +343,9 @@ public partial class WallPaper : Window
     {
         switch (msg)
         {
-            case YiKit.WM_SIZEING:
+            case YiKit.WmSizeing:
 
-                if (wParam.ToInt32() == (int) YiKit.ABNotify.ABN_FULLSCREENAPP)
+                if (wParam.ToInt32() == (int) YiKit.AbNotify.ABN_FULLSCREENAPP)
                 {
                     if (lParam == (IntPtr) 1)
                     {
@@ -416,8 +428,8 @@ public partial class WallPaper : Window
         //Variable to hold the handle for the form
         var hwnd = new WindowInteropHelper(this).Handle;
         //Performing some magic to hide the form from Alt+Tab
-        YiKit.SetWindowLong(hwnd, YiKit.GWL_EX_STYLE,
-            (YiKit.GetWindowLong(hwnd, YiKit.GWL_EX_STYLE) | YiKit.WS_EX_TOOLWINDOW) & ~YiKit.WS_EX_APPWINDOW);
+        YiKit.SetWindowLong(hwnd, YiKit.GwlExstyle,
+            (YiKit.GetWindowLong(hwnd, YiKit.GwlExstyle) | YiKit.WsExToolwindow) & ~YiKit.WsExAppwindow);
         //鼠标穿透
         // SetWindowLong(hwnd, GWL_EX_STYLE,0x20);
         // SetWindowLong(hwnd, GWL_EX_STYLE, (GetWindowLong(hwnd, GWL_EX_STYLE) | 0x00000020));

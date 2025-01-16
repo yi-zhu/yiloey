@@ -62,7 +62,7 @@ public partial class MemoWindow : Window
 
     protected override void OnSourceInitialized(EventArgs e)
     {
-        YiKit.Areo(this, new Thickness(-1));
+        YiKit.UiAreo(this, new Thickness(-1));
         base.OnSourceInitialized(e);
     }
 

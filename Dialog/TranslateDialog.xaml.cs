@@ -46,8 +46,8 @@ public partial class TranslateDialog : Window
         //Variable to hold the handle for the form
         var hwnd = new WindowInteropHelper(this).Handle;
         //Performing some magic to hide the form from Alt+Tab
-        YiKits.YiKit.SetWindowLong(hwnd, YiKit.GWL_EX_STYLE,
-            (YiKit.GetWindowLong(hwnd, YiKit.GWL_EX_STYLE) | YiKit.WS_EX_TOOLWINDOW) & ~YiKit.WS_EX_APPWINDOW);
+        YiKits.YiKit.SetWindowLong(hwnd, YiKit.GwlExstyle,
+            (YiKit.GetWindowLong(hwnd, YiKit.GwlExstyle) | YiKit.WsExToolwindow) & ~YiKit.WsExAppwindow);
         //鼠标穿透
         // SetWindowLong(hwnd, GWL_EX_STYLE,0x20);
         // SetWindowLong(hwnd, GWL_EX_STYLE, (GetWindowLong(hwnd, GWL_EX_STYLE) | 0x00000020));

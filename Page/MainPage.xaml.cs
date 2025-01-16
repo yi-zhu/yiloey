@@ -45,7 +45,7 @@ public partial class MainPage
                         YiKit.RunOnUIThread(() =>
                         {
                             MainStr.Content = "断开连接："+DateTime.Now.ToShortTimeString();
-                            MainBtn.Background = new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Img/button.png")));
+                            // MainBtn.Background = MainBtnRed.Background;
                         });
                     }
                     else  if (MainStr.Content.ToString()!.Contains("未连接"))
@@ -83,7 +83,11 @@ public partial class MainPage
                         if (nowUp>0)
                         {
                             YiKit.RunOnUIThread(()=>MainStr.Content = "🔗已连接");
-                            YiKit.RunOnUIThread(() => {MainBtn.Background =new ImageBrush(new BitmapImage(new Uri(@"pack://application:,,,/Img/buttonBlue.png"))); });
+                            YiKit.RunOnUIThread(() =>
+                            {
+                                MainBtn.Background = MainBtnBlue.Background;
+
+                            });
                         }
                         if (lastUp==0)
                         {
@@ -121,6 +125,7 @@ public partial class MainPage
         
     }
     
+
 
     private void MainBtn_OnClick(object sender, RoutedEventArgs e)
     {

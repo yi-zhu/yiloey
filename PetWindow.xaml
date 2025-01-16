@@ -114,7 +114,9 @@
                             <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
                             <MenuItem Header="放大/缩小" Click="ZoomItem_OnClick"></MenuItem>
                             <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
-                            <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem>
+                            <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
+                            <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
+                            <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
                             <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
                             <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
                         </ContextMenu>

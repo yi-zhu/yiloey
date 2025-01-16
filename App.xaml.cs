@@ -116,8 +116,7 @@ namespace holey
         
         private void App_OnStartup(object sender, StartupEventArgs e)
         {
-
-           
+       
 
             if (YiKit.IniGetInt("eyi",0)==1)
             {
@@ -125,7 +124,7 @@ namespace holey
               {
                   try
                   {
-                      holey.MainWindow.StartEyi();
+                      holey.MainWindow.StarteYi();
                   }
                   catch (Exception exception)
                   {
@@ -155,7 +154,11 @@ namespace holey
                 
             }
             YiKit.ShowToastError("检查程序更新，当前程序版本："+System.Reflection.Assembly.GetExecutingAssembly().GetName().Version,time:2);
-            if (e.Args.Length == 0)
+            if (YiKit.IniGetInt("boot",0)==0)
+            {
+                new MainWindow().Show();
+                YiKit.IniWrite("boot","1");
+            }else if (e.Args.Length == 0)
             {
                 new PetWindow().Show();
             }

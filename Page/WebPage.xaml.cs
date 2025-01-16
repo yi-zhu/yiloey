@@ -15,7 +15,7 @@ public partial class WebPage : System.Windows.Controls.Page
     public WebPage()
     {
         InitializeComponent();
-        string wbv2v = null;
+        string? wbv2v = null;
         try
         {
              // wbv2v = CoreWebView2Environment.GetAvailableBrowserVersionString();

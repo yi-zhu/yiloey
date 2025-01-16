@@ -21,8 +21,7 @@
 
             <Viewbox Grid.Row="0" OpacityMask="#FF921E1E" HorizontalAlignment="Left">
 
-                <Menu Grid.Row="0" HorizontalContentAlignment="Stretch" HorizontalAlignment="Left"
-                      Background="Transparent">
+                <Menu Grid.Row="0" HorizontalContentAlignment="Stretch" HorizontalAlignment="Left" Background="Transparent">
                     <!-- 菜单栏 -->
                     <MenuItem Header="文件">
                         <MenuItem Header="退出" Click="Exit_Click"></MenuItem>

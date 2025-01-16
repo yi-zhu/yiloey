@@ -59,19 +59,44 @@
                             Content="💫公网" Click="PTextBlock_OnClick" FontSize="4" />
                     
                 </Grid>
+                <Button Grid.Column="1" Name="MainBtnRed">
+                    <Button.Background>
+                        <ImageBrush ImageSource="../Img/button.png"></ImageBrush>
+                    </Button.Background> 
+                </Button>
+                <Button Grid.Column="1" Name="MainBtnBlue">
+                    <Button.Background>
+                        <ImageBrush ImageSource="../Img/buttonBlue.png"></ImageBrush>
+                    </Button.Background> 
+                </Button>
                 <!-- 这是 按钮 -->
-                <Button Grid.Column="1" Name="MainBtn" Click="MainBtn_OnClick">
+                <Button Grid.Column="1" Name="MainBtn" Click="MainBtn_OnClick" >
                     <Button.Background>
                         <ImageBrush ImageSource="../Img/buttonBlue.png"></ImageBrush>
                     </Button.Background>
                     <Button.Content>
-                        <Label Grid.Row="0" Name="MainStr"
-                               VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
-                               VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
-                               Foreground="Black"
-                               >
-                            未连接
-                        </Label>
+                        <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                            <Label Grid.Row="0" Name="MainStr"
+                                   VerticalAlignment="Stretch" HorizontalAlignment="Stretch"
+                                   VerticalContentAlignment="Center" HorizontalContentAlignment="Center"
+                                   Foreground="Black"
+                                  
+                            >
+                                未连接
+                            </Label>   
+                            <!--<Grid  Name="MainBtnBgBlue">
+                                <Grid.Background>
+                                    <ImageBrush ImageSource="../Img/buttonBlue.png"></ImageBrush>
+                                </Grid.Background>  
+                            </Grid>
+                            <Grid  Name="MainBtnBgRed" Visibility="Collapsed">
+                                <Grid.Background>
+                                    <ImageBrush ImageSource="../Img/button.png"></ImageBrush>
+                                </Grid.Background>  
+                            </Grid>-->
+
+                        </Grid>
+
                     </Button.Content>
                 </Button>
               
