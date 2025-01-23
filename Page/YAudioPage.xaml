@@ -1,0 +1,130 @@
+﻿<Page x:Class="holey.Page.YAudioPage"
+      xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+      xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+      xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+      xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+      xmlns:local="clr-namespace:holey.Page"
+      mc:Ignorable="d"
+      Title="YAudio" VerticalAlignment="Stretch">
+
+    <Grid HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="10"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="10"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="10"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="10"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+            <ColumnDefinition Width="10"></ColumnDefinition>
+            <ColumnDefinition Width="*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="10"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="10"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="10"></RowDefinition>
+            <RowDefinition Height="*"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Canvas Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="11" Grid.RowSpan="2" Name="waveformCanvas" Background="Transparent" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
+        
+        <!-- <Viewbox HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+            <Button Name="StartBtn" Click="StartBtn_OnClick">开始监听</Button>
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Column="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+            <!-- <Button Grid.Column="10" Name="EndBtn" Click="EndBtn_OnClick">结束监听</Button> -->
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+        <!--<TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" FontStretch="Expanded" FontSize="16"
+                   Name="AuiTextBlock" VerticalAlignment="Center">
+        </TextBlock>-->
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Row="2" Grid.Column="9" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+            <StackPanel Grid.Row="0" Grid.Column="4" Grid.ColumnSpan="1" Orientation="Horizontal"
+                        VerticalAlignment="Stretch">
+                <TextBlock Margin="10,0,0,0" ToolTip="历史条数" VerticalAlignment="Center">历史：</TextBlock>
+                <TextBox Name="HlTextBox" ToolTip="历史条数" MinWidth="30" TextChanged="HlTextBox_OnTextChanged"></TextBox>
+                <TextBlock ToolTip="输入要监控的派接组" VerticalAlignment="Center">条</TextBlock>
+            </StackPanel>
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Row="0" Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+            <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Stretch">
+                <CheckBox Name="CapShow" IsChecked="True"  Checked="CapShow_OnChecked"  Unchecked="CapShow_OnUnchecked" Foreground="Blue"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="波形显示">
+                </CheckBox>
+                <CheckBox Name="SICk" Checked="SICk_OnChecked" Unchecked="SICk_OnUnchecked" Foreground="Blue"
+                          HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="扬声器">
+                </CheckBox>
+            </StackPanel>
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+            <StackPanel Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="4" Orientation="Horizontal"
+                        VerticalAlignment="Stretch">
+                <TextBlock Margin="10,0,0,0" ToolTip="输入要监控的派接组" VerticalAlignment="Center">派接组：</TextBlock>
+                <TextBox Name="JkTextBox" ToolTip="输入要监控的派接组" MinWidth="70" TextChanged="JkTextBox_OnTextChanged"></TextBox>
+            </StackPanel>
+        <Button Grid.Row="0" Grid.Column="9" Grid.ColumnSpan="3" Name="SetDirBtn" Click="SetDirBtn_OnClick" >设置程序根目录</Button>
+        <!-- </Viewbox> -->
+        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="11" Orientation="Vertical"
+                    HorizontalAlignment="Stretch">
+            <!-- <Viewbox  HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+            <!-- </Viewbox> -->
+            <TextBlock Name="LogRtTextBlock" TextWrapping="Wrap" Margin="10,5,0,0" Foreground="SaddleBrown"></TextBlock>
+
+        </StackPanel>
+        <ListBox Name="LogListBox" Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="7" HorizontalAlignment="Stretch"
+                 HorizontalContentAlignment="Stretch" SelectionChanged="LogListBox_OnSelectionChanged"
+                 Background="Transparent" MouseEnter="LogListBox_OnMouseEnter" MouseLeave="LogListBox_OnMouseLeave">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                    <EventSetter Event="PreviewMouseRightButtonDown" Handler="ListBoxItem_PreviewMouseRightButtonDown" />
+                </Style>
+            </ListBox.ItemContainerStyle>
+            <ListBox.Resources>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+                </Style>
+                <ContextMenu x:Key="ItemContextMenu">
+                    <MenuItem Header="PDT占用信道" Click="MenuItem_Click" />
+                    <MenuItem Header="LTE占用信道" Click="MenuItem_Click" />
+                    <Separator />
+                    <MenuItem Header="无声音" Click="MenuItem_Click" />
+                    <MenuItem Header="声音卡顿" Click="MenuItem_Click" />
+                    <MenuItem Header="乱呼叫" Click="MenuItem_Click" />
+                    <Separator />
+                    <MenuItem Header="PDT没起来" Click="MenuItem_Click" />
+                    <MenuItem Header="LTE未起来" Click="MenuItem_Click" />
+                    <Separator />
+                    <MenuItem Header="其他" Click="MenuItem_Click" />
+                </ContextMenu>
+            </ListBox.Resources>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+        <ListBox Name="LogeListBox" Grid.Column="7" Grid.Row="6" Grid.ColumnSpan="4" HorizontalAlignment="Stretch"
+                 HorizontalContentAlignment="Stretch" SelectionChanged="LogListBox_OnSelectionChanged"
+                 Background="Transparent" MouseEnter="LogeListBox_OnMouseEnter" MouseLeave="LogeListBox_OnMouseLeave">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}" Foreground="Brown" TextWrapping="Wrap" />
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+            <ListBox.Resources>
+                <Style TargetType="ScrollViewer">
+                    <Setter Property="HorizontalScrollBarVisibility" Value="Disabled" />
+                </Style>
+            </ListBox.Resources>
+        </ListBox>
+
+    </Grid>
+
+</Page>

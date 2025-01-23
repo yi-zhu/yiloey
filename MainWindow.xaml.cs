@@ -30,6 +30,7 @@ namespace holey
         private TapPage _tapPage;
         private SetPage _setPage;
         private WebPage _webPage;
+        private YAudioPage _yAudioPage;
         public static bool IsAlive { get; set; } = true;
         public static MainWindow Me { get; set; }
         public static PetWindow? PetWindow;
@@ -162,8 +163,12 @@ namespace holey
                 else if (mSc.Status == ServiceControllerStatus.Running ||
                          mSc.Status == ServiceControllerStatus.StartPending)
                 {
-                    mSc.Stop();
-                    YiKit.IniWrite("eyi", "0");
+                    if (start==false)
+                    {
+                        mSc.Stop();
+                  YiKit.IniWrite("eyi", "0");
+                    }
+                  
                 }
             }
             else
@@ -274,6 +279,12 @@ namespace holey
 
         public static void StarteYi()
         {
+            string path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
+                          "\\tapinstall.exe";
+            if (!File.Exists(path))
+            {  return;
+            }
+
             if (!YiKit.IsAdministrator())
             {
                 // 获取当前进程的启动信息
@@ -331,7 +342,7 @@ namespace holey
                 if (!isTap)
                 {
                     //安装tap
-                    string path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
+                     path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
                                   "\\";
                     YiKit.StartProcessSync(path + "tapinstall.exe install " + path + "OemWin2k.inf tap0901", (obj =>
                     {
@@ -593,5 +604,12 @@ namespace holey
                 _webPage = new WebPage();
             MPage.Content = _webPage;
         }
+        private void AuiItem_Click(object sender, RoutedEventArgs e)
+        {
+            if (_yAudioPage == null)
+                _yAudioPage = new YAudioPage();
+            MPage.Content = _yAudioPage;
+        }
     }
+    
 }
