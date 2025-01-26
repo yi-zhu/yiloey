@@ -4,6 +4,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
+using System.Media;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -28,18 +29,29 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 {
     private string area = "catalog";
 
+    private YAudioPage me;
+
     public YAudioPage()
     {
+        me = this;
         string path = YiKit.IniGet("path", area);
         pjGid = YiKit.IniGet("pjgid", area);
         capShow = YiKit.IniGetBool("capShow", true, area);
-        hlnum = Convert.ToInt64(YiKit.IniGet("hlnum", area));
+        errorAuto = YiKit.IniGetBool("errorAuto", true, area);
+        hlnum = Convert.ToInt64(YiKit.IniGet("hlnum", area, null, "0"));
+
+        bjsc = long.Parse(YiKit.IniGet("bjsc", area, null, "5000"));
+
         InitializeComponent();
 
         CapShow.IsChecked = capShow;
+        ErrorAutoCk.IsChecked = errorAuto;
         if (hlnum == null)
             hlnum = 100;
+        if (bjsc == null)
+            hlnum = 5000;
         HlTextBox.Text = hlnum + "";
+        BjTimeTextBox.Text = bjsc / 1000 + "";
 
         if (pjGid == null)
 
@@ -123,7 +135,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     WaveInEvent waveIn = null; //new WaveInEvent();
 
     //录制扬声器的声音
-    WasapiLoopbackCapture capture; //new WasapiLoopbackCapture();
+    WasapiLoopbackCapture capture = null; //new WasapiLoopbackCapture();
 
     //生成音频文件的对象
     WaveFileWriter writer = null;
@@ -169,9 +181,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     public bool watched = false;
     private Polyline waveformPolyline;
 
-    private void StartBtn_OnClick(object sender, RoutedEventArgs e)
+
+    public bool startCap(bool start = true)
     {
-        if (watched == true)
+        if (!start)
         {
             try
             {
@@ -186,116 +199,150 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             {
                 Console.WriteLine(exception);
                 (StartBtn).Content = "error1";
+                return false;
             }
+
+            return true;
+        }
+
+
+        try
+        {
+            if (t == RecordType.microphone)
+            {
+                waveIn = new WaveInEvent();
+                // writer = new WaveFileWriter(audioFile, waveIn.WaveFormat);
+                //开始录音，写数据
+                waveIn.DataAvailable += (s, a) => { writer.Write(a.Buffer, 0, a.BytesRecorded); };
+                //结束录音
+                waveIn.RecordingStopped += (s, a) =>
+                {
+                    writer.Dispose();
+                    // writer = null;
+                    waveIn.Dispose();
+                };
+                waveIn.StartRecording();
+            }
+            else
+            {
+                if (null != capture)
+                {
+                    capture.Dispose();
+                    Thread.Sleep(100);
+                    capture = null;
+                }
+
+                capture = new WasapiLoopbackCapture();
+                long capNum = 0;
+                // writer = new WaveFileWriter(audioFile, capture.WaveFormat);
+                capture.DataAvailable += (s, e) =>
+                {
+                    try
+                    {
+                        // writer.Write(a.Buffer, 0, e.BytesRecorded);
+                        float[] samples = Enumerable // 提取数据中的采样
+                            .Range(0, e.BytesRecorded / 4) // 除以四是因为, 缓冲区内每 4 个字节构成一个浮点数, 一个浮点数是一个采样
+                            .Select(i => BitConverter.ToSingle(e.Buffer, i * 4)) // 转换为 float
+                            .ToArray(); // 转换为数组
+                        // 将字节转换为浮点数样本以进行处理
+                        // var sampleCount = e.BytesRecorded / 4; // 假设是32位浮点格式
+                        // float[] samples = new float[sampleCount];
+                        Buffer.BlockCopy(e.Buffer, 0, samples, 0, e.BytesRecorded);
+                        if (samples.Length > 1)
+                            nowaudio = samples.Average();
+                        else nowaudio = 0;
+                        if (capShow)
+                            // 在这里实现波形绘制逻辑
+                            YiKit.RunOnUIThread(() =>
+                            {
+                                capNum++;
+                                if (capNum % 3 == 1)
+                                {
+                                    waveformPolyline.Points.Clear();
+                                }
+
+                                if (capNum > int.MaxValue)
+                                {
+                                    capNum = 0;
+                                }
+
+                                for (int i = 0; i < samples.Length && i < waveformCanvas.ActualWidth; i++)
+                                {
+                                    double y = (samples[i]) * waveformCanvas.ActualHeight /
+                                               1; // 将-1到1范围内的样本映射到画布高度
+                                    waveformPolyline.Points.Add(new Point(i, y));
+                                }
+                            });
+                    }
+                    catch (Exception exception)
+                    {
+                        YiKit.RunOnUIThread(() =>
+                        {
+                            (StartBtn).Content = exception.ToString();
+                            YiKit.ShowToast(exception.ToString());
+                        });
+
+                        // Console.WriteLine(exception);
+                        // throw;
+                    }
+
+                    // nowaudio = allSamples.Max();
+
+                    // 获取采样后, 在这里进行详细处理
+                    YiKit.RunOnUIThread(() => { StartBtn.Content = "" + nowaudio; });
+                };
+                //结束录音
+                capture.RecordingStopped += (s, a) =>
+                {
+                    // writer.Dispose();
+                    // writer = null;
+                    // capture?.Dispose();
+                    (StartBtn).Content = "监听结束~~";
+                    // capture = null;
+
+                    if (watched)
+                    {
+                        watched = false;
+                        (StartBtn).Content = "监听被结束，已重启监听中";
+                        Thread.Sleep(delay + 50);
+                        startCap();
+                    }
+                };
+                capture.StartRecording();
+            }
+        }
+        catch (Exception ex)
+        {
+            // watched = false;
+            // (StartBtn).Content = "开始监听,error2";
+            YiKit.RunOnUIThread(() => { YiKit.ShowToastError("" + ex.Message); });
+            watched = false;
+            Thread.Sleep(delay + 50);
+            startCap();
+        }
+
+        watched = true;
+        startListingLogDir1S();
+        playErrorThrea();
+
+        StartBtn.Background = Brushes.Red;
+        StartBtn.Content = "监听中";
+        return true;
+    }
+
+    private bool startBtnBool = true;
+
+    private void StartBtn_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (startBtnBool)
+        {
+            startCap(true);
+            startBtnBool = !startBtnBool;
         }
         else
         {
-            try
-            {
-                watched = true;
-                if (t == RecordType.microphone)
-                {
-                    waveIn = new WaveInEvent();
-                    // writer = new WaveFileWriter(audioFile, waveIn.WaveFormat);
-                    //开始录音，写数据
-                    waveIn.DataAvailable += (s, a) => { writer.Write(a.Buffer, 0, a.BytesRecorded); };
-                    //结束录音
-                    waveIn.RecordingStopped += (s, a) =>
-                    {
-                        writer.Dispose();
-                        // writer = null;
-                        waveIn.Dispose();
-                    };
-                    waveIn.StartRecording();
-                }
-                else
-                {
-                    capture = new WasapiLoopbackCapture();
-                    long capNum = 0;
-                    // writer = new WaveFileWriter(audioFile, capture.WaveFormat);
-                    capture.DataAvailable += (s, e) =>
-                    {
-                        try
-                        {
-                            // writer.Write(a.Buffer, 0, e.BytesRecorded);
-                            /*float[] allSamples = Enumerable // 提取数据中的采样
-                                .Range(0, e.BytesRecorded / 4) // 除以四是因为, 缓冲区内每 4 个字节构成一个浮点数, 一个浮点数是一个采样
-                                .Select(i => BitConverter.ToSingle(e.Buffer, i * 4)) // 转换为 float
-                                .ToArray(); // 转换为数组
-                                */
-                            // 将字节转换为浮点数样本以进行处理
-                            var sampleCount = e.BytesRecorded / 4; // 假设是32位浮点格式
-                            float[] samples = new float[sampleCount];
-                            Buffer.BlockCopy(e.Buffer, 0, samples, 0, e.BytesRecorded);
-                            if (samples.Length > 1)
-                                nowaudio = samples.Average();
-                            else nowaudio = 0;
-                            if (capShow)
-                                // 在这里实现波形绘制逻辑
-                                YiKit.RunOnUIThread(() =>
-                                {
-                                    capNum++;
-                                    if (capNum % 3 == 1)
-                                    {
-                                        waveformPolyline.Points.Clear();
-                                    }
-
-                                    if (capNum > int.MaxValue)
-                                    {
-                                        capNum = 0;
-                                    }
-
-                                    for (int i = 0; i < samples.Length && i < waveformCanvas.ActualWidth; i++)
-                                    {
-                                        double y = (samples[i] +0.2) * waveformCanvas.ActualHeight /
-                                                   1; // 将-1到1范围内的样本映射到画布高度
-                                        waveformPolyline.Points.Add(new Point(i, y));
-                                    }
-                                });
-                        }
-                        catch (Exception exception)
-                        {
-                            YiKit.RunOnUIThread(() =>
-                            {
-                                (StartBtn).Content = exception.ToString();
-                                YiKit.ShowToast(exception.ToString());
-                            });
-
-                            // Console.WriteLine(exception);
-                            // throw;
-                        }
-
-                        // nowaudio = allSamples.Max();
-
-                        // 获取采样后, 在这里进行详细处理
-                        YiKit.RunOnUIThread(() => { StartBtn.Content = "" + nowaudio; });
-                    };
-                    //结束录音
-                    capture.RecordingStopped += (s, a) =>
-                    {
-                        // writer.Dispose();
-                        // writer = null;
-                        // capture.Dispose();
-                        (StartBtn).Content = "监听结束~~";
-                        if (watched)
-                        {
-                            (StartBtn).Content = "监听被结束，已重启监听中";
-                            capture.StartRecording();
-                        }
-                    };
-                    capture.StartRecording();
-                }
-            }
-            catch (Exception ex)
-            {
-                watched = false;
-                (StartBtn).Content = "开始监听,error2";
-                StartBtn.Background = Brushes.Blue;
-            }
-
-            startListingLogDir1S();
-            StartBtn.Background = Brushes.Red;
-            StartBtn.Content = "监听中";
+            startCap(false);
+            startBtnBool = !startBtnBool;
         }
     }
 
@@ -404,15 +451,37 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     private int jknumsoundyx = 0;
 
     /// <summary>
+    /// 连续无声音
+    /// </summary>
+    private int lxwsy = 0;
+
+    /// <summary>
     /// 轮询单次延迟时间
     /// </summary>
     public int delay = 200;
 
     ObservableCollection<string> hllogs = new ObservableCollection<string>();
     ObservableCollection<string> hlelogs = new ObservableCollection<string>();
-
     private string logeFilePath = YiKit.GetAppStartPath() + "\\监控派接异常通话.csv";
     private string logFilePath = YiKit.GetAppStartPath() + "\\监控派接.csv";
+
+    public void playErrorThrea()
+    {
+        YiKit.RunThread(s =>
+        {
+            while (watched)
+            {
+                if (lxwsy > (bjsc / delay))
+                {
+                    // 播放系统报警音
+                    // SystemSounds.Beep.Play();
+                    Console.Beep();
+                    // 最终恢复原始背景色
+                }
+                else Thread.Sleep(500);
+            }
+        });
+    }
 
     public void startListingLogDir1S()
     {
@@ -436,6 +505,43 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                         {
                             jknumyx += 1;
                             jknumsoundyx += (nowaudio == 0 ? 0 : 1);
+                        }
+
+                        if (nowaudio == 0)
+                        {
+                            lxwsy += 1;
+                            if (lxwsy > bjsc / delay)
+                            {
+                                // 播放系统报警音
+                                // SystemSounds.Beep.Play();
+                                YiKit.RunOnUIThread(() =>
+                                {
+                                    me.Background = (me.Background == Brushes.Transparent)
+                                        ? Brushes.Red
+                                        : Brushes.Transparent;
+                                });
+                                // 最终恢复原始背景色
+                            }
+                        }
+                        else
+                        {
+                            if (lxwsy != 0)
+                            {
+                                lxwsy = 0;
+                                YiKit.RunOnUIThread(() => { me.Background = Brushes.Transparent; });
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if (lxwsy != 0)
+                        {
+                            lxwsy = 0;
+                            YiKit.RunOnUIThread(() =>
+                            {
+                                if (me.Background != Brushes.Transparent)
+                                    me.Background = Brushes.Transparent;
+                            });
                         }
                     }
 
@@ -468,12 +574,13 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                     gcDic.Add(cid, gid);
 
                                 if (!gcLogLine.ContainsKey(cid))
-                                    gcLogLine.Add(cid, gid + "-" + cid + "-" + uid + "-" + YiKit.NowD());
+                                    gcLogLine.Add(cid, gid + "-" + uid + "," + YiKit.NowD());
                                 else
-                                    gcLogLine[cid] = gid + "-" + cid + "-" + uid + "-" + YiKit.NowD();
+                                    gcLogLine[cid] = gid + "-" + uid + "," + YiKit.NowD();
                                 if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
                                 {
                                     faqi = true;
+                                    if (lxwsy != 0) lxwsy = 0;
                                     showTxt(gcLogLine[cid]);
                                 }
                             }
@@ -489,6 +596,12 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                 else gcLogLine.Add(cid, "🔊" + sn + "(" + sm + "):" + YiKit.NowT());
                                 if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
                                 {
+                                    if (lxwsy != 0) lxwsy = 0;
+                                    YiKit.RunOnUIThread(() =>
+                                    {
+                                        if (me.Background != Brushes.Transparent)
+                                            me.Background = Brushes.Transparent;
+                                    });
                                     faqisp = true;
                                     showTxt(gcLogLine[cid]);
                                 }
@@ -498,8 +611,8 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                 //释放
                                 cid = YiKit.SubStr(s, "channleid: ", " ");
                                 if (gcLogLine.ContainsKey(cid))
-                                    gcLogLine[cid] += "-" + YiKit.NowT() + ",";
-                                else gcLogLine.Add(cid, "-" + YiKit.NowT() + ",");
+                                    gcLogLine[cid] += "-" + YiKit.NowT();
+                                else gcLogLine.Add(cid, "-" + YiKit.NowT());
                                 if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
                                 {
                                     faqisp = false;
@@ -521,8 +634,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                     if (jknumyx == 0)
                                     {
                                         gcLogLine[cid] += "♦音频：" + soundRatio + "%,持续：" + Math.Round(jknum / 500f, 3) +
-                                                          "♦有效音频：0"  + "%,有效持续0" ;
-                                      
+                                                          "♦有效音频：0" + "%,有效持续0";
                                     }
                                     else
                                         gcLogLine[cid] += "♦音频：" + soundRatio + "%,持续：" + Math.Round(jknum / 500f, 3) +
@@ -541,7 +653,8 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                     }
 
                                     YiKit.RunOnUIThread(() => { hllogs.Add(gcLogLine[cid]); });
-                                    if (jknumyx == 0 || Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) <= 30)
+                                    if (errorAuto && (jknumyx == 0 ||
+                                                      Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) <= 30))
                                     {
                                         YiKit.RunOnUIThread(() => { hlelogs.Add(gcLogLine[cid]); });
 
@@ -558,6 +671,12 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                     }
 
                                     faqi = false;
+                                    if (lxwsy != 0) lxwsy = 0;
+                                    YiKit.RunOnUIThread(() =>
+                                    {
+                                        if (me.Background != Brushes.Transparent)
+                                            me.Background = Brushes.Transparent;
+                                    });
                                     jknum = 0;
                                     jknumyx = 0;
                                     soundRatio = 0;
@@ -566,6 +685,15 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                     showTxt(gcLogLine[cid], false);
                                     txt.WriteLine(gcLogLine[cid].Replace("♦", ",").Replace("🔊", ""));
                                     txt.Flush();
+                                    if (lxwsy != 0)
+                                    {
+                                        lxwsy = 0;
+                                        YiKit.RunOnUIThread(() =>
+                                        {
+                                            if (me.Background != Brushes.Transparent)
+                                                me.Background = Brushes.Transparent;
+                                        });
+                                    }
                                 }
                             }
                         }
@@ -882,11 +1010,23 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             {
                 selectLogItem.Content += ",LTE占用信道\r\n";
             }
+            else if (menuItem.Header.Equals("PTD与LTE占用信道"))
+            {
+                selectLogItem.Content += ",PTD与LTE占用信道\r\n";
+            }
             else if (menuItem.Header.Equals("无声音"))
             {
                 selectLogItem.Content += ",无声音\r\n";
             }
-            else if (menuItem.Header.Equals("声音卡顿"))
+            else if (menuItem.Header.Equals("PDT声音卡顿"))
+            {
+                selectLogItem.Content += ",PDT声音卡顿\r\n";
+            }
+            else if (menuItem.Header.Equals("LTE声音卡顿"))
+            {
+                selectLogItem.Content += ",LTE声音卡顿\r\n";
+            }
+            else if (menuItem.Header.Equals("LTE声音卡顿"))
             {
                 selectLogItem.Content += ",声音卡顿\r\n";
             }
@@ -907,14 +1047,15 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                 List<string> strs = YiKit.ShowInputDialog(selectLogItem.Content.ToString(), new[] { "发现的问题" });
                 if (strs != null && strs.Count == 1)
                 {
-                    selectLogItem.Content += "," + (strs[0].Length == 0 ? "其他" : strs[0])+"\r\n";
+                    selectLogItem.Content += "," + (strs[0].Length == 0 ? "其他" : strs[0]) + "\r\n";
                 }
             }
 
             YiKit.RunOnUIThread(() => { hlelogs.Add(selectLogItem.Content.ToString()); });
             try
             {
-                YiKit.FileWriteAppend(selectLogItem.Content.ToString(), logeFilePath);
+                YiKit.FileWriteAppend(selectLogItem.Content.ToString().Replace("♦", ",").Replace("🔊", ""),
+                    logeFilePath);
             }
             catch (Exception exception)
             {
@@ -958,5 +1099,37 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     {
         capShow = false;
         YiKit.IniWrite("capShow", capShow + "", area);
+    }
+
+    private bool errorAuto = true;
+
+    private void ErrorAutoCk_OnChecked(object sender, RoutedEventArgs e)
+    {
+        errorAuto = true;
+        YiKit.IniWrite("errorAuto", errorAuto + "", area);
+    }
+
+    private void ErrorAutoCk_OnUnchecked(object sender, RoutedEventArgs e)
+    {
+        errorAuto = false;
+        YiKit.IniWrite("errorAuto", errorAuto + "", area);
+    }
+
+    /// <summary>
+    /// 触发报警的时长5秒，默认
+    /// </summary>
+    private long bjsc = 5;
+
+    private void BjTimeTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        try
+        {
+            bjsc = long.Parse(BjTimeTextBox.Text) * 1000;
+            YiKit.IniWrite("bjsc", bjsc + "", area);
+        }
+        catch (Exception exception)
+        {
+            YiKit.ShowToastError(exception.Message);
+        }
     }
 }
