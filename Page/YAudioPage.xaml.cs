@@ -463,7 +463,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     ObservableCollection<string> hllogs = new ObservableCollection<string>();
     ObservableCollection<string> hlelogs = new ObservableCollection<string>();
     private string logeFilePath = YiKit.GetAppStartPath() + "\\监控派接异常通话.csv";
-    private string logFilePath = YiKit.GetAppStartPath() + "\\监控派接.csv";
+    private string logFilePath = YiKit.GetAppStartPath()+"\\"+YiKit.NowD() + "监控派接.csv";
 
     public void playErrorThrea()
     {
@@ -662,7 +662,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                         {
                                             YiKit.FileWriteAppend(
                                                 gcLogLine[cid].Replace("♦", ",").Replace("🔊", "") + ",讲话声音短\r\n",
-                                                logeFilePath);
+                                                YiKit.GetAppStartPath()+"\\" +YiKit.NowD()+ "监控派接异常通话.csv");
                                         }
                                         catch (Exception e)
                                         {
@@ -1055,7 +1055,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             try
             {
                 YiKit.FileWriteAppend(selectLogItem.Content.ToString().Replace("♦", ",").Replace("🔊", ""),
-                    logeFilePath);
+                    YiKit.GetAppStartPath()+"\\" +YiKit.NowD()+ "监控派接异常通话.csv");
             }
             catch (Exception exception)
             {

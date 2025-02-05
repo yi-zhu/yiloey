@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -340,6 +341,7 @@ public partial class PetWindow : Window
 
             while (IsAlive)
             {
+           
                 cot += 1;
                 if (cot % 60 == 1)
                 {
@@ -381,25 +383,34 @@ public partial class PetWindow : Window
                         {
                             tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
                         }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
+                        
+                        DateTime currentDateTime = DateTime.Now;
+
+                        // 创建一个中国农历实例
+                        ChineseLunisolarCalendar chineseCalendar = new ChineseLunisolarCalendar();
+
+                        // 获取农历月、日
+                        int lunarMonth = chineseCalendar.GetMonth(currentDateTime);
+                        int lunarDay = chineseCalendar.GetDayOfMonth(currentDateTime);
                         if (nowDown == lastDown && nowUp == lastUp)
                         {
                             if (isnowork) break;
-                            tapas = "速";
-                            tapasU = "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
-                            tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown);
-
+                            // tapas = "时间:"+YiKit.NowT();
+                            tapas = string.Format("{0:0}",currentDateTime.Hour)+":"+YiKit.NowT();
+                            tapasU = string.Format("{0:00}",currentDateTime.Minute)+"" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
+                            tapasD = string.Format("{0:00}",currentDateTime.Second)+"" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown);
                             isnowork = true;
                         }
                         else
                         {
                             isnowork = false;
-                            tapas = "速" + (nowUp == lastUp ? "  " : "⇡") +
+                            tapas = string.Format("{0:0}",currentDateTime.Hour)+"" + (nowUp == lastUp ? "  " : "⇡") +
                                     (((nowDown - lastDown) >= (nowUp - lastUp)) ? "⇣" : "⇡")
-                                    + (nowDown == lastDown ? "  " : "⇣") + " "
+                                    + (nowDown == lastDown ? "  " : "⇣") + ""
                                     + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "";
 
-                            tapasU = "上" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
-                            tapasD = "下" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "";
+                            tapasU = string.Format("{0:00}",currentDateTime.Minute)+"" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
+                            tapasD = string.Format("{0:00}",currentDateTime.Second)+"" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "";
                         }
 
 
@@ -456,6 +467,7 @@ public partial class PetWindow : Window
                 #region CPU使用率
 
                 cpuse = (int) YiKit.CpuUse();
+          
                 if (cpuse >= 90)
                 {
                     YiKit.RunOnUIThread(() =>
@@ -492,7 +504,7 @@ public partial class PetWindow : Window
                 diskusebyteR = (int) YiKit.DiskUseByte("Read");
                 diskusebyteW = (int) YiKit.DiskUseByte("Write");
                 disktx = (diskusebyteW == diskusebyteR ? "" : (diskusebyteW > diskusebyteR ? "✎" : "👁")) +
-                         YiKit.SumByte(diskusebyteW + diskusebyteR);
+                         YiKit.SumByteDate(diskusebyteW + diskusebyteR);
                 gpumemmbU = YiKit.GpuMem();
                 gpumemmbT = YiKit.GpuMemTol();
                 gpumem = (int) YiKit.GpuMemuse();
@@ -1472,6 +1484,11 @@ public partial class PetWindow : Window
         {
          var ret=   YiKit.ShowInputDialog("输入TAG查找泄漏文件", "tag");
 
+         if (ret==null)
+         {
+             YiKit.ProgressEnd("poolmon.exe");
+             return;
+         }
        var o=  YiKit.RunCmd("Set-Location \"C:\\Windows\\System32\\drivers\";Select-String -Path *.sys -Pattern " + ret[0] +
                       " -CaseSensitive | Select-Object FileName -Unique");
 

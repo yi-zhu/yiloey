@@ -200,31 +200,41 @@
 
 
                             <Viewbox Width="100">
-                                <TextBlock x:Name="CpuStr" FontSize="12" Margin="0,-3,0,0" Padding="9,0,0,0"
-                                           Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"
-                                           VerticalAlignment="Center" FontWeight="Bold"
-                                           HorizontalAlignment="Center" TextAlignment="Center">
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="1*"></ColumnDefinition>
+                                        <ColumnDefinition Width="1*"></ColumnDefinition>
+                                    </Grid.ColumnDefinitions>
+                                  
+                                    <TextBlock Grid.ColumnSpan="2" x:Name="CpuStr" FontSize="12" Margin="0,-3,0,0" Padding="0,0,0,0"
+                                               Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"
+                                               VerticalAlignment="Center" FontWeight="SemiBold"
+                                               HorizontalAlignment="Stretch" TextAlignment="Right">
 
-                                    <TextBlock.Foreground>
-                                        <LinearGradientBrush MappingMode="Absolute" StartPoint="0,1" EndPoint="0,0"
-                                                             SpreadMethod="Pad">
-                                            <LinearGradientBrush.RelativeTransform>
-                                                <TransformGroup>
-                                                    <RotateTransform Angle="0" CenterX="0" CenterY="0" />
-                                                    <TranslateTransform />
-                                                </TransformGroup>
-                                            </LinearGradientBrush.RelativeTransform>
+                                       
+                                        <TextBlock.Foreground>
+                                            <LinearGradientBrush MappingMode="Absolute" StartPoint="0,1" EndPoint="0,0"
+                                                                 SpreadMethod="Pad">
+                                                <LinearGradientBrush.RelativeTransform>
+                                                    <TransformGroup>
+                                                        <RotateTransform Angle="0" CenterX="0" CenterY="0" />
+                                                        <TranslateTransform />
+                                                    </TransformGroup>
+                                                </LinearGradientBrush.RelativeTransform>
 
-                                            <GradientStop Color="#f00" Offset="0" />
+                                                <GradientStop Color="#f00" Offset="0" />
 
-                                            <GradientStop Color="#fff" Offset="1" />
-                                        </LinearGradientBrush>
-                                    </TextBlock.Foreground>
-                                    <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="CpuStrShadow" Color="#00f" BlurRadius="3"
-                                                          ShadowDepth="1" Opacity="1" Direction="270" />
-                                    </TextBlock.Effect>
-                                </TextBlock>
+                                                <GradientStop Color="#fff" Offset="1" />
+                                            </LinearGradientBrush>
+                                        </TextBlock.Foreground>
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect x:Name="CpuStrShadow" Color="#00f" BlurRadius="3"
+                                                              ShadowDepth="1" Opacity="1" Direction="270" />
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                    
+                                </Grid>
+                                
                             </Viewbox>
                         </Grid>
 
@@ -281,7 +291,7 @@
 
                             </Rectangle>
                             <Viewbox>
-                                <TextBlock x:Name="StatStr" FontSize="13"
+                                <TextBlock x:Name="StatStr" FontSize="16"
                                            Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">
                                     H
                                     <TextBlock.Effect>
@@ -398,6 +408,7 @@
                             Margin="-19,0,0,0" Padding="0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0,0,0,0">
+                            
                             <Rectangle Stroke="Transparent"  Height="10" Width="100" Cursor="Hand"
                                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
                                        StrokeThickness="1">
@@ -427,20 +438,29 @@
                                 </Rectangle.Effect>
 
                             </Rectangle>
-
+                      
 
                         </Grid>
+
 
                     </Button>
 
                     <TextBlock x:Name="DiskStrW" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
-                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,20,-2">
+                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,22,-2">
                         disk
                         <TextBlock.Effect>
                             <DropShadowEffect x:Name="DiskStrShadowW" Color="#f000" BlurRadius="2" ShadowDepth="1"
                                               Opacity="1" Direction="0" />
                         </TextBlock.Effect>
                     </TextBlock>
+                    <!--<TextBlock x:Name="DiskStrL" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom" FontWeight="SemiBold"
+                               Foreground="#ffff" HorizontalAlignment="Left" Margin="0,0,0,-2">
+                        12.29
+                        <TextBlock.Effect>
+                            <DropShadowEffect x:Name="DiskStrShadowL" Color="#f000" BlurRadius="2" ShadowDepth="1"
+                                              Opacity="1" Direction="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>-->
                     <TextBlock x:Name="DiskStrR" Visibility="Collapsed" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
                                Foreground="#ffff" HorizontalAlignment="Left" Margin="0,0,10,-2">
                         disk👁
