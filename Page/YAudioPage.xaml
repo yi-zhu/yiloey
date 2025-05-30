@@ -31,13 +31,14 @@
             <RowDefinition Height="10"></RowDefinition>
             <RowDefinition Height="*"></RowDefinition>
         </Grid.RowDefinitions>
-        <Canvas Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="11" Grid.RowSpan="2" Name="waveformCanvas" Background="Transparent" VerticalAlignment="Stretch" HorizontalAlignment="Stretch"/>
-        
+        <Canvas Grid.Column="0" Grid.Row="5" Grid.ColumnSpan="11" Grid.RowSpan="2" Name="waveformCanvas"
+                Background="Transparent" VerticalAlignment="Stretch" HorizontalAlignment="Stretch" />
+
         <!-- <Viewbox HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
-            <Button Name="StartBtn" Click="StartBtn_OnClick">开始监听</Button>
+        <Button Name="StartBtn" Click="StartBtn_OnClick">开始监听</Button>
         <!-- </Viewbox> -->
         <!-- <Viewbox Grid.Column="10" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
-            <!-- <Button Grid.Column="10" Name="EndBtn" Click="EndBtn_OnClick">结束监听</Button> -->
+        <!-- <Button Grid.Column="10" Name="EndBtn" Click="EndBtn_OnClick">结束监听</Button> -->
         <!-- </Viewbox> -->
         <!-- <Viewbox Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="8" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
         <!--<TextBlock Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="3" FontStretch="Expanded" FontSize="16"
@@ -45,48 +46,77 @@
         </TextBlock>-->
         <!-- </Viewbox> -->
         <!-- <Viewbox Grid.Row="2" Grid.Column="9" Grid.ColumnSpan="2" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
-            <StackPanel Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="4" Orientation="Horizontal"
-                        VerticalAlignment="Stretch">
-                <TextBlock Margin="10,0,0,0" ToolTip="历史条数" VerticalAlignment="Center">历史：</TextBlock>
-                <TextBox Name="HlTextBox" ToolTip="历史条数" MinWidth="30" TextChanged="HlTextBox_OnTextChanged"></TextBox>
-                <TextBlock ToolTip="历史条数" VerticalAlignment="Center">条</TextBlock>
-                <TextBlock Margin="10,0,0,0" ToolTip="输入要监控的派接组" VerticalAlignment="Center">派接组：</TextBlock>
-                <TextBox Name="JkTextBox" ToolTip="输入要监控的派接组" MinWidth="70" TextChanged="JkTextBox_OnTextChanged"></TextBox>
-            </StackPanel>
-        <!-- </Viewbox> -->
-        <!-- <Viewbox Grid.Row="0" Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
-            <StackPanel Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="3" Orientation="Horizontal" VerticalAlignment="Stretch">
-                <CheckBox Name="CapShow" IsChecked="True"  Checked="CapShow_OnChecked"  Unchecked="CapShow_OnUnchecked" Foreground="Blue"
-                          HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="波形">
-                </CheckBox> <CheckBox Name="ErrorAutoCk" IsChecked="True" Checked="ErrorAutoCk_OnChecked"  Unchecked="ErrorAutoCk_OnUnchecked"  Foreground="Blue"
-                          HorizontalAlignment="Stretch" VerticalAlignment="Center" ToolTip="通话时间短，自动记录，长时间占用不讲话，声光报警" >
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch">
-                        <TextBlock VerticalAlignment="Center">报警时长</TextBlock>
-                        <TextBox Name="BjTimeTextBox" ToolTip="报警时长" MinWidth="30" TextChanged="BjTimeTextBox_OnTextChanged"></TextBox>
-                        <TextBlock VerticalAlignment="Center">秒</TextBlock>
-                    </StackPanel>
-                 
-                </CheckBox>
-                <CheckBox Name="SICk" Checked="SICk_OnChecked" Unchecked="SICk_OnUnchecked" Foreground="Blue"
-                          HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="扬声器">
-                </CheckBox>
-            </StackPanel>
-        <!-- </Viewbox> -->
-        <!-- <Viewbox Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
-            <!-- <StackPanel Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="4" Orientation="Horizontal" -->
-            <!--             VerticalAlignment="Stretch"> -->
-            <!--     <TextBlock Margin="10,0,0,0" ToolTip="输入要监控的派接组" VerticalAlignment="Center">派接组：</TextBlock> -->
-            <!--     <TextBox Name="JkTextBox" ToolTip="输入要监控的派接组" MinWidth="70" TextChanged="JkTextBox_OnTextChanged"></TextBox> -->
-            <!-- </StackPanel> -->
-        <Button Grid.Row="0" Grid.Column="9" Grid.ColumnSpan="3" Name="SetDirBtn" Click="SetDirBtn_OnClick" >设置程序根目录</Button>
-        <!-- </Viewbox> -->
-        <StackPanel Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="11" Orientation="Vertical"
-                    HorizontalAlignment="Stretch">
-            <!-- <Viewbox  HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
-            <!-- </Viewbox> -->
-            <TextBlock Name="LogRtTextBlock" TextWrapping="Wrap" Margin="10,5,0,0" Foreground="SaddleBrown"></TextBlock>
+        <StackPanel Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="4" Orientation="Horizontal"
+                    VerticalAlignment="Stretch">
 
         </StackPanel>
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Row="0" Grid.Column="4" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+        <StackPanel Grid.Row="0" Grid.Column="2" Grid.ColumnSpan="7" Orientation="Horizontal"
+                    VerticalAlignment="Stretch">
+            <CheckBox Name="AutoStart" Checked="AutoStart_OnChecked" Unchecked="AutoStart_OnUnchecked"
+                      Foreground="Blue"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="自启">
+            </CheckBox>
+            <CheckBox Name="CapShow" IsChecked="True" Checked="CapShow_OnChecked" Unchecked="CapShow_OnUnchecked"
+                      Foreground="Blue"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="波形">
+            </CheckBox>
+            <CheckBox Name="ErrorAutoCk" IsChecked="True" Checked="ErrorAutoCk_OnChecked"
+                      Unchecked="ErrorAutoCk_OnUnchecked" Foreground="Blue"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" ToolTip="通话时间短，自动记录，长时间占用不讲话，声光报警">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Stretch">
+                    <TextBlock VerticalAlignment="Center">报警</TextBlock>
+                    <TextBox Name="BjTimeTextBox" ToolTip="报警" MinWidth="30" TextChanged="BjTimeTextBox_OnTextChanged"></TextBox>
+                    <TextBlock VerticalAlignment="Center">掐断</TextBlock>
+                    <TextBox Name="XTB" MinWidth="30" Background="Transparent" BorderBrush="Transparent"
+                             TextChanged="XTB_OnTextChanged">
+                    </TextBox>
+                    <TextBlock VerticalAlignment="Center">,</TextBlock>
+                    <TextBox Name="YTB" MinWidth="30" Background="Transparent" BorderBrush="Transparent"
+                             TextChanged="YTB_OnTextChanged">
+                    </TextBox>
+                </StackPanel>
+
+            </CheckBox>
+            <CheckBox Name="SICk" Checked="SICk_OnChecked" Unchecked="SICk_OnUnchecked" Foreground="Blue"
+                      HorizontalAlignment="Stretch" VerticalAlignment="Center" Content="扬声器">
+            </CheckBox>
+            <TextBlock Margin="10,0,0,0" ToolTip="历史条数" VerticalAlignment="Center">历史：</TextBlock>
+            <TextBox Name="HlTextBox" ToolTip="历史条数" MinWidth="30" TextChanged="HlTextBox_OnTextChanged"></TextBox>
+            <TextBlock ToolTip="历史条数" VerticalAlignment="Center">条</TextBlock>
+            <TextBlock Margin="10,0,0,0" ToolTip="输入要监控的派接组" VerticalAlignment="Center">派接组：</TextBlock>
+            <TextBox Name="JkTextBox" ToolTip="输入要监控的派接组" MinWidth="70" TextChanged="JkTextBox_OnTextChanged"></TextBox>
+        </StackPanel>
+        <!-- </Viewbox> -->
+        <!-- <Viewbox Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
+        <!-- <StackPanel Grid.Row="0" Grid.Column="5" Grid.ColumnSpan="4" Orientation="Horizontal" -->
+        <!--             VerticalAlignment="Stretch"> -->
+        <!--     <TextBlock Margin="10,0,0,0" ToolTip="输入要监控的派接组" VerticalAlignment="Center">派接组：</TextBlock> -->
+        <!--     <TextBox Name="JkTextBox" ToolTip="输入要监控的派接组" MinWidth="70" TextChanged="JkTextBox_OnTextChanged"></TextBox> -->
+        <!-- </StackPanel> -->
+        <Button Grid.Row="0" Grid.Column="9" Grid.ColumnSpan="3" Name="SetDirBtn" Click="SetDirBtn_OnClick">设置程序根目录</Button>
+        <!-- </Viewbox> -->
+        <StackPanel Grid.Row="2" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="11" Orientation="Horizontal"
+                    HorizontalAlignment="Stretch">
+            <TextBlock Name="NumNoResTB" Foreground="DarkRed" FontWeight="Bold">
+                <TextBlock.Text>
+                    <Binding Path="NumNoRes" Mode="OneWay" UpdateSourceTrigger="PropertyChanged" />
+                </TextBlock.Text>
+            </TextBlock>
+            <TextBlock Foreground="DarkRed" FontWeight="Bold">/</TextBlock>
+            <TextBlock Name="NumResTB" Foreground="DarkBlue" FontWeight="Bold">
+                <TextBlock.Text>
+                    <Binding Path="NumRes" Mode="OneWay" UpdateSourceTrigger="PropertyChanged" />
+                </TextBlock.Text>
+            </TextBlock>
+        </StackPanel>
+
+
+        <TextBlock Grid.Row="2" Grid.RowSpan="3" Grid.Column="0" Grid.ColumnSpan="11" Name="LogRtTextBlock" 
+                   TextWrapping="Wrap" Margin="5,5,0,0" Foreground="MediumBlue">
+        </TextBlock>
+
         <ListBox Name="LogListBox" Grid.Column="0" Grid.Row="6" Grid.ColumnSpan="7" HorizontalAlignment="Stretch"
                  HorizontalContentAlignment="Stretch" SelectionChanged="LogListBox_OnSelectionChanged"
                  Background="Transparent" MouseEnter="LogListBox_OnMouseEnter" MouseLeave="LogListBox_OnMouseLeave">

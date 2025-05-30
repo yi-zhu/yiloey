@@ -63,30 +63,90 @@ namespace holey
             set => _vname = value ?? throw new ArgumentNullException(nameof(value));
         }
 
-    
 
-        public MainWindow()
+        /// <summary>
+        /// 加载初始页面
+        /// </summary>
+        /// <param name="pageName"></param>
+        public void loadInitPage(string pageName)
         {
+            Type pageType = Type.GetType(pageName);
+            if (pageType != null)
+            {
+                System.Windows.Controls.Page page = Activator.CreateInstance(pageType) as System.Windows.Controls.Page;
+
+
+                MPage.Content = new Frame { Content = page };
+            }
+        }
+
+        public void loadSize()
+        {
+            this.Left=YiKit.IniGetDouble("mainleft", 500);
+            this.Top=YiKit.IniGetDouble("maintop", 300);
+            this.Width=YiKit.IniGetDouble("mainsizew", 750);
+            this.Height=YiKit.IniGetDouble("mainsizeh", 450);
+            this.LocationChanged += (s, e) =>
+            {
+                YiKit.IniWrite("mainleft",this.Left.ToString());
+                YiKit.IniWrite("maintop",this.Top.ToString());
+            };
+            this.SizeChanged += (s, e) =>
+            {
+                YiKit.IniWrite("mainsizew", this.Width.ToString());
+                YiKit.IniWrite("mainsizeh",  this.Height.ToString());
+                
+            };
+
+
+        }
+
+  
+
+        public MainWindow(string pageName = null)
+        {
+            
             if (PetWindow.Me == null)
             {
                 PetWindow = new PetWindow();
                 PetWindow.Show();
-                Hide();
+                if (pageName == null)
+                    Hide();
             }
 
-            
+
             InitializeComponent();
+            loadSize();
+            
+            if (pageName != null)
+            {
+                loadInitPage(pageName);
+            }
+            else
+            {
+                _mainPage = new MainPage();
+                MPage.Content = new Frame { Content = _mainPage };
+            }
+
             IsAlive = true;
             Me = this;
-            _mainPage = new MainPage();
-            _tapPage = new TapPage();
-            MPage.Content = new Frame {Content = _mainPage};
+            // _mainPage = new MainPage();
+            // _tapPage = new TapPage();
+            // MPage.Content = new Frame { Content = _mainPage };
             if (YiKit.IsX86())
             {
                 _vname = "ey";
             }
+
             StarteYi();
 
+            //初始化系统休眠
+            if (YiKit.IniGetBool("wake", false))
+            {
+                YiKit.ChangePowerWake();
+                PowerWakeItem.ToolTip = "不允许系统休眠";
+                PowerWakeItem.Header = "👁";
+            }
         }
 
 
@@ -112,6 +172,7 @@ namespace holey
                     mSc = sc;
                 }
             }
+
             if (mSc == null)
             {
                 //
@@ -153,6 +214,7 @@ namespace holey
                 }*/
                 mSc = new ServiceController(Svname);
             }
+
             if (autochage)
             {
                 if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
@@ -163,12 +225,11 @@ namespace holey
                 else if (mSc.Status == ServiceControllerStatus.Running ||
                          mSc.Status == ServiceControllerStatus.StartPending)
                 {
-                    if (start==false)
+                    if (start == false)
                     {
                         mSc.Stop();
-                  YiKit.IniWrite("eyi", "0");
+                        YiKit.IniWrite("eyi", "0");
                     }
-                  
                 }
             }
             else
@@ -282,7 +343,8 @@ namespace holey
             string path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
                           "\\tapinstall.exe";
             if (!File.Exists(path))
-            {  return;
+            {
+                return;
             }
 
             if (!YiKit.IsAdministrator())
@@ -342,8 +404,8 @@ namespace holey
                 if (!isTap)
                 {
                     //安装tap
-                     path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
-                                  "\\";
+                    path = YiKit.GetAppStartPath() + "drv\\" + (YiKit.IsX86() ? "x86" : "x64") +
+                           "\\";
                     YiKit.StartProcessSync(path + "tapinstall.exe install " + path + "OemWin2k.inf tap0901", (obj =>
                     {
                         YiKit.ShowToast(obj.ToString());
@@ -575,6 +637,30 @@ namespace holey
 
 
         /// <summary>
+        /// 设置唤醒状态
+        /// </summary>
+        /// <param name="sender"></param>
+        /// <param name="e"></param>
+        private void WakeItem_OnClick(object sender, RoutedEventArgs e)
+        {
+            if (!YiKit.IniGetBool("wake", false))
+            {
+                YiKit.ChangePowerWake();
+                YiKit.IniWrite("wake", "true");
+                PowerWakeItem.ToolTip = "不允许系统休眠";
+                PowerWakeItem.Header = "👁";
+            }
+            else
+            {
+                YiKit.ChangePowerWake(false);
+                YiKit.IniWrite("wake", "false");
+                PowerWakeItem.ToolTip = "不干涉系统休眠";
+                PowerWakeItem.Header = "😴";
+            }
+        }
+
+
+        /// <summary>
         /// 设置页面
         /// </summary>
         /// <param name="sender"></param>
@@ -604,12 +690,14 @@ namespace holey
                 _webPage = new WebPage();
             MPage.Content = _webPage;
         }
+
         private void AuiItem_Click(object sender, RoutedEventArgs e)
         {
             if (_yAudioPage == null)
                 _yAudioPage = new YAudioPage();
             MPage.Content = _yAudioPage;
         }
-    }
     
+        
+    }
 }

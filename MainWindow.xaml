@@ -49,6 +49,7 @@
                     <!-- 菜单栏 -->
                     <MenuItem Header="📕" Click="MemoItem_OnClick"></MenuItem>
                     <MenuItem Header="💥" Click="PetItem_OnClick"></MenuItem>
+                    <MenuItem Name="PowerWakeItem" Header="😴" Click="WakeItem_OnClick" ToolTip="设置是否为保持唤醒，不让系统休眠"></MenuItem>
                     <MenuItem Name="TopMenuItem" Header="📌" ToolTip="置顶，将窗口桌面置于最上层" Click="TopItem_OnClick"/>
                     <MenuItem Header="主页" Click="IndexItem_Click">
                     </MenuItem>

@@ -4,7 +4,6 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.Globalization;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -18,6 +17,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Net.WebSockets;
 using System.Windows.Automation;
+using System.Windows.Controls;
 using System.Windows.Forms;
 using System.Windows.Media.Effects;
 using holey.Dialog;
@@ -25,6 +25,8 @@ using holey.Page;
 using YiKits;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
+using Control = System.Windows.Forms.Control;
+using InputDialog = YiKits.Dialog.InputDialog;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -98,7 +100,7 @@ public partial class PetWindow : Window
         // YiKit.GetAllCate();
         try
         {
-            _sleep = (int) (Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
+            _sleep = (int)(Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
         }
         catch (Exception e)
         {
@@ -162,6 +164,9 @@ public partial class PetWindow : Window
             {
                 YiKit.IniWrite("pettop", this.Top.ToString(), "ini");
             }
+
+
+            ;
         };
 
 
@@ -170,20 +175,20 @@ public partial class PetWindow : Window
         //按键监听
         YiKit.KeyDownEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int) Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift &&
+            if (e.KeyValue == (int)Keys.Q && (Control.ModifierKeys & Keys.Shift) == Keys.Shift &&
                 (Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 isTranslateing = true;
 
                 // YiKit.Print("按下了Ctrl+alt+Q:");
             }
-            else if (e.KeyValue == (int) Keys.Q && (int) Control.ModifierKeys == (int) Keys.Control)
+            else if (e.KeyValue == (int)Keys.Q && (int)Control.ModifierKeys == (int)Keys.Control)
             {
                 isTranslateing = true;
 
                 // YiKit.Print("按下了Ctrl+Q:");
             }
-            else if (e.KeyValue == (int) Keys.Q)
+            else if (e.KeyValue == (int)Keys.Q)
             {
                 isTranslateing = false;
 
@@ -192,7 +197,7 @@ public partial class PetWindow : Window
         })); //按键监听
         YiKit.KeyUpEvent += (((sender, e) =>
         {
-            if (e.KeyValue == (int) Keys.Q)
+            if (e.KeyValue == (int)Keys.Q)
             {
                 // isTranslateing = true;
                 if (isTranslateing)
@@ -249,12 +254,12 @@ public partial class PetWindow : Window
             YiKit.GwlExstyle | YiKit.WsExTransparent);
         YiKit.SetWindowListen(callback: (state =>
         {
-            if (state == (object) YiKit.ScMaximize)
+            if (state == (object)YiKit.ScMaximize)
             {
                 //全屏
                 this.Topmost = false;
             }
-            else if (state == (object) YiKit.ScRestore)
+            else if (state == (object)YiKit.ScRestore)
             {
                 this.Topmost = false;
                 this.Topmost = true;
@@ -267,7 +272,12 @@ public partial class PetWindow : Window
             WallPaper.me.Show();
             WallPaper.me.Activate();
         }
-       
+
+
+        if (YiKit.IniGet("centzoom", def: "0").Equals("1"))
+            CentZomm_OnItemClick(CentZoom, null);
+        if (YiKit.IniGet("crosshair", def: "0").Equals("1"))
+            Crosshair_OnItemClick(Crosshair, null);
     }
 
 
@@ -341,7 +351,6 @@ public partial class PetWindow : Window
 
             while (IsAlive)
             {
-           
                 cot += 1;
                 if (cot % 60 == 1)
                 {
@@ -381,9 +390,9 @@ public partial class PetWindow : Window
 
                         /*if (nowUp - lastUp<10)
                         {
-                            tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  "; 
+                            tapas += "上⇵上↑↓⇣⇡" + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";
                         }else tapas += "↑ " + YiKit.SumByte((nowUp - lastUp) * (1000 / _sleep)) + "  |  ";*/
-                        
+
                         DateTime currentDateTime = DateTime.Now;
 
                         // 创建一个中国农历实例
@@ -392,25 +401,31 @@ public partial class PetWindow : Window
                         // 获取农历月、日
                         int lunarMonth = chineseCalendar.GetMonth(currentDateTime);
                         int lunarDay = chineseCalendar.GetDayOfMonth(currentDateTime);
+
                         if (nowDown == lastDown && nowUp == lastUp)
                         {
-                            if (isnowork) break;
+                            // if (isnowork) break;
                             // tapas = "时间:"+YiKit.NowT();
-                            tapas = string.Format("{0:0}",currentDateTime.Hour)+":"+YiKit.NowT();
-                            tapasU = string.Format("{0:00}",currentDateTime.Minute)+"" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
-                            tapasD = string.Format("{0:00}",currentDateTime.Second)+"" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown);
+                            tapas = string.Format("{0:0}", currentDateTime.Hour) + ":" + YiKit.NowD() + "." +
+                                    YiKit.NowW();
+                            tapasU = string.Format("{0:00}", currentDateTime.Minute) + "" +
+                                     (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
+                            tapasD = string.Format("{0:00}", currentDateTime.Second) + "" +
+                                     (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown);
                             isnowork = true;
                         }
                         else
                         {
                             isnowork = false;
-                            tapas = string.Format("{0:0}",currentDateTime.Hour)+"" + (nowUp == lastUp ? "  " : "⇡") +
+                            tapas = string.Format("{0:0}", currentDateTime.Hour) + "" + (nowUp == lastUp ? "  " : "⇡") +
                                     (((nowDown - lastDown) >= (nowUp - lastUp)) ? "⇣" : "⇡")
                                     + (nowDown == lastDown ? "  " : "⇣") + ""
                                     + YiKit.SumByte((nowDown + nowUp - lastDown - lastUp) * (1000f / _sleep)) + "";
 
-                            tapasU = string.Format("{0:00}",currentDateTime.Minute)+"" + (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
-                            tapasD = string.Format("{0:00}",currentDateTime.Second)+"" + (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "";
+                            tapasU = string.Format("{0:00}", currentDateTime.Minute) + "" +
+                                     (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
+                            tapasD = string.Format("{0:00}", currentDateTime.Second) + "" +
+                                     (nowDown == lastDown ? "：" : "↓: ") + YiKit.SumByte(nowDown) + "";
                         }
 
 
@@ -466,8 +481,8 @@ public partial class PetWindow : Window
             {
                 #region CPU使用率
 
-                cpuse = (int) YiKit.CpuUse();
-          
+                cpuse = (int)YiKit.CpuUse();
+
                 if (cpuse >= 90)
                 {
                     YiKit.RunOnUIThread(() =>
@@ -499,20 +514,22 @@ public partial class PetWindow : Window
                     YiKit.RunOnUIThread(() => WallPaper.me?.PlayMidea());
                 }
 
-                memuse = (int) YiKit.MemUse();
-                diskuse = (int) YiKit.DiskUse();
-                diskusebyteR = (int) YiKit.DiskUseByte("Read");
-                diskusebyteW = (int) YiKit.DiskUseByte("Write");
+                memuse = (int)YiKit.MemUse();
+                diskuse = (int)YiKit.DiskUse();
+                diskusebyteR = (int)YiKit.DiskUseByte("Read");
+                diskusebyteW = (int)YiKit.DiskUseByte("Write");
                 disktx = (diskusebyteW == diskusebyteR ? "" : (diskusebyteW > diskusebyteR ? "✎" : "👁")) +
                          YiKit.SumByteDate(diskusebyteW + diskusebyteR);
                 gpumemmbU = YiKit.GpuMem();
                 gpumemmbT = YiKit.GpuMemTol();
-                gpumem = (int) YiKit.GpuMemuse();
+                gpumem = (int)YiKit.GpuMemuse();
+
                 YiKit.RunOnUIThread(() =>
                 {
                     //cpu
                     CpuRect.Width = cpuse;
-
+                    if (!YiKit.NowSD().Equals(CpuStrR.Text))
+                        CpuStrR.Text = YiKit.NowSD();
                     //gpumem
                     if (!GpuMemStr.Text.Equals(gpumem + ""))
                     {
@@ -589,7 +606,7 @@ public partial class PetWindow : Window
                                     brush.EndPoint = new Point(bf/2.5, 0);
                                 }
                             }*/
-                            if ((float) b > 90)
+                            if ((float)b > 90)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -597,7 +614,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float) b > 80)
+                            else if ((float)b > 80)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -605,7 +622,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Red;
                                 }
                             }
-                            else if ((float) b > 70)
+                            else if ((float)b > 70)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -613,7 +630,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float) b > 60)
+                            else if ((float)b > 60)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -621,7 +638,7 @@ public partial class PetWindow : Window
                                     linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
                                 }
                             }
-                            else if ((float) b > 50)
+                            else if ((float)b > 50)
                             {
                                 if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
                                 {
@@ -646,7 +663,7 @@ public partial class PetWindow : Window
 
                 #endregion
 
-                Thread.Sleep((int) (_sleep * 1.5));
+                Thread.Sleep((int)(_sleep * 1.5));
             }
         });
     }
@@ -753,7 +770,7 @@ public partial class PetWindow : Window
         int? index = tap?.GetIPProperties()?.UnicastAddresses.Count - 1;
         if (index == null)
             return;
-        IPAddress? add = tap?.GetIPProperties()?.UnicastAddresses[(int) index]?.Address;
+        IPAddress? add = tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address;
         if (add != null)
         {
             try
@@ -767,8 +784,8 @@ public partial class PetWindow : Window
             }
         }
 
-        YiKit.ShowToast(tap?.Name + "\n" + tap?.GetIPProperties()?.UnicastAddresses[(int) index]?.Address,
-            l: (int) ((int) Left + Width / 2), t: (int) ((int) Top + 30));
+        YiKit.ShowToast(tap?.Name + "\n" + tap?.GetIPProperties()?.UnicastAddresses[(int)index]?.Address,
+            l: (int)((int)Left + Width / 2), t: (int)((int)Top + 30));
         // YiKit.ShowToast(IsVpn ? "切换专网" : "显示公网", l: (int) ((int) Left + Width / 2), t: (int) ((int) Top));
     }
 
@@ -809,7 +826,7 @@ public partial class PetWindow : Window
 
     private List<string> ShowInputDialog(string name, params string[] names)
     {
-        InputDialog inputDialog = new InputDialog(name, names);
+        YiKits.Dialog.InputDialog inputDialog = new InputDialog(name, names);
         List<string> strs = null;
 
         inputDialog.Result += (sender, _) => { strs = sender as List<string>; };
@@ -1346,7 +1363,7 @@ public partial class PetWindow : Window
                 return;
             }
 
-            _sleep = (int) (Convert.ToSingle(s) * 1000);
+            _sleep = (int)(Convert.ToSingle(s) * 1000);
         }
         catch (Exception exception)
         {
@@ -1443,14 +1460,17 @@ public partial class PetWindow : Window
         {
             if (mouseArgs.RightButton == MouseButtonState.Pressed)
             {
+                WallPaper.me.ShowFile();
                 WallPaper.me.Show();
                 WallPaper.me.Activate();
                 return;
             }
             else if (mouseArgs.LeftButton == MouseButtonState.Pressed)
-            { ;
+            {
+                ;
             }
         }
+
         if (WallPaper.me == null)
         {
             new WallPaper();
@@ -1474,34 +1494,32 @@ public partial class PetWindow : Window
     }
 
 
-
-
     private void MemoMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
     {
-        
         //内存分析
-        YiKit.StartProcessSync(YiKit.GetAppStartPath()+"Tools/poolmon.exe -p -b",end:(state =>
+        YiKit.StartProcessSync(YiKit.GetAppStartPath() + "Tools/poolmon.exe -p -b", end: (state =>
         {
-         var ret=   YiKit.ShowInputDialog("输入TAG查找泄漏文件", "tag");
+            var ret = YiKit.ShowInputDialog("输入TAG查找泄漏文件", "tag");
 
-         if (ret==null)
-         {
-             YiKit.ProgressEnd("poolmon.exe");
-             return;
-         }
-       var o=  YiKit.RunCmd("Set-Location \"C:\\Windows\\System32\\drivers\";Select-String -Path *.sys -Pattern " + ret[0] +
-                      " -CaseSensitive | Select-Object FileName -Unique");
+            if (ret == null)
+            {
+                YiKit.ProgressEnd("poolmon.exe");
+                return;
+            }
 
-       YiKit.ProgressEnd("poolmon.exe");
-       YiKit.ShowToast(o as string);
+            var o = YiKit.RunCmd("Set-Location \"C:\\Windows\\System32\\drivers\";Select-String -Path *.sys -Pattern " +
+                                 ret[0] +
+                                 " -CaseSensitive | Select-Object FileName -Unique");
+
+            YiKit.ProgressEnd("poolmon.exe");
+            YiKit.ShowToast(o as string);
         }));
-        
     }
 
     private void ChangeSizeMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
     {
-        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小", "进程名称", "宽", "高","x","y");
-        if (null == strs || strs.Count <5)
+        List<string> strs = YiKit.ShowInputDialog("设置其他窗口的大小", "进程名称", "宽", "高", "x", "y", "是否置顶");
+        if (null == strs || strs.Count < 5)
         {
             return;
         }
@@ -1537,7 +1555,9 @@ public partial class PetWindow : Window
                 IntPtr hwnd = p.MainWindowHandle;
                 if (hwnd.ToInt32() != 0)
                 {
-                    YiKit.SetWindowPos(hwnd, 0, Convert.ToInt32(strs[3]), Convert.ToInt32(strs[4]), Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
+                    YiKit.SetWindowPos(hwnd, string.IsNullOrEmpty(strs[5]) ? IntPtr.Zero : YiKit.WindowPosTOPMOST,
+                        Convert.ToInt32(strs[3]), Convert.ToInt32(strs[4]),
+                        Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
                 }
 
                 // YiKit.SetWindowPos(p.MainWindowHandle, 0, 0, 0, Convert.ToInt32(strs[1]), Convert.ToInt32(strs[2]), 0x0040);
@@ -1548,5 +1568,179 @@ public partial class PetWindow : Window
             YiKit.ShowToastError("时间只可为数字, 设置失败!");
             return;
         }
+    }
+
+    private void UIElement_OnPreviewMouseRightButtonUp(object sender, MouseButtonEventArgs e)
+    {
+        if (WallPaper.me == null)
+        {
+            new WallPaper();
+        }
+
+        WallPaper.me.ShowFile();
+    }
+
+    string subKey = "计算机\\HKEY_LOCAL_MACHINE\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerSettings";
+
+    private void PowerItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        string[] sks = YiKit.RegeditLmGetSubKey(subKey);
+        if (sks == null)
+        {
+            return;
+        }
+
+        foreach (string sk in sks)
+        {
+            string[] pks = YiKit.RegeditLmGetSubKey(subKey + "\\" + sk);
+            foreach (string pk in pks)
+            {
+                YiKit.RegeditLmEdit(subKey + "\\" + sk + "\\" + pk, "Attributes", 2);
+            }
+        }
+    }
+
+    /// <summary>
+    /// 中心放大
+    /// </summary>
+    private CentZoom _centZoom;
+
+    private void CentZomm_OnItemClick(object sender, RoutedEventArgs e)
+    {
+        if (IsRightClick(e))
+        {
+            if (YiKit.IniGetDouble("放大倍数", area: InputDialog.are, def: -1) == -1)
+            {
+                YiKit.IniWrite("放大倍数", "2.0", area: InputDialog.are);
+                YiKit.IniWrite("放大透明度", "0.8", area: InputDialog.are);
+                YiKit.IniWrite("放大刷新率", "30", area: InputDialog.are);
+                YiKit.IniWrite("放大左偏移", "0", area: InputDialog.are);
+                YiKit.IniWrite("放大上偏移", "0", area: InputDialog.are);
+                YiKit.IniWrite("放大显示大小", "100", area: InputDialog.are);
+                YiKit.IniWrite("放大显示左偏移", "0", area: InputDialog.are);
+                YiKit.IniWrite("放大显示上偏移", "0", area: InputDialog.are);
+            }
+
+            YiKit.ShowInputDialog("放大显示设置（不要将放大显示和放大区域重叠）", "放大倍数","放大透明度","放大刷新率", "放大左偏移", "放大上偏移", "放大显示大小", "放大显示左偏移", "放大显示上偏移");
+            _centZoom?.changeSetStyle();
+        }
+        else
+        
+        {
+            var isc = OnItemCheckedProgress(sender as MenuItem);
+            _centZoom ??= new CentZoom();
+            if (isc) _centZoom.Show();
+            else _centZoom.Hide();
+        }
+
+       
+    }
+
+    /// <summary>
+    /// 中心准星
+    /// </summary>
+    private Crosshair _crosshair;
+
+    private void Crosshair_OnItemClick(object sender, RoutedEventArgs e)
+    {
+        if (IsRightClick(e))
+        {
+            if (YiKit.IniGetDouble("准星上偏移", area: InputDialog.are, def: -1) == -1)
+            {
+                YiKit.IniWrite("准星上偏移", "0", area: InputDialog.are);
+                YiKit.IniWrite("准星左偏移", "0", area: InputDialog.are);
+                YiKit.IniWrite("准星大小", "2", area: InputDialog.are);
+                YiKit.IniWrite("准星颜色", "0xffff", area: InputDialog.are);
+            }
+
+            YiKit.ShowInputDialog("设置准星坐标偏移和大小", "准星上偏移", "准星左偏移", "准星大小", "准星颜色");
+                _crosshair?.changeStyle();
+        }
+        else
+        {
+            bool isc = OnItemCheckedProgress(sender as MenuItem);
+            _crosshair ??= new Crosshair();
+            if (isc) _crosshair.Show();
+            else _crosshair.Hide(); 
+        }
+
+    
+    }
+
+    /// <summary>
+    /// 处理MeunItem显示样式,并返回当前MenuItem是否被选中/激活
+    /// </summary>
+    /// <param name="mi">menuItem</param>
+    /// <param name="name">保存到ini文件的key</param>
+    /// <returns>当前MenuItem是否被选中/激活</returns>
+    private bool OnItemCheckedProgress(MenuItem? mi, string? name = null)
+    {
+        if (null == mi) return false;
+        mi.IsChecked = !mi.IsChecked;
+        name ??= mi.Name as string;
+        name ??= mi.Header as string;
+        if (null != name) YiKit.IniWrite(name.ToLower(), mi.IsChecked ? "1" : "0");
+        return mi.IsChecked;
+    }
+
+    /// <summary>
+    /// 查询对应 Header 的 MenuItem，不区分大小写
+    /// </summary>
+    /// <param name="parent">可以是 Grid、Menu、MenuItem 等任意支持子元素的容器</param>
+    /// <param name="targetHeader">要查找的菜单项标题</param>
+    /// <returns>匹配的 MenuItem 对象，未找到返回 null</returns>
+    public MenuItem FindMenuItem(DependencyObject parent, string targetHeader)
+    {
+        if (parent == null)
+            return null;
+
+        // 如果当前节点本身就是 MenuItem 并且匹配，则直接返回
+        if (parent is MenuItem menuItem)
+        {
+            if (string.Equals(menuItem.Header?.ToString(), targetHeader, StringComparison.CurrentCultureIgnoreCase))
+            {
+                return menuItem;
+            }
+        }
+
+        // 判断是否为 ItemsControl 类型（如 Menu、MenuItem）
+        if (parent is ItemsControl itemsControl)
+        {
+            foreach (object item in itemsControl.Items)
+            {
+                if (item is MenuItem childItem)
+                {
+                    var result = FindMenuItem(childItem, targetHeader);
+                    if (result != null)
+                        return result;
+                }
+            }
+        }
+        else
+        {
+            // 遍历视觉树查找所有子元素（适用于 Grid、StackPanel 等非 ItemsControl 容器）
+            int childrenCount = VisualTreeHelper.GetChildrenCount(parent);
+            for (var i = 0; i < childrenCount; i++)
+            {
+                var child = VisualTreeHelper.GetChild(parent, i);
+
+                var result = FindMenuItem(child, targetHeader);
+                if (result != null)
+                    return result;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// 判断是否右键点击
+    /// </summary>
+    /// <param name="e"></param>
+    /// <returns>true是右键，false是左键或判断失败</returns>
+    public bool IsRightClick(RoutedEventArgs e)
+    {
+        if (e is not MouseButtonEventArgs mouseArgs) return false;
+        return mouseArgs.RightButton == MouseButtonState.Pressed;
     }
 }

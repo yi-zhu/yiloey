@@ -1,0 +1,28 @@
+﻿<Window x:Class="holey.Crosshair"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:holey"
+        mc:Ignorable="d"
+        Title="Crosshair" Width="10" Height="10"
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        Loaded="Window_Loaded"
+
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Grid Name="Grid">
+        <!-- 图像容器 -->
+
+       
+            <!-- 准星 -->
+            <Canvas Name="zx" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <Line Name="zxl"  Y1="1" Y2="-1" Stroke="Red" StrokeThickness="2" />
+                <Line Name="zxl2" X1="1"  X2="-1" Stroke="Red" StrokeThickness="2" />
+            </Canvas>
+     
+    </Grid>
+</Window>

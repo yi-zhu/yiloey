@@ -98,23 +98,38 @@
             <!-- <local:GifImage Source="../Img/giphy.gif" Stretch="Uniform" Cursor="Hand"/> -->
             <Viewbox Height="60" Width="120" Name="Viewbox">
 
-                <Grid Margin="0" Height="60" Width="120">
+                <Grid Margin="0" Height="60" Width="120" Name="MenuItemGrid">
                     <Grid.ContextMenu>
                         <ContextMenu>
-                            <MenuItem Header="窗口" Click="ShowItem_OnClick"></MenuItem>
-                            <MenuItem Header="动态桌面" Click="WallPaperItem_OnClick"></MenuItem>
+                            <MenuItem Header="打开主页" Click="ShowItem_OnClick"></MenuItem>
+                            <MenuItem Header="动态桌面" PreviewMouseLeftButtonUp="WallPaperItem_OnClick"
+                                      PreviewMouseRightButtonUp="UIElement_OnPreviewMouseRightButtonUp">
+                            </MenuItem>
                             <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
                             <MenuItem Name="TranslateMenuItem" Header="开启翻译" Click="TranslateItemOnClick"></MenuItem>
-                            <MenuItem Name="ChangeSizeMenuItem" Header="变更窗口大小" Click="ChangeSizeMenuItem_OnClickItemOnClick"></MenuItem>
+                            <MenuItem Header="窗口">
+                                <MenuItem Name="ChangeSizeMenuItem" Header="变更窗口大小"
+                                          Click="ChangeSizeMenuItem_OnClickItemOnClick">
+                                </MenuItem>
+                                <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
+                                <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
+                                <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
+                                <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
+                                <MenuItem Header="放大/缩小" Click="ZoomItem_OnClick"></MenuItem>
+                                <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
+                            </MenuItem>
+
                             <!-- <MenuItem Name="TranslateShowMenuItem" Header="显示翻译" Click="TranslateShowItemOnClick"></MenuItem> -->
                             <!-- <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem> -->
-                            <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
-                            <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
-                            <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
-                            <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
-                            <MenuItem Header="放大/缩小" Click="ZoomItem_OnClick"></MenuItem>
-                            <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
-                            <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
+                            <MenuItem Header="其他">
+                                <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
+                                <MenuItem Header="显示电源" Click="PowerItem_OnClick"></MenuItem>
+                            </MenuItem>
+                           
+                            <MenuItem Header="fps">
+                                <MenuItem Header="中心放大" Name="CentZoom" PreviewMouseDown="CentZomm_OnItemClick"></MenuItem>
+                                <MenuItem Header="中心准星"  Name="Crosshair" PreviewMouseDown="Crosshair_OnItemClick"></MenuItem>
+                            </MenuItem>
                             <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
                             <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
                             <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
@@ -132,7 +147,7 @@
                     <Button Name="MainStr" MouseDoubleClick="Control_OnMouseDoubleClick" Width="120" Height="50"
                             VerticalContentAlignment="Stretch" FontSize="12" Margin="0" Padding="0"
                             HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
-                            Background="Transparent" Foreground="Red" FontWeight="Bold" 
+                            Background="Transparent" Foreground="Red" FontWeight="Bold"
                             IsHitTestVisible="False"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Button.Content>
@@ -205,13 +220,23 @@
                                         <ColumnDefinition Width="1*"></ColumnDefinition>
                                         <ColumnDefinition Width="1*"></ColumnDefinition>
                                     </Grid.ColumnDefinitions>
-                                  
-                                    <TextBlock Grid.ColumnSpan="2" x:Name="CpuStr" FontSize="12" Margin="0,-3,0,0" Padding="0,0,0,0"
+                                    <TextBlock Grid.Column="1" x:Name="CpuStrR" FontSize="9" TextWrapping="Wrap"
+                                               VerticalAlignment="Top"
+                                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,-2,0,0">
+                                        日.期
+                                        <TextBlock.Effect>
+                                            <DropShadowEffect x:Name="CpuStrShadowR" Color="#f000" BlurRadius="2"
+                                                              ShadowDepth="1"
+                                                              Opacity="1" Direction="0" />
+                                        </TextBlock.Effect>
+                                    </TextBlock>
+                                    <TextBlock Grid.ColumnSpan="2" x:Name="CpuStr" FontSize="12" Margin="0,-3,0,0"
+                                               Padding="0,0,0,0"
                                                Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"
                                                VerticalAlignment="Center" FontWeight="SemiBold"
                                                HorizontalAlignment="Stretch" TextAlignment="Right">
 
-                                       
+
                                         <TextBlock.Foreground>
                                             <LinearGradientBrush MappingMode="Absolute" StartPoint="0,1" EndPoint="0,0"
                                                                  SpreadMethod="Pad">
@@ -232,9 +257,9 @@
                                                               ShadowDepth="1" Opacity="1" Direction="270" />
                                         </TextBlock.Effect>
                                     </TextBlock>
-                                    
+
                                 </Grid>
-                                
+
                             </Viewbox>
                         </Grid>
 
@@ -333,7 +358,7 @@
                                         <GradientStop Color="#00f" Offset="1" />
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
-                           
+
                             </Rectangle>
                             <Viewbox>
                                 <TextBlock x:Name="MemStr" FontSize="13" Width="8" TextWrapping="Wrap"
@@ -357,7 +382,8 @@
                             Margin="0,8.7,-0.5,0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom">
-                            <Rectangle Stroke="Transparent" Height="50" Width="{Binding ElementName=GpuMemBtn,Path=Width}" Cursor="Hand"
+                            <Rectangle Stroke="Transparent" Height="50"
+                                       Width="{Binding ElementName=GpuMemBtn,Path=Width}" Cursor="Hand"
                                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
                                        StrokeThickness="0">
                                 <Rectangle.Fill>
@@ -382,8 +408,8 @@
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
                                 <Rectangle.Effect>
-                                    <DropShadowEffect  Color="#ff00" BlurRadius="5" ShadowDepth="5"
-                                                       Opacity="1" Direction="315" />
+                                    <DropShadowEffect Color="#ff00" BlurRadius="5" ShadowDepth="5"
+                                                      Opacity="1" Direction="315" />
                                 </Rectangle.Effect>
                             </Rectangle>
                             <Viewbox>
@@ -408,8 +434,7 @@
                             Margin="-19,0,0,0" Padding="0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0,0,0,0">
-                            
-                            <Rectangle Stroke="Transparent"  Height="10" Width="100" Cursor="Hand"
+                            <Rectangle Stroke="Transparent" Height="10" Width="100" Cursor="Hand"
                                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
                                        StrokeThickness="1">
                                 <Rectangle.Fill>
@@ -433,16 +458,11 @@
                                     </LinearGradientBrush>
                                 </Rectangle.Fill>
                                 <Rectangle.Effect>
-                                    <DropShadowEffect  Color="#ff00" BlurRadius="11" ShadowDepth="1"
+                                    <DropShadowEffect Color="#ff00" BlurRadius="11" ShadowDepth="1"
                                                       Opacity="1" Direction="0" />
                                 </Rectangle.Effect>
-
                             </Rectangle>
-                      
-
                         </Grid>
-
-
                     </Button>
 
                     <TextBlock x:Name="DiskStrW" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
@@ -461,7 +481,8 @@
                                               Opacity="1" Direction="0" />
                         </TextBlock.Effect>
                     </TextBlock>-->
-                    <TextBlock x:Name="DiskStrR" Visibility="Collapsed" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
+                    <TextBlock x:Name="DiskStrR" Visibility="Collapsed" FontSize="9" TextWrapping="Wrap"
+                               VerticalAlignment="Bottom"
                                Foreground="#ffff" HorizontalAlignment="Left" Margin="0,0,10,-2">
                         disk👁
                         <TextBlock.Effect>

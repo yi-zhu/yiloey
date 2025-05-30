@@ -1,0 +1,30 @@
+﻿<Window x:Class="holey.CentZoom"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:local="clr-namespace:holey"
+        mc:Ignorable="d"
+        Title="CentZoom"
+        WindowStartupLocation="CenterScreen" 
+        WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
+        AllowsTransparency="True"
+        Background="Transparent"
+        Topmost="True"
+        Loaded="Window_Loaded"
+
+        MouseLeftButtonDown="Window_MouseLeftButtonDown">
+    <Grid Name="Grid">
+        <!-- 图像容器 -->
+
+
+        <!-- 圆形裁剪的 Canvas -->
+        <Canvas Name="canvasMagnifier" Width="200" Height="200" >
+            <Canvas.Clip>
+                <EllipseGeometry x:Name="ellipseClip" Center="100,100" RadiusX="100" RadiusY="100" />
+            </Canvas.Clip>
+        </Canvas>
+  
+
+    </Grid>
+</Window>

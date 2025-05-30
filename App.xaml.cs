@@ -124,7 +124,17 @@ namespace holey
               {
                   try
                   {
-                      holey.MainWindow.StarteYi();
+                      ServiceController   mSc = new ServiceController(holey.MainWindow.Svname);
+                      if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
+                      {
+                          holey.MainWindow.StarteYi();
+                      }
+                      else if (mSc.Status == ServiceControllerStatus.Running ||
+                               mSc.Status == ServiceControllerStatus.StartPending)
+                      {
+                          YiKit.Print(mSc.Status);
+                      }
+                 
                   }
                   catch (Exception exception)
                   {
@@ -154,6 +164,12 @@ namespace holey
                 
             }
             YiKit.ShowToastError("检查程序更新，当前程序版本："+System.Reflection.Assembly.GetExecutingAssembly().GetName().Version,time:2);
+           string page= YiKit.IniGet("autostartpage", def: null);
+           if (page!=null&& page.Length>1)
+           {
+               new MainWindow(page).Show();
+           }else
+            
             if (YiKit.IniGetInt("boot",0)==0)
             {
                 new MainWindow().Show();

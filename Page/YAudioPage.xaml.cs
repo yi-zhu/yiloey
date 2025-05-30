@@ -2,9 +2,12 @@
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Media;
+using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,6 +34,8 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
     private YAudioPage me;
 
+    private Dictionary<string, string> ids = new Dictionary<string, string>();
+
     public YAudioPage()
     {
         me = this;
@@ -41,9 +46,12 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
         hlnum = Convert.ToInt64(YiKit.IniGet("hlnum", area, null, "0"));
 
         bjsc = long.Parse(YiKit.IniGet("bjsc", area, null, "5000"));
+        xtb = int.Parse(YiKit.IniGet("xtb", area, null, "1560"));
+        ytb = int.Parse(YiKit.IniGet("ytb", area, null, "226"));
 
         InitializeComponent();
 
+        DataContext = this;
         CapShow.IsChecked = capShow;
         ErrorAutoCk.IsChecked = errorAuto;
         if (hlnum == null)
@@ -64,6 +72,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             logPath = path + "\\log";
         }
 
+        ;
         LogListBox.ItemsSource = hllogs;
         LogeListBox.ItemsSource = hlelogs;
         // 如果你想每次添加新消息后都滚动到最底部，可以订阅CollectionChanged事件
@@ -93,6 +102,14 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                 StrokeThickness = 3
             };
             waveformCanvas.Children.Add(waveformPolyline);
+        }
+
+        if (this.GetType().ToString().Equals(YiKit.IniGet("autostartpage")))
+        {
+            AutoStart.IsChecked = true;
+            //自启开始监听
+
+            StartBtn_OnClick(null, null);
         }
     }
 
@@ -225,6 +242,38 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             }
             else
             {
+                YiKit.RunThread(s =>
+                {
+                    char spx = ';';
+                    string filep=null;
+                    
+                    if (File.Exists("ids.txt")) filep= "ids.txt";
+                    else if (File.Exists("id.txt")) filep= "id.txt";
+                    else if (File.Exists("ids")) filep= "ids";
+                    else if (File.Exists("id")) filep= "ids";
+                    
+                    if (filep==null) return;
+                    
+                    foreach (string line in File.ReadLines(filep))
+                    {
+                        if (spx == ';')
+                        {
+                            if (line.Contains('\t')) spx = '\t';
+                            if (line.Contains(' ')) spx = ' ';
+                            else if (line.Contains(',')) spx = ',';
+                            else if (line.Contains('，')) spx = '，';
+                            else if (line.Contains('\t')) spx = '\t';
+                            else if (line.Contains('-')) spx = '-';
+                            else if (line.Contains(';')) spx = ';';
+                            else if (line.Contains('；')) spx = '；';
+                        }
+                        ids[line.Split(spx)[0]] = line.Split(spx)[1];
+                        // ids.Add(line.Split(spx)[0], line.Split(spx)[1]);
+                        // Console.WriteLine(line);
+                    }
+                    // YiKit.ShowToast("加载完成");
+
+                });
                 if (null != capture)
                 {
                     capture.Dispose();
@@ -249,7 +298,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                         // float[] samples = new float[sampleCount];
                         Buffer.BlockCopy(e.Buffer, 0, samples, 0, e.BytesRecorded);
                         if (samples.Length > 1)
-                            nowaudio = samples.Average();
+                            nowaudio = samples.Max() - samples.Min();
                         else nowaudio = 0;
                         if (capShow)
                             // 在这里实现波形绘制逻辑
@@ -389,6 +438,11 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     {
         if (nowlogc != null)
             oldlogc = nowlogc.Clone().ToString();
+        if (logFile == null)
+        {
+            return null;
+        }
+
         logFile = getNewFile(logPath);
         try
         {
@@ -451,9 +505,26 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     private int jknumsoundyx = 0;
 
     /// <summary>
+    /// 判定为背景音次数
+    /// </summary>
+    private int jknumsoundbj = 0;
+
+    /// <summary>
     /// 连续无声音
     /// </summary>
     private int lxwsy = 0;
+
+    /// <summary>
+    /// 背景音临界值
+    /// </summary>
+    private double beijingyin = 0.1;
+
+    /// <summary>
+    /// 无声音临界值
+    /// </summary>
+    private double wushengyin = 0.03;
+
+    private long pttstart = 0;
 
     /// <summary>
     /// 轮询单次延迟时间
@@ -462,8 +533,144 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
     ObservableCollection<string> hllogs = new ObservableCollection<string>();
     ObservableCollection<string> hlelogs = new ObservableCollection<string>();
-    private string logeFilePath = YiKit.GetAppStartPath() + "\\监控派接异常通话.csv";
-    private string logFilePath = YiKit.GetAppStartPath()+"\\"+YiKit.NowD() + "监控派接.csv";
+    private string logeFilePath = YiKit.GetAppStartPath()+ "\\idswatch\\监控派接异常通话.csv";
+    private string logFilePath = YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接.csv";
+
+    private bool ismove = false;
+
+    public List<string> tishi = new List<string>()
+    {
+        "派接异常，强制占用信道，无声音",
+        "误触，有背景音，无人声",
+        "讲话声音短",
+    };
+
+    /// <summary>
+    /// 声音计数归零
+    /// </summary>
+    public void jkSoundZero()
+    {
+        jknum = 0;
+        jknumyx = 0;
+        soundRatio = 0;
+        jknumsound = 0;
+        jknumsoundyx = 0;
+        jknumsoundbj = 0;
+    }
+
+    uint timeoutMilliseconds = 5000; // 设置超时时间为5秒
+
+    // 定义一个简单的消息，如 WM_NULL，用于检测响应
+    private const uint WM_NULL = 0x000D;
+
+    private string pname = "济南公安融合通信";
+
+    // private string pname = "everything";
+    IntPtr hwnd = IntPtr.Zero;
+    private short numr = 0;
+    private short norNum = 0;
+
+    private long numRes;
+    private long numNoRes;
+
+    public long NumRes
+    {
+        get { return numRes; }
+        set
+        {
+            if (numRes != value)
+            {
+                numRes = value;
+                // YiKit.RunOnUIThread(() => { NumResTB.Text = value+""; });
+                OnPropertyChanged("NumRes");
+            }
+        }
+    }
+
+    public long NumNoRes
+    {
+        get { return numNoRes; }
+        set
+        {
+            if (numNoRes != value)
+            {
+                numNoRes = value;
+                norNum++;
+                // YiKit.RunOnUIThread(() => { NumNoResTB.Text = value+""; });
+                OnPropertyChanged("NumNoRes");
+            }
+        }
+    }
+
+    public void restartProgress()
+    {
+        try
+        {
+            numr++;
+            if (hwnd == IntPtr.Zero)
+            {
+                hwnd = YiKit.FindWindowEx(IntPtr.Zero, IntPtr.Zero, null, pname);
+                Thread.Sleep(500);
+            }
+
+            if (hwnd != IntPtr.Zero)
+            {
+                // YiKit.IsHungAppWindow(hwnd);
+                if (YiKit.IsHungAppWindow(hwnd))
+                {
+                    NumRes++;
+                    NumNoRes++;
+                    if (norNum > 2)
+                    {
+                        norNum = 0;
+                        // 进程无响应
+                        YiKit.RunOnUIThread(() =>
+                        {
+                            YiKit.ShowToastError("进程无响应!!" + "-------" + numr + "--" + num + "-----------------");
+                        });
+                        YiKit.ProgressEnd(pname);
+                        hwnd = IntPtr.Zero;
+                        Thread.Sleep(500);
+                    }
+                    else return;
+                }
+                else
+                {
+                    NumRes++;
+                    // YiKit.RunOnUIThread(() => { YiKit.ShowToastWaring("读取次数"+numr+"--"+num); });
+                    return;
+                }
+            }
+
+            //930,700
+            //执行重启命令
+            string lujing = YiKit.IniGet("path", area) + "\\济南公安融合通信.exe";
+            //930,700
+            YiKit.StartProcessAsync(lujing);
+            Thread.Sleep(1000);
+            // 1110,766
+
+            while ((hwnd = YiKit.FindWindowEx(IntPtr.Zero, IntPtr.Zero, null, pname)) == IntPtr.Zero)
+            {
+                Thread.Sleep(1000);
+            }
+
+            Thread.Sleep(500);
+
+            YiKit.MoveWindow(hwnd, 0, 0, 1110, 766, true);
+            YiKit.SetForegroundWindow(hwnd);
+            Thread.Sleep(500);
+            YiKit.SimulateMouseClick(630, 580);
+            hwnd = IntPtr.Zero;
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine(e);
+        }
+        // 630,580
+    }
+
+    public short errorExNum = 0;
 
     public void playErrorThrea()
     {
@@ -471,246 +678,354 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
         {
             while (watched)
             {
-                if (lxwsy > (bjsc / delay))
+                if (errorExNum<2&&((lxwsy > (bjsc / delay)) || jknumsoundbj > (bjsc / delay)))
                 {
+                    if (!ismove)
+                    {
+                        ismove = true;
+
+                        YiKit.RunThread(s1 =>
+                        {
+                            var sn = 1;
+                            while (ismove)
+                            {
+                                Console.Beep();
+                                Thread.Sleep(100/sn);
+                                sn+=1;
+                            }
+                        });
+
+                        // 40，550，
+                        //200,950
+                        // YiKit.ProgressMouseClick("济南公安融合通信", xtb, ytb);
+                        var h = YiKit.GetWindowPtr("济南公安融合通信");
+                     
+                        // 设置焦点到目标窗口
+                        YiKit.SetForegroundWindow(h);
+                        Thread.Sleep(500);
+                        YiKit.SimulateMouseClick(40, 550);
+                        Thread.Sleep(500);
+                        YiKit.SimulateMouseClick(200, 950);
+                        Thread.Sleep(500);
+                        YiKit.SimulateMouseClick(xtb, ytb);
+                        errorExNum++;
+                        ismove = false;
+                    }
+
                     // 播放系统报警音
                     // SystemSounds.Beep.Play();
-                    Console.Beep();
+                    
                     // 最终恢复原始背景色
                 }
-                else Thread.Sleep(500);
+                else if (errorExNum>=2)
+                {
+                    jknumsoundbj = 0;
+                    lxwsy = 0;
+                    faqi = false;
+                    errorExNum = 0;
+                    ismove = false;
+                }
+                else Thread.Sleep(1000);
             }
         });
     }
+
+    string errorMsg = "";
+    private short num = 0;
+
+    private List<string> lastErrors = new List<string>();
+    string lastError = "";
+    private List<string> lastErrorFails = new List<string>();
 
     public void startListingLogDir1S()
     {
         YiKit.RunThread(state =>
         {
-            using (StreamWriter txt =
-                   new StreamWriter(logFilePath, true, Encoding.UTF8))
+            StreamWriter txt = new StreamWriter(logFilePath, true, Encoding.UTF8);
+            txt.Flush();
+            string log = "";
+            string line = "";
+            string gid = "", cid = "", uid = "", sm = "", sn = "";
+
+            while (watched)
             {
-                txt.Flush();
-                string log = "";
-                string line = "";
-                string gid = "", cid = "", uid = "", sm = "", sn = "";
-
-                while (watched)
+                if (num > 32)
                 {
-                    if (faqi)
-                    {
-                        jknum += 1;
-                        jknumsound += (nowaudio == 0 ? 0 : 1);
-                        if (faqisp)
-                        {
-                            jknumyx += 1;
-                            jknumsoundyx += (nowaudio == 0 ? 0 : 1);
-                        }
+                    restartProgress();
 
-                        if (nowaudio == 0)
+                    num = 0;
+
+                    //判断日期
+                    if (!logFilePath.Contains(YiKit.NowD()))
+                    {
+                        try
                         {
-                            lxwsy += 1;
-                            if (lxwsy > bjsc / delay)
-                            {
-                                // 播放系统报警音
-                                // SystemSounds.Beep.Play();
-                                YiKit.RunOnUIThread(() =>
-                                {
-                                    me.Background = (me.Background == Brushes.Transparent)
-                                        ? Brushes.Red
-                                        : Brushes.Transparent;
-                                });
-                                // 最终恢复原始背景色
-                            }
+                            txt.Close();
+                            logFilePath = YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接.csv";
+                            txt = new StreamWriter(logFilePath, true, Encoding.UTF8);
                         }
-                        else
+                        catch (Exception e)
                         {
-                            if (lxwsy != 0)
+                            Console.WriteLine(e);
+                        }
+                    }
+                }
+
+                num++;
+                if (faqi)
+                {
+                    jknum += 1;
+                    jknumsound += (nowaudio < wushengyin ? 0 : 1);
+                    if ((nowaudio < beijingyin ? 0 : 1) == 0)
+                    {
+                        jknumsoundbj += 1;
+                    }
+                    else if (jknumsoundbj != 0 && (jknumsoundbj <= (bjsc / delay)))
+                    {
+                        jknumsoundbj = 0;
+                    }
+
+                    if (faqisp)
+                    {
+                        jknumyx += 1;
+                        jknumsoundyx += (nowaudio < wushengyin ? 0 : 1);
+                    }
+
+                    if (nowaudio == 0)
+                    {
+                        lxwsy += 1;
+                        if (lxwsy > bjsc / delay)
+                        {
+                            // 播放系统报警音
+                            // SystemSounds.Beep.Play();
+                            YiKit.RunOnUIThread(() =>
                             {
-                                lxwsy = 0;
-                                YiKit.RunOnUIThread(() => { me.Background = Brushes.Transparent; });
-                            }
+                                me.Background = (me.Background == Brushes.Transparent)
+                                    ? Brushes.Red
+                                    : Brushes.Transparent;
+                            });
+                            // 最终恢复原始背景色
                         }
                     }
                     else
                     {
                         if (lxwsy != 0)
                         {
+                            if (lxwsy <= (bjsc / delay))
+                                lxwsy = 0;
+                            YiKit.RunOnUIThread(() => { me.Background = Brushes.Transparent; });
+                        }
+                    }
+                }
+                else
+                {
+                    if (lxwsy != 0)
+                    {
+                        if (lxwsy <= (bjsc / delay))
                             lxwsy = 0;
-                            YiKit.RunOnUIThread(() =>
-                            {
-                                if (me.Background != Brushes.Transparent)
-                                    me.Background = Brushes.Transparent;
-                            });
-                        }
-                    }
-
-                    log = readLastFile();
-                    if (log == null)
-                    {
-                        continue;
-                    }
-
-                    List<string> list =
-                        new List<string>(log.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None));
-
-                    foreach (string s in list)
-                    {
-                        line = "";
-
-                        try
+                        YiKit.RunOnUIThread(() =>
                         {
-                            if (s.Contains("qConnectCB start gid"))
-                            {
-                                //开始，截取组ID和Cid，和起呼ID
-                                gid = YiKit.SubStr(s, "gid:", " ");
-                                cid = YiKit.SubStr(s, "channelid", " ");
-                                uid = YiKit.SubStr(s, "uid:");
-                                if (gcDic.ContainsKey(cid))
-                                {
-                                    gcDic[cid] = gid;
-                                }
-                                else
-                                    gcDic.Add(cid, gid);
-
-                                if (!gcLogLine.ContainsKey(cid))
-                                    gcLogLine.Add(cid, gid + "-" + uid + "," + YiKit.NowD());
-                                else
-                                    gcLogLine[cid] = gid + "-" + uid + "," + YiKit.NowD();
-                                if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
-                                {
-                                    faqi = true;
-                                    if (lxwsy != 0) lxwsy = 0;
-                                    showTxt(gcLogLine[cid]);
-                                }
-                            }
-                            else if (s.Contains("SendFloorAlert, alertType: 1"))
-                            {
-                                //讲话
-                                cid = YiKit.SubStr(s, "channleid: ", " ");
-                                sm = YiKit.SubStr(s, "speekNum: ", " ");
-                                sn = YiKit.SubStr(s, "speakName:");
-
-                                if (gcLogLine.ContainsKey(cid))
-                                    gcLogLine[cid] += "🔊" + sn + "(" + sm + "):" + YiKit.NowT();
-                                else gcLogLine.Add(cid, "🔊" + sn + "(" + sm + "):" + YiKit.NowT());
-                                if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
-                                {
-                                    if (lxwsy != 0) lxwsy = 0;
-                                    YiKit.RunOnUIThread(() =>
-                                    {
-                                        if (me.Background != Brushes.Transparent)
-                                            me.Background = Brushes.Transparent;
-                                    });
-                                    faqisp = true;
-                                    showTxt(gcLogLine[cid]);
-                                }
-                            }
-                            else if (s.Contains("SendFloorAlert, alertType: 0"))
-                            {
-                                //释放
-                                cid = YiKit.SubStr(s, "channleid: ", " ");
-                                if (gcLogLine.ContainsKey(cid))
-                                    gcLogLine[cid] += "-" + YiKit.NowT();
-                                else gcLogLine.Add(cid, "-" + YiKit.NowT());
-                                if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
-                                {
-                                    faqisp = false;
-                                    showTxt(gcLogLine[cid]);
-                                }
-                            }
-                            // else if (s.Contains("Change the call channelid:[" ))
-                            else if (s.Contains("to be released"))
-                            {
-                                //结束
-                                cid = YiKit.SubStr(s, "channelid: ", " ");
-                                if (gcLogLine.ContainsKey(cid))
-                                    gcLogLine[cid] += " 释放" + YiKit.NowT();
-                                else gcLogLine.Add(cid, " 释放" + YiKit.NowT());
-
-                                if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
-                                {
-                                    soundRatio = Math.Round((jknumsound / (jknum * 1f)) * 100.0f, 2);
-                                    if (jknumyx == 0)
-                                    {
-                                        gcLogLine[cid] += "♦音频：" + soundRatio + "%,持续：" + Math.Round(jknum / 500f, 3) +
-                                                          "♦有效音频：0" + "%,有效持续0";
-                                    }
-                                    else
-                                        gcLogLine[cid] += "♦音频：" + soundRatio + "%,持续：" + Math.Round(jknum / 500f, 3) +
-                                                          "♦有效音频：" +
-                                                          Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) +
-                                                          "%,有效持续" + Math.Round(jknumyx / 500f, 3);
-
-                                    if (hllogs.Count > hlnum)
-                                    {
-                                        YiKit.RunOnUIThread(() => { hllogs.RemoveAt(0); });
-                                    }
-
-                                    if (hlelogs.Count > hlnum)
-                                    {
-                                        YiKit.RunOnUIThread(() => { hlelogs.RemoveAt(0); });
-                                    }
-
-                                    YiKit.RunOnUIThread(() => { hllogs.Add(gcLogLine[cid]); });
-                                    if (errorAuto && (jknumyx == 0 ||
-                                                      Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) <= 30))
-                                    {
-                                        YiKit.RunOnUIThread(() => { hlelogs.Add(gcLogLine[cid]); });
-
-                                        try
-                                        {
-                                            YiKit.FileWriteAppend(
-                                                gcLogLine[cid].Replace("♦", ",").Replace("🔊", "") + ",讲话声音短\r\n",
-                                                YiKit.GetAppStartPath()+"\\" +YiKit.NowD()+ "监控派接异常通话.csv");
-                                        }
-                                        catch (Exception e)
-                                        {
-                                            YiKit.ShowToastError("异常文件写入失败");
-                                        }
-                                    }
-
-                                    faqi = false;
-                                    if (lxwsy != 0) lxwsy = 0;
-                                    YiKit.RunOnUIThread(() =>
-                                    {
-                                        if (me.Background != Brushes.Transparent)
-                                            me.Background = Brushes.Transparent;
-                                    });
-                                    jknum = 0;
-                                    jknumyx = 0;
-                                    soundRatio = 0;
-                                    jknumsound = 0;
-                                    jknumsoundyx = 0;
-                                    showTxt(gcLogLine[cid], false);
-                                    txt.WriteLine(gcLogLine[cid].Replace("♦", ",").Replace("🔊", ""));
-                                    txt.Flush();
-                                    if (lxwsy != 0)
-                                    {
-                                        lxwsy = 0;
-                                        YiKit.RunOnUIThread(() =>
-                                        {
-                                            if (me.Background != Brushes.Transparent)
-                                                me.Background = Brushes.Transparent;
-                                        });
-                                    }
-                                }
-                            }
-                        }
-                        catch (Exception e)
-                        {
-                            Console.WriteLine(e);
-                            YiKit.ShowToastError(e.Message);
-                        }
+                            if (me.Background != Brushes.Transparent)
+                                me.Background = Brushes.Transparent;
+                        });
                     }
-
-                    Thread.Sleep(delay);
                 }
 
-                txt.Close();
+                log = readLastFile();
+                if (log == null)
+                {
+                    Thread.Sleep(delay);
+                    continue;
+                }
+
+                List<string> list =
+                    new List<string>(log.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None));
+                foreach (string s in list)
+                {
+                    line = "";
+                    try
+                    {
+                        if (s.Contains("qConnectCB start gid"))
+                        {
+                            //开始，截取组ID和Cid，和起呼ID
+                            gid = YiKit.SubStr(s, "gid:", " ");
+                            cid = YiKit.SubStr(s, "channelid", " ");
+                            uid = YiKit.SubStr(s, "uid:");
+                            sn =ids.ContainsKey(uid)?ids[uid] :"";
+                            if (gcDic.ContainsKey(cid))
+                            {
+                                gcDic[cid] = gid;
+                            }
+                            else
+                                gcDic.Add(cid, gid);
+
+                            if (!gcLogLine.ContainsKey(cid))
+                                gcLogLine.Add(cid, gid + "-" + uid +sn+ "," + YiKit.NowD());
+                            else
+                                gcLogLine[cid] = gid + "-" + uid +sn+ "," + YiKit.NowD();
+                            if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
+                            {
+                                faqi = true;
+                                if (lxwsy != 0) lxwsy = 0;
+                                showTxt(gcLogLine[cid]);
+                            }
+                        }
+                        else if (s.Contains("SendFloorAlert, alertType: 1"))
+                        {
+                            //讲话
+                            cid = YiKit.SubStr(s, "channleid: ", " ");
+                            sm = YiKit.SubStr(s, "speekNum: ", " ");
+                            
+                            sn =ids.ContainsKey(sm)?ids[sm] :(s.Contains("speakName:")? YiKit.SubStr(s, "speakName:"):"");
+
+                            if (gcLogLine.ContainsKey(cid))
+                                gcLogLine[cid] += "🔊" + sn + "(" + sm + "):" + YiKit.NowT();
+                            else gcLogLine.Add(cid, "🔊" + sn + "(" + sm + "):" + YiKit.NowT());
+                            if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
+                            {
+                                if (lxwsy != 0) lxwsy = 0;
+                                if (jknumsoundbj != 0) jknumsoundbj = 0;
+                                YiKit.RunOnUIThread(() =>
+                                {
+                                    if (me.Background != Brushes.Transparent)
+                                        me.Background = Brushes.Transparent;
+                                });
+                                faqisp = true;
+                                showTxt(gcLogLine[cid]);
+                            }
+                        }
+                        else if (s.Contains("SendFloorAlert, alertType: 0"))
+                        {
+                            //释放
+                            cid = YiKit.SubStr(s, "channleid: ", " ");
+                            if (gcLogLine.ContainsKey(cid))
+                                gcLogLine[cid] += "-" + YiKit.NowT();
+                            else gcLogLine.Add(cid, "-" + YiKit.NowT());
+                            if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
+                            {
+                                faqisp = false;
+                                showTxt(gcLogLine[cid]);
+                            }
+                        }
+                        // else if (s.Contains("Change the call channelid:[" ))
+                        else if (s.Contains("to be released"))
+                        {
+                            //结束
+                            cid = YiKit.SubStr(s, "channelid: ", " ");
+                            if (gcLogLine.ContainsKey(cid))
+                                gcLogLine[cid] += " 释放" + YiKit.NowT();
+                            else gcLogLine.Add(cid, " 释放" + YiKit.NowT());
+
+                            if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
+                            {
+                                soundRatio = Math.Round((jknumsound / (jknum * 1f)) * 100.0f, 2);
+                                if (jknumyx == 0)
+                                {
+                                    gcLogLine[cid] +=
+                                        "♦音频：" + soundRatio + "%,持续：" + Math.Round(jknum / (1000f / delay), 3) +
+                                        "♦有效音频：0" + "%,有效持续0";
+                                }
+                                else
+                                    gcLogLine[cid] +=
+                                        "♦音频：" + soundRatio + "%,持续：" + Math.Round(jknum / (1000f / delay), 3) +
+                                        "♦有效音频：" +
+                                        Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) +
+                                        "%,⏳有效持续" + Math.Round(jknumyx / 5f, 3);
+
+                                if (hllogs.Count > hlnum)
+                                {
+                                    YiKit.RunOnUIThread(() => { hllogs.RemoveAt(0); });
+                                }
+
+                                if (hlelogs.Count > hlnum)
+                                {
+                                    YiKit.RunOnUIThread(() => { hlelogs.RemoveAt(0); });
+                                }
+
+                                YiKit.RunOnUIThread(() => { hllogs.Add(gcLogLine[cid]); });
+                                if (errorAuto)
+                                {
+                                    if (lxwsy > bjsc / delay)
+                                    {
+                                        errorMsg = gcLogLine[cid] + ",信道占用，无背景音，无人声\r\n";
+                                    }
+                                    else if (jknumsoundbj > bjsc / delay)
+                                    {
+                                        errorMsg = gcLogLine[cid] + ",信道占用，有背景音，无人声\r\n";
+                                    }
+                                    else if (jknumyx == 0 ||
+                                             Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) <= 30)
+                                    {
+                                        errorMsg = gcLogLine[cid] + ",讲话声音短\r\n";
+                                    }
+
+                                    YiKit.RunOnUIThread(() => { hlelogs.Add(errorMsg); });
+
+                                    errorMsg = errorMsg.Replace("♦", ",").Replace("🔊", "").Replace("⏳", "");
+                                    try
+                                    {
+                                        if (lastErrorFails.Count > 0)
+                                        {
+                                            YiKit.FileWriteAppend(string.Join("", lastErrorFails),
+                                                YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接异常通话.csv");
+                                            lastErrorFails.Clear();
+                                        }
+
+                                        if (!lastError.Equals(errorMsg))
+                                        {
+                                            YiKit.FileWriteAppend(errorMsg,
+                                                YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接异常通话.csv");
+                                            lastError = errorMsg + "";
+                                        }
+
+
+                                        // lastErrors.Add(errorMsg.Replace("♦", ",").Replace("🔊", "").Replace("⏳", ""));
+                                    }
+                                    catch (Exception e)
+                                    {
+                                        lastErrorFails.Add(errorMsg);
+                                        YiKit.ShowToastError("异常文件写入失败");
+                                    }
+                                }
+
+                                faqi = false;
+                                if (lxwsy != 0) lxwsy = 0;
+                                YiKit.RunOnUIThread(() =>
+                                {
+                                    if (me.Background != Brushes.Transparent)
+                                        me.Background = Brushes.Transparent;
+                                });
+                                jkSoundZero();
+
+                                showTxt(gcLogLine[cid], false);
+                                txt.WriteLine(gcLogLine[cid].Replace("♦", ",").Replace("🔊", "").Replace("⏳", ""));
+                                txt.Flush();
+                                if (lxwsy != 0)
+                                {
+                                    lxwsy = 0;
+                                    YiKit.RunOnUIThread(() =>
+                                    {
+                                        if (me.Background != Brushes.Transparent)
+                                            me.Background = Brushes.Transparent;
+                                    });
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e);
+                        YiKit.ShowToastError(e.Message);
+                    }
+                }
+
+                Thread.Sleep(delay);
             }
+
+            txt.Close();
         });
     }
+
 
     private void showTxt(string txt, bool realTime = true)
     {
@@ -968,6 +1283,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     protected void OnPropertyChanged(string propertyName)
     {
         PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
+        // PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(propertyName));
     }
 
     /// <summary>
@@ -1044,7 +1360,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             }
             else if (menuItem.Header.Equals("其他"))
             {
-                List<string> strs = YiKit.ShowInputDialog(selectLogItem.Content.ToString(), new[] { "发现的问题" });
+                List<string> strs = YiKit.ShowInputDialog("输入异常详情", new[] { "发现的问题" });
                 if (strs != null && strs.Count == 1)
                 {
                     selectLogItem.Content += "," + (strs[0].Length == 0 ? "其他" : strs[0]) + "\r\n";
@@ -1055,7 +1371,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             try
             {
                 YiKit.FileWriteAppend(selectLogItem.Content.ToString().Replace("♦", ",").Replace("🔊", ""),
-                    YiKit.GetAppStartPath()+"\\" +YiKit.NowD()+ "监控派接异常通话.csv");
+                    YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接异常通话.csv");
             }
             catch (Exception exception)
             {
@@ -1120,6 +1436,9 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     /// </summary>
     private long bjsc = 5;
 
+    private int xtb = 1560;
+    private int ytb = 228;
+
     private void BjTimeTextBox_OnTextChanged(object sender, TextChangedEventArgs e)
     {
         try
@@ -1131,5 +1450,43 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
         {
             YiKit.ShowToastError(exception.Message);
         }
+    }
+
+    private void XTB_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        try
+        {
+            xtb = int.Parse(XTB.Text) * 1000;
+            YiKit.IniWrite("xtb", xtb + "", area);
+        }
+        catch (Exception exception)
+        {
+            YiKit.ShowToastError(exception.Message);
+        }
+    }
+
+    private void YTB_OnTextChanged(object sender, TextChangedEventArgs e)
+    {
+        try
+        {
+            ytb = int.Parse(YTB.Text) * 1000;
+            YiKit.IniWrite("ytb", ytb + "", area);
+        }
+        catch (Exception exception)
+        {
+            YiKit.ShowToastError(exception.Message);
+        }
+    }
+
+    private void AutoStart_OnUnchecked(object sender, RoutedEventArgs e)
+    {
+        YiKit.SetAutoStart((Assembly.GetExecutingAssembly().Location), isAuto: false);
+        YiKit.IniWrite("autostartpage", "");
+    }
+
+    private void AutoStart_OnChecked(object sender, RoutedEventArgs e)
+    {
+        YiKit.SetAutoStart((Assembly.GetExecutingAssembly().Location), isAuto: true);
+        YiKit.IniWrite("autostartpage", this.GetType().ToString());
     }
 }
