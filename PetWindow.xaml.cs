@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
+using System.Drawing;
+using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.Net;
@@ -68,6 +70,7 @@ public partial class PetWindow : Window
         //Variable to hold the handle for the form
         var hwnd = new WindowInteropHelper(this).Handle;
         //Performing some magic to hide the form from Alt+Tab
+        // YiKit.SetWindowLong(hwnd, YiKit.GwlExstyle, YiKit.GwlExstyle | YiKit.WsExTransparent);
         SetWindowLong(hwnd, GWL_EX_STYLE,
             (GetWindowLong(hwnd, GWL_EX_STYLE) | WS_EX_TOOLWINDOW) & ~WS_EX_APPWINDOW);
         //鼠标穿透
@@ -1496,10 +1499,16 @@ public partial class PetWindow : Window
 
     private void MemoMenuItem_OnClickItemOnClick(object sender, RoutedEventArgs e)
     {
-        //内存分析
-        YiKit.StartProcessSync(YiKit.GetAppStartPath() + "Tools/poolmon.exe -p -b", end: (state =>
+        if (!File.Exists(YiKit.GetAppStartPath() + "Tools/poolmon.exe"))
         {
-            var ret = YiKit.ShowInputDialog("输入TAG查找泄漏文件", "tag");
+            return;
+        }
+
+        //内存分析
+        YiKit.StartProcessSync(YiKit.GetAppStartPath() + "Tools/poolmon.exe  -b", end: (state =>
+        {
+            var ret = YiKit.ShowInputDialog("系统后台执行，执行完后弹窗", "tag", " Bytes代表TAG占用总内存，frees代表已经释放的内存()为实时的更新值",
+                "需要根据自己的经验判断到底是哪个tag，条目出现灰底代表内存有变动 ", "经常变动且frees一直没增加的有极大可能内存泄露，查询需要等待1分钟");
 
             if (ret == null)
             {
@@ -1507,12 +1516,14 @@ public partial class PetWindow : Window
                 return;
             }
 
-            var o = YiKit.RunCmd("Set-Location \"C:\\Windows\\System32\\drivers\";Select-String -Path *.sys -Pattern " +
+            YiKit.ShowToastWaring("请耐心等待，系统将会分析出当前TAG下的所有程序\n右键可以复制内容到剪贴板\n自己根据系统指出的路径判断是否是自己安装的程序，卸载即可", time: 60);
+            // findstr /m /l /s NpCD c:/ *.sys
+            var o = YiKit.RunCmd("findstr /m /l /s " +
                                  ret[0] +
-                                 " -CaseSensitive | Select-Object FileName -Unique");
+                                 " c:/ *.sys");
 
             YiKit.ProgressEnd("poolmon.exe");
-            YiKit.ShowToast(o as string);
+            YiKit.ShowToastWaring(o as string, time: 60);
         }));
     }
 
@@ -1621,19 +1632,18 @@ public partial class PetWindow : Window
                 YiKit.IniWrite("放大显示上偏移", "0", area: InputDialog.are);
             }
 
-            YiKit.ShowInputDialog("放大显示设置（不要将放大显示和放大区域重叠）", "放大倍数","放大透明度","放大刷新率", "放大左偏移", "放大上偏移", "放大显示大小", "放大显示左偏移", "放大显示上偏移");
+            YiKit.ShowInputDialog("放大显示设置（不要将放大显示和放大区域重叠）", "放大倍数", "放大透明度", "放大刷新率", "放大左偏移", "放大上偏移", "放大显示大小",
+                "放大显示左偏移", "放大显示上偏移");
             _centZoom?.changeSetStyle();
         }
         else
-        
+
         {
             var isc = OnItemCheckedProgress(sender as MenuItem);
             _centZoom ??= new CentZoom();
             if (isc) _centZoom.Show();
             else _centZoom.Hide();
         }
-
-       
     }
 
     /// <summary>
@@ -1654,17 +1664,15 @@ public partial class PetWindow : Window
             }
 
             YiKit.ShowInputDialog("设置准星坐标偏移和大小", "准星上偏移", "准星左偏移", "准星大小", "准星颜色");
-                _crosshair?.changeStyle();
+            _crosshair?.changeStyle();
         }
         else
         {
             bool isc = OnItemCheckedProgress(sender as MenuItem);
             _crosshair ??= new Crosshair();
             if (isc) _crosshair.Show();
-            else _crosshair.Hide(); 
+            else _crosshair.Hide();
         }
-
-    
     }
 
     /// <summary>
@@ -1742,5 +1750,154 @@ public partial class PetWindow : Window
     {
         if (e is not MouseButtonEventArgs mouseArgs) return false;
         return mouseArgs.RightButton == MouseButtonState.Pressed;
+    }
+
+    private void IcoItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog(
+            "图像转换为ICO图标，文件和文件夹二选一，同时选，取文件夹",
+            "选择源文件位置",
+            "选择源文件夹位置",
+            "ico尺寸:256,128,64,48,32,16");
+
+        if (strs == null || strs.Count < 1)
+        {
+            return;
+        }
+
+        YiKit.RunThread((state) =>
+        {
+            int[] sizes = { 256, 128, 64, 48, 32, 16 };
+            string path = strs[0];
+            string pathDir = strs[1];
+            string icoSizeStr = strs[2];
+
+            // 解析尺寸参数
+            if (!string.IsNullOrWhiteSpace(icoSizeStr))
+            {
+                try
+                {
+                    icoSizeStr = icoSizeStr.Replace("，", ",");
+                    sizes = Array.ConvertAll(icoSizeStr.Split(','), int.Parse);
+                }
+                catch (Exception ex)
+                {
+                    YiKit.ShowToastError("尺寸填写失败，将使用默认值：256,128,64,48,32,16");
+                    Console.WriteLine("尺寸解析失败：" + ex.Message);
+                }
+            }
+
+            List<string> imageFiles = new List<string>();
+
+            // 判断是文件还是文件夹
+            if (!string.IsNullOrEmpty(pathDir) && Directory.Exists(pathDir))
+            {
+                // 获取文件夹中所有支持的图像文件
+                var files = Directory.GetFiles(pathDir);
+                foreach (var file in files)
+                {
+                    if (IsImageFile(file))
+                        imageFiles.Add(file);
+                }
+            }
+            else if (!string.IsNullOrEmpty(path) && File.Exists(path))
+            {
+                if (IsImageFile(path))
+                    imageFiles.Add(path);
+            }
+
+            if (imageFiles.Count == 0)
+            {
+                YiKit.ShowToastError("未找到有效的图像文件！");
+                return;
+            }
+
+            // 开始转换每个图像
+            foreach (var pngPath in imageFiles)
+            {
+                try
+                {
+                    using (Bitmap original = new Bitmap(pngPath))
+                    {
+                        string icoPath = Path.ChangeExtension(pngPath, ".ico");
+
+                        using (FileStream fs = new FileStream(icoPath, FileMode.Create))
+                        {
+                            BinaryWriter writer = new BinaryWriter(fs);
+
+                            // 写入 ICO 文件头
+                            writer.Write((short)0); // Reserved
+                            writer.Write((short)1); // Type: icon (.ICO)
+                            writer.Write((short)sizes.Length); // Number of images
+
+                            long[] directoryEntriesPos = new long[sizes.Length];
+                            int imageIndex = 0;
+
+                            // 预留目录条目位置
+                            foreach (int size in sizes)
+                            {
+                                directoryEntriesPos[imageIndex++] = fs.Position;
+                                writer.Write(new byte[16]); // 占位符
+                            }
+
+                            // 逐个写入图标数据
+                            imageIndex = 0;
+                            foreach (int size in sizes)
+                            {
+                                using (Bitmap resized = new Bitmap(size, size))
+                                using (Graphics g = Graphics.FromImage(resized))
+                                {
+                                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                                    g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                                    g.DrawImage(original, 0, 0, size, size);
+
+                                    using (MemoryStream pngStream = new MemoryStream())
+                                    {
+                                        resized.Save(pngStream, ImageFormat.Png);
+                                        byte[] pngData = pngStream.ToArray();
+
+                                        // 回到目录条目位置并写入信息
+                                        fs.Seek(directoryEntriesPos[imageIndex++], SeekOrigin.Begin);
+                                        writer.Write((byte)size); // Width
+                                        writer.Write((byte)size); // Height
+                                        writer.Write((byte)0); // Color count (>=256)
+                                        writer.Write((byte)0); // Reserved
+                                        writer.Write((short)1); // Planes
+                                        writer.Write((short)32); // Bits per pixel
+                                        writer.Write(pngData.Length); // Size of image data
+                                        writer.Write((int)fs.Position); // Offset to image data
+
+                                        // 返回末尾继续写图像数据
+                                        fs.Seek(0, SeekOrigin.End);
+                                        writer.Write(pngData);
+                                    }
+                                }
+                            }
+                        }
+
+                        // 主线程更新UI
+                       YiKit.ShowToast($"✅ 已生成 ICO：{icoPath}");
+                    }
+                }
+                catch (Exception ex)
+                {
+                    YiKit.ShowToastError($"❌ 转换失败：{Path.GetFileName(pngPath)}\n错误：{ex.Message}");
+                }
+            }
+
+            YiKit.ShowToast($"🎉 共转换 {imageFiles.Count} 个文件");
+        });
+    }
+
+    public static readonly HashSet<string> SupportedExtensions = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        ".png", ".jpg", ".jpeg", ".bmp", ".gif", ".tiff"
+    };
+
+    public static bool IsImageFile(string filePath)
+    {
+        string ext = Path.GetExtension(filePath);
+        return SupportedExtensions.Contains(ext);
     }
 }

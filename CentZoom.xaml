@@ -19,12 +19,12 @@
 
 
         <!-- 圆形裁剪的 Canvas -->
-        <Canvas Name="canvasMagnifier" Width="200" Height="200" >
-            <Canvas.Clip>
-                <EllipseGeometry x:Name="ellipseClip" Center="100,100" RadiusX="100" RadiusY="100" />
-            </Canvas.Clip>
+        <Canvas Name="canvasMagnifier" Width="200" Height="200"  Opacity="1">
+            <!-- <Canvas.Clip> -->
+            <!--     <EllipseGeometry x:Name="ellipseClip" Center="100,100" RadiusX="200" RadiusY="100" /> -->
+            <!-- </Canvas.Clip> -->
         </Canvas>
-  
+        <TextBlock Name="FpsTb" Text="30fps" Foreground="Red"></TextBlock>
 
     </Grid>
 </Window>

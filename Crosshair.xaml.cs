@@ -32,6 +32,7 @@ public partial class Crosshair : Window
 
     private void Window_Loaded(object sender, RoutedEventArgs e)
     {
+       
         EnableMousePassThrough();
         Rectangle screenRect = Screen.PrimaryScreen.Bounds;
         Left = (screenRect.Width-this.Width) / 2;
@@ -103,7 +104,9 @@ public partial class Crosshair : Window
     private void EnableMousePassThrough()
     {
         var hwnd = new WindowInteropHelper(this).Handle;
-        SetWindowExTransparent(hwnd);
+        YiKit.SetWindowLong(hwnd,YiKit.GwlExstyle,
+            (YiKit.GetWindowLong(hwnd, YiKit.GwlExstyle) | YiKit.WsExToolWindow) & ~YiKit.WsExAppWindow);
+        // SetWindowExTransparent(hwnd);
     }
 
     [DllImport("user32", SetLastError = true)]

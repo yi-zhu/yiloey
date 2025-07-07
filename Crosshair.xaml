@@ -20,8 +20,8 @@
        
             <!-- 准星 -->
             <Canvas Name="zx" HorizontalAlignment="Center" VerticalAlignment="Center">
-                <Line Name="zxl"  Y1="1" Y2="-1" Stroke="Red" StrokeThickness="2" />
-                <Line Name="zxl2" X1="1"  X2="-1" Stroke="Red" StrokeThickness="2" />
+                <Line Name="zxl"  Y1="1" Y2="-1" Stroke="Blue" StrokeThickness="2" />
+                <Line Name="zxl2" X1="1"  X2="-1" Stroke="Blue" StrokeThickness="2" />
             </Canvas>
      
     </Grid>
