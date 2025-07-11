@@ -131,6 +131,7 @@
                                 <MenuItem Header="中心准星"  Name="Crosshair" PreviewMouseDown="Crosshair_OnItemClick"></MenuItem>
                             </MenuItem>
                             <MenuItem Header="ico转换" Click="IcoItem_OnClick"></MenuItem>
+                            <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
                             <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
                             <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
                             <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>

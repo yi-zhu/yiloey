@@ -1844,12 +1844,13 @@ public partial class PetWindow : Window
                             imageIndex = 0;
                             foreach (int size in sizes)
                             {
+                                long imageDataOffset = fs.Position;
                                 using (Bitmap resized = new Bitmap(size, size))
                                 using (Graphics g = Graphics.FromImage(resized))
                                 {
-                                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
-                                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
-                                    g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+                                    //g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                    //g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                                    // g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
                                     g.DrawImage(original, 0, 0, size, size);
 
                                     using (MemoryStream pngStream = new MemoryStream())
@@ -1866,10 +1867,10 @@ public partial class PetWindow : Window
                                         writer.Write((short)1); // Planes
                                         writer.Write((short)32); // Bits per pixel
                                         writer.Write(pngData.Length); // Size of image data
-                                        writer.Write((int)fs.Position); // Offset to image data
+                                        writer.Write((int)imageDataOffset); // Offset to image data
 
                                         // 返回末尾继续写图像数据
-                                        fs.Seek(0, SeekOrigin.End);
+                                        fs.Seek(imageDataOffset, SeekOrigin.Begin);
                                         writer.Write(pngData);
                                     }
                                 }
@@ -1877,7 +1878,7 @@ public partial class PetWindow : Window
                         }
 
                         // 主线程更新UI
-                       YiKit.ShowToast($"✅ 已生成 ICO：{icoPath}");
+                        YiKit.ShowToast($"✅ 已生成 ICO：{icoPath}");
                     }
                 }
                 catch (Exception ex)
@@ -1899,5 +1900,44 @@ public partial class PetWindow : Window
     {
         string ext = Path.GetExtension(filePath);
         return SupportedExtensions.Contains(ext);
+    }
+
+    private void AdbItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog(
+            "apk（电视）安装器（需开启adb调试）",
+            "电视IP地址",
+            "选择apk应用文件位置"
+        );
+        if (strs == null || strs.Count < 1)
+        {
+            return;
+        }
+
+        String ip = strs[0];
+        String apk = strs[1];
+
+        YiKit.RunThread((state =>
+        {
+            var ret="";
+            try
+            {
+                ret = YiKit.RunCmd("adb.exe connect " + ip);
+            }
+            catch (Exception exception)
+            {
+                YiKit.ShowToastError("运行失败，系统不具备安装条件");
+            }
+
+            if (ret.Contains(" connected"))
+            {
+                YiKit.ShowToastOther("请观察电视是否弹出允许或确定对话框，请允许或确定！",time:30);
+                YiKit.RunCmd("adb install" + apk);
+            }
+            else
+            {
+                YiKit.ShowToastError("请在电视设置->用户（或安全选项卡）->打开允许调试或adb调试！");
+            }
+        }));
     }
 }
