@@ -6,7 +6,10 @@ using System.Drawing;
 using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Net;
+using System.Net.Mime;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using System.Reflection;
@@ -18,6 +21,7 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Net.WebSockets;
+using System.Threading.Tasks;
 using System.Windows.Automation;
 using System.Windows.Controls;
 using System.Windows.Forms;
@@ -27,12 +31,15 @@ using holey.Page;
 using YiKits;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
+using Color = System.Drawing.Color;
 using Control = System.Windows.Forms.Control;
+using Image = System.Drawing.Image;
 using InputDialog = YiKits.Dialog.InputDialog;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
+using Size = System.Drawing.Size;
 
 namespace holey;
 
@@ -1919,7 +1926,7 @@ public partial class PetWindow : Window
 
         YiKit.RunThread((state =>
         {
-            var ret="";
+            var ret = "";
             try
             {
                 ret = YiKit.RunCmd("adb.exe connect " + ip);
@@ -1931,7 +1938,7 @@ public partial class PetWindow : Window
 
             if (ret.Contains(" connected"))
             {
-                YiKit.ShowToastOther("请观察电视是否弹出允许或确定对话框，请允许或确定！",time:30);
+                YiKit.ShowToastOther("请观察电视是否弹出允许或确定对话框，请允许或确定！", time: 30);
                 YiKit.RunCmd("adb install" + apk);
             }
             else
@@ -1939,5 +1946,588 @@ public partial class PetWindow : Window
                 YiKit.ShowToastError("请在电视设置->用户（或安全选项卡）->打开允许调试或adb调试！");
             }
         }));
+    }
+
+    private void OgvItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        //ffmpeg -i input.ogv -vf fps=30 -c:v png -pix_fmt rgba output_%04d.png
+
+
+        string type = "ogv";
+        if ((sender as MenuItem).Header.ToString().Contains("Gif")) type = "gif";
+
+        List<string> strs = YiKit.ShowInputDialog(
+            type + "转png联系表",
+            type + "文件位置（可为空）：",
+            "列数(自动计算请填0):0",
+            "目标宽度等比缩放:256",
+            type + "帧率:24",
+            type + "文件夹位置（和文件二选一）：",
+            type + "删除黑色背景强度:0.005",
+            "是否删除缓存图片："
+        );
+        if (strs == null || strs.Count < 1)
+        {
+            YiKit.ShowToastError("参数错误");
+            return;
+        }
+
+        string ogvFilePath = strs[0].Trim();
+        int columns = int.TryParse(strs[1], out var col) ? col : 0;
+        int targetWidth = int.TryParse(strs[2], out var width) ? width : 256;
+        int fps = int.TryParse(strs[3], out var f) ? f : 30;
+        string color = "black";
+
+        double delDark = 0.005;
+        if (strs[5].Contains(":"))
+        {
+            string[] colors = strs[5].Split(':');
+            delDark = double.TryParse(colors[1], out var d) ? d : 0.005;
+            color = colors[0];
+        }
+        else
+            delDark = double.TryParse(strs[5], out var d) ? d : 0.005;
+
+        string ogvFolder = strs[4].Trim();
+        bool isDel = false;
+        bool.TryParse(strs[6], out isDel);
+
+        YiKit.RunThread(async s =>
+        {
+            try
+            {
+                List<string> ogvFiles = new List<string>();
+
+                // 如果提供了文件夹，则优先使用文件夹中的 .ogv 文件
+                if (!string.IsNullOrEmpty(ogvFolder) && Directory.Exists(ogvFolder))
+                {
+                    ogvFiles.AddRange(Directory.GetFiles(ogvFolder, "*." + type, SearchOption.TopDirectoryOnly));
+                }
+
+                // 如果提供了单个文件，则加入列表
+                if (!string.IsNullOrEmpty(ogvFilePath) && File.Exists(ogvFilePath))
+                {
+                    ogvFiles.Add(ogvFilePath);
+                }
+
+                if (ogvFiles.Count == 0)
+                {
+                    // 如果没有找到任何 .fla 文件，则查找 .zip 文件并尝试提取其中的 .fla
+
+                    var zipFiles = Directory.GetFiles(ogvFolder, "*.zip", SearchOption.TopDirectoryOnly);
+
+                    foreach (var zipFile in zipFiles)
+                    {
+                        // 确保临时目录干净
+                        // if (Directory.Exists(extractTempDir)) Directory.Delete(extractTempDir, true);
+                        // Directory.CreateDirectory(extractTempDir);
+
+                        // 提取 ZIP 中的 .type 文件
+                        using (var archive = ZipFile.OpenRead(zipFile))
+                        {
+                            foreach (var entry in archive.Entries)
+                            {
+                                if (entry.FullName.EndsWith("." + type, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string uniqueName = $"{Path.GetFileNameWithoutExtension(zipFile)}.{type}";
+                                    string destPath = Path.Combine(ogvFolder, uniqueName);
+                                    entry.ExtractToFile(destPath);
+                                    ogvFiles.Add(destPath);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (ogvFiles.Count == 0)
+                {
+                    YiKit.ShowToastError($"未找到有效的{type}文件");
+                    return;
+                }
+
+                foreach (var ogvFile in ogvFiles)
+                {
+                    string fileDir = Path.GetDirectoryName(ogvFile);
+                    string outputDir = Path.Combine(
+                        fileDir,
+                        Path.GetFileNameWithoutExtension(ogvFile)
+                    );
+
+                    string contactSheetPath = Path.Combine(fileDir, Path.GetFileNameWithoutExtension(ogvFile) + ".png");
+
+                    Directory.CreateDirectory(outputDir);
+
+                    // 创建输出目录
+                    // if (Directory.Exists(framesDir)) Directory.Delete(framesDir, true);
+                    // Directory.CreateDirectory(framesDir);
+
+                    // 使用 FFmpeg 提取帧（RGBA 透明通道）
+                    //ffmpeg -i he1.ogv   -vf "scale={targetWidth}:-1,format=rgba,colorkey=black:0.005:0.1,fps={fps}" "D:\soft\Godot\projects\jie-(4.4)\anim\ogv\he1\frame_%04d.png"
+
+
+                    string ffmpegArgs = null;
+                    if (type.Equals("gif"))
+                    {
+                        ffmpegArgs =
+                            $"-i \"{ogvFile}\" -vf \"scale={targetWidth}:-1,format=rgba,colorkey={color}:{delDark}:0.1\" \"{Path.Combine(outputDir, "frame_%04d.png")}\"";
+                    }
+                    else if (type.Equals("ogv"))
+                    {
+                        ffmpegArgs =
+                            $"-i \"{ogvFile}\" -vf \"scale={targetWidth}:-1,format=rgba,colorkey={color}:{delDark}:0.1,fps={fps}\"  \"{Path.Combine(outputDir, "frame_%04d.png")}\"";
+                    }
+
+                    if (ffmpegArgs == null)
+                        return;
+
+                    YiKit.RunCmd($"ffmpeg.exe {ffmpegArgs}");
+
+                    if (!Directory.Exists(outputDir) || Directory.GetFiles(outputDir, "*.png").Length == 0)
+                    {
+                        YiKit.ShowToastError($"{Path.GetFileName(ogvFile)} 导出帧失败");
+                        continue;
+                    }
+
+                    // 计算列数（如果用户设置为0则自动计算）
+                    if (columns <= 0)
+                    {
+                        columns = (int)Math.Ceiling(Math.Sqrt(Directory.GetFiles(outputDir, "*.png").Length));
+                    }
+
+                    // 合成联系表
+
+                    // 调用 pngPacker（假设你已定义该方法）
+                    pngPacker(outputDir, contactSheetPath, targetWidth, columns);
+
+                    if (isDel)
+                    {
+                        YiKit.TryDeleteDir(outputDir);
+                    }
+
+                    YiKit.ShowToast($"文件{contactSheetPath}处理完成！");
+                }
+
+                YiKit.ShowToast($"全部 .{type} 处理完成！");
+            }
+            catch (Exception ex)
+            {
+                YiKit.ShowToastError("发生异常：" + ex.Message);
+            }
+        });
+    }
+
+    private void FlaItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog(
+            "fla转png联系表",
+            "fla文件位置（可为空）：",
+            "列数(自动计算请填0)：",
+            "目标宽度(等比缩放)：",
+            "Animate.exe文件位置：",
+            "fla文件夹位置（和文件二选一）："
+        );
+
+
+        if (strs != null && strs.Count > 3)
+        {
+            YiKit.RunThread((s) =>
+            {
+                string flaFile = strs[0]; // 单个 .fla 文件（可为空）
+                string folderPath = strs[4]; // fla文件夹位置（可能为空）
+                int columns = 0;
+                if (strs[1] != null && !string.IsNullOrEmpty(strs[1]))
+                {
+                    try
+                    {
+                        columns = int.Parse(strs[1]);
+                    }
+                    catch (Exception)
+                    {
+                        columns = -1;
+                    }
+                }
+
+                int targetWidth = int.Parse(strs[2]);
+                string animateExe = strs[3];
+
+                // 准备要处理的 .fla 文件列表
+                List<string> flaFilesToProcess = new List<string>();
+
+                // 如果有单个 .fla 文件路径且存在，直接加入处理列表
+                if (!string.IsNullOrWhiteSpace(flaFile) && File.Exists(flaFile))
+                {
+                    flaFilesToProcess.Add(flaFile);
+                }
+
+                // 如果指定了文件夹路径，尝试从该目录中查找 .fla 文件
+                if (!string.IsNullOrWhiteSpace(folderPath) && Directory.Exists(folderPath))
+                {
+                    // 获取文件夹内所有 .fla 文件
+                    var flasInFolder = Directory.GetFiles(folderPath, "*.fla", SearchOption.TopDirectoryOnly);
+                    flaFilesToProcess.AddRange(flasInFolder);
+
+
+                    // 如果没有找到任何 .fla 文件，则查找 .zip 文件并尝试提取其中的 .fla
+                    if (flaFilesToProcess.Count == 0)
+                    {
+                        var zipFiles = Directory.GetFiles(folderPath, "*.zip", SearchOption.TopDirectoryOnly);
+
+                        foreach (var zipFile in zipFiles)
+                        {
+                            string extractTempDir = Path.Combine(folderPath, Path.GetFileNameWithoutExtension(zipFile));
+
+                            // 确保临时目录干净
+                            // if (Directory.Exists(extractTempDir)) Directory.Delete(extractTempDir, true);
+                            // Directory.CreateDirectory(extractTempDir);
+
+                            // 提取 ZIP 中的 .fla 文件
+                            using (var archive = ZipFile.OpenRead(zipFile))
+                            {
+                                foreach (var entry in archive.Entries)
+                                {
+                                    if (entry.FullName.EndsWith(".fla", StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        string uniqueName = $"{Path.GetFileNameWithoutExtension(zipFile)}.fla";
+                                        string destPath = Path.Combine(folderPath, uniqueName);
+                                        entry.ExtractToFile(destPath);
+                                        flaFilesToProcess.Add(destPath);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // 如果最终找到了需要处理的 .fla 文件，则启动异步任务处理每个文件
+                if (flaFilesToProcess.Count > 0)
+                {
+                    YiKit.RunThread(async (s) =>
+                    {
+                        foreach (var file in flaFilesToProcess)
+                        {
+                            string outputDir = Path.Combine(Path.GetDirectoryName(file),
+                                Path.GetFileNameWithoutExtension(file));
+                            try
+                            {
+                                await Fla2PngSheet(file, outputDir, columns, targetWidth, animateExe);
+                                YiKit.ShowToast($"成功生成联系表：" + file);
+                            }
+                            catch (Exception ex)
+                            {
+                                YiKit.ShowToastError($"处理 {file} 失败：{ex.Message}");
+                            }
+                        }
+                    });
+                }
+                else
+                {
+                    YiKit.ShowToastError("未找到任何 .fla 文件或包含 .fla 的 ZIP 文件。");
+                }
+            });
+        }
+    }
+
+    /// <summary>
+    /// 导出 FLA 的所有帧并生成联系表（单方法封装版）
+    /// </summary>
+    /// <param name="flaFilePath">FLA 文件路径</param>
+    /// <param name="outputDir">输出目录</param>
+    /// <param name="columns">联系表每行的列数</param>
+    /// <param name="targetFrameWidth">每张图像缩放后的宽度（保持比例）</param>
+    /// <param name="animatePath">Adobe Animate 的安装路径</param>
+    /// <param name="jsflTemplatePath">JSFL 脚本模板路径</param>
+    /// <returns>生成的联系表路径</returns>
+    public static async Task<string> Fla2PngSheet(
+        string flaFilePath,
+        string outputDir,
+        int columns = 0,
+        int targetFrameWidth = 256,
+        string animatePath = @"C:\Program Files\Adobe\Adobe Animate 2025\Animate.exe"
+    )
+    {
+        // 检查输入参数
+        if (!File.Exists(flaFilePath))
+        {
+            YiKit.ShowToastError("fla文件不存在");
+            return null;
+        }
+
+        if (outputDir == null || string.IsNullOrEmpty(outputDir))
+        {
+            outputDir = Path.GetDirectoryName(flaFilePath) + "/" +
+                        YiKit.ChineseToHash(Path.GetFileNameWithoutExtension(flaFilePath));
+        }
+
+        if (!Directory.Exists(outputDir))
+            Directory.CreateDirectory(outputDir);
+
+
+        string framesDir = Path.Combine(outputDir, "frames");
+        string resizedDir = Path.Combine(outputDir, "resized_frames");
+        string contactSheetPath = Path.Combine(Path.GetDirectoryName(flaFilePath),
+            Path.GetFileNameWithoutExtension(flaFilePath) + ".png");
+
+
+        if (!File.Exists(animatePath))
+            throw new FileNotFoundException("找不到 Adobe Animate 程序", animatePath);
+
+        // 清理旧数据
+        if (Directory.Exists(framesDir)) Directory.Delete(framesDir, true);
+        if (Directory.Exists(resizedDir)) Directory.Delete(resizedDir, true);
+        Directory.CreateDirectory(framesDir);
+
+        // 替换 JSFL 输出路径
+        // 内置 JSFL 脚本模板（字符串形式）
+        const string JsflTemplate = @"
+    fl.outputPanel.clear();
+    var doc = fl.getDocumentDOM();
+    if (!doc) {
+        alert('无法打开文档');
+        exit();
+    }
+    var timeline = doc.getTimeline();
+    var totalFrames = timeline.frameCount;
+    var outputFolder = ""REPLACE_OUTPUT_FOLDER"";
+    if (!FLfile.exists(outputFolder)) {
+        FLfile.createFolder(outputFolder);
+    }
+    for (var i = 0; i < totalFrames; i++) {
+        timeline.currentFrame = i;
+        doc.selectAll();
+        var filePath = ""file:///"" +outputFolder + ""frame_"" + padLeft(i + 1, 4, '0') + "".png"";
+        doc.exportPNG(filePath, true, true);
+    }
+    doc.exportPNG(""file:///"" +outputFolder + ""end.png"", true, true);
+
+    // ✅ 添加完成标志：写入一个 done.flag 文件
+    // ✅ 正确版本
+    //FLfile.createFolder(outputFolder+""done.flag"");
+    //var flagFile = outputFolder + ""done.flag"";
+    //FLfile.write(flagFile, ""Export completed at "" + new Date());
+
+    function padLeft(str, length, padChar) {
+        str = String(str);
+        while (str.length < length) {
+            str = padChar + str;
+        }
+        return str;
+    }";
+
+        // 替换输出路径
+        string jsflCode = JsflTemplate.Replace("REPLACE_OUTPUT_FOLDER", framesDir.Replace("\\", "/") + "/");
+        string tempJsfl = Path.Combine(outputDir, "temp_export.jsfl");
+        File.WriteAllText(tempJsfl, jsflCode);
+
+        // 启动 Adobe Animate
+        Process.Start(animatePath, $"\"{flaFilePath}\" \"{tempJsfl}\"");
+
+        string flagFile = Path.Combine(framesDir, "end.png");
+
+        int timeoutSeconds = 180;
+        bool completed = false;
+
+        for (int i = 0; i < timeoutSeconds; i++)
+        {
+            if (File.Exists(flagFile))
+            {
+                completed = true;
+                await Task.Delay(100); // 等待1秒
+                YiKit.TryDeleteFile(flagFile);
+                break;
+            }
+
+            await Task.Delay(1000); // 等待1秒
+        }
+
+        if (completed)
+        {
+            Console.WriteLine("JSFL 脚本执行完成！");
+        }
+        else
+        {
+            Console.WriteLine("等待超时，JSFL 可能未完成。");
+        }
+
+        pngPacker(framesDir, contactSheetPath, targetFrameWidth, columns);
+
+        /*
+        // 缩放图像尺寸
+        Directory.CreateDirectory(resizedDir);
+        foreach (string file in Directory.GetFiles(framesDir, "*.png"))
+        {
+            string filename = Path.GetFileName(file);
+            string output = Path.Combine(resizedDir, filename);
+
+            using (Image img = Image.FromFile(file))
+            {
+                double ratio = (double)targetFrameWidth / img.Width;
+                int newHeight = (int)(img.Height * ratio);
+                using (Image resized = new Bitmap(img, new Size(targetFrameWidth, newHeight)))
+                using (Graphics g = Graphics.FromImage(resized))
+                {
+                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                    g.DrawImage(resized, 0, 0);
+                    resized.Save(output, ImageFormat.Png);
+                }
+            }
+        }
+
+        // 合成联系表
+        var images = Directory.GetFiles(resizedDir, "*.png")
+            .Select(f => Image.FromFile(f))
+            .ToList();
+
+        if (images.Count == 0)
+            throw new Exception("未找到 PNG 图像文件");
+
+        int thumbWidth = images[0].Width;
+        int thumbHeight = images[0].Height;
+        int rows = (int)Math.Ceiling((double)images.Count / columns);
+
+        Bitmap sheet = new Bitmap(columns * thumbWidth, rows * thumbHeight);
+        using (Graphics g = Graphics.FromImage(sheet))
+        {
+            g.Clear(Color.Transparent);
+            int x = 0, y = 0;
+            foreach (var img in images)
+            {
+                g.DrawImage(img, new Rectangle(x, y, thumbWidth, thumbHeight));
+                x += thumbWidth;
+                if (x >= sheet.Width)
+                {
+                    x = 0;
+                    y += thumbHeight;
+                }
+            }
+        }
+
+        sheet.Save(contactSheetPath, ImageFormat.Png);*/
+        YiKit.ShowToast("转换完成：" + contactSheetPath);
+        // sheet.Save(contactSheetPath, ImageFormat.Png);
+
+// ✅ 删除中间目录
+        if (Directory.Exists(outputDir)) YiKit.TryDeleteDir(outputDir);
+        return contactSheetPath;
+    }
+
+
+    public static void pngPacker(string framesDir, string contactSheetPath, int targetFrameWidth = 256, int columns = 0)
+    {
+        // 直接从原始 PNG 帧图像创建联系表，不生成缩放后的临时文件
+
+
+        int thumbWidth = targetFrameWidth; // 每个缩略图宽度
+        int thumbHeight = 0; // 稍后根据第一张图像比例计算高度
+
+        var images = new List<Bitmap>();
+        List<int> actualHeights = new List<int>(); // 可选：记录每个图像的实际高度（非统一）
+
+// 读取所有 PNG 帧，并在内存中缩放
+        foreach (string file in Directory.GetFiles(framesDir, "*.png"))
+        {
+            using (Image original = Image.FromFile(file))
+            {
+                double ratio = (double)targetFrameWidth / original.Width;
+                int newHeight = (int)(original.Height * ratio);
+                thumbHeight = newHeight; // 所有缩略图统一高度（也可动态处理）
+
+                var resized = new Bitmap(original, new Size(targetFrameWidth, newHeight));
+                images.Add(resized); // 添加到列表中
+            }
+        }
+
+        if (images.Count == 0)
+            throw new Exception("未找到 PNG 图像文件");
+        if (columns < 1) columns = (int)Math.Ceiling(Math.Sqrt(images.Count)); // 自动计算行列
+        int rows = (int)Math.Ceiling((double)images.Count / columns);
+
+// 创建联系表画布
+        Bitmap sheet = new Bitmap(columns * thumbWidth, rows * thumbHeight);
+        using (Graphics g = Graphics.FromImage(sheet))
+        {
+            g.Clear(Color.Transparent); // 如果背景透明可用 PNG 格式保存
+            int x = 0, y = 0;
+
+            foreach (var img in images)
+            {
+                g.DrawImage(img, new Rectangle(x, y, thumbWidth, thumbHeight));
+                x += thumbWidth;
+
+                if (x >= sheet.Width)
+                {
+                    x = 0;
+                    y += thumbHeight;
+                }
+            }
+        }
+
+// 保存联系表
+        sheet.Save(contactSheetPath, ImageFormat.Png);
+
+// 清理资源
+        foreach (var img in images)
+        {
+            img.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// 从 ZIP 文件中提取所有 .fla 文件到目标目录
+    /// </summary>
+    /// <param name="zipFilePath">ZIP 文件路径</param>
+    /// <param name="outputDirectory">要保存 .fla 文件的目录</param>
+    /// <returns>提取出的 .fla 文件路径列表</returns>
+    public static string[] ExtractOnlyFlaFiles(string zipFilePath, string outputDirectory)
+    {
+        if (!File.Exists(zipFilePath))
+        {
+            YiKit.ShowToastWaring("找不到 ZIP 文件");
+            return null;
+        }
+
+        if (!Directory.Exists(outputDirectory))
+            Directory.CreateDirectory(outputDirectory);
+
+        var extractedFiles = new System.Collections.Generic.List<string>();
+
+        using (var archive = ZipFile.OpenRead(zipFilePath))
+        {
+            foreach (var entry in archive.Entries)
+            {
+                // 只处理 .fla 文件
+                if (entry.FullName.EndsWith(".fla", StringComparison.OrdinalIgnoreCase))
+                {
+                    string fileName = Path.GetFileName(entry.FullName);
+                    string destFileName = GetUniqueFileName(outputDirectory, fileName);
+
+                    string destinationPath = Path.Combine(outputDirectory, destFileName);
+
+                    // 解压文件
+                    entry.ExtractToFile(destinationPath);
+                    extractedFiles.Add(destinationPath);
+                }
+            }
+        }
+
+        return extractedFiles.ToArray();
+    }
+
+    /// <summary>
+    /// 如果文件已存在，则自动加上数字后缀以避免冲突
+    /// </summary>
+    private static string GetUniqueFileName(string directory, string originalName)
+    {
+        string fileName = Path.GetFileNameWithoutExtension(originalName);
+        string extension = Path.GetExtension(originalName);
+        string path = Path.Combine(directory, originalName);
+
+        int count = 1;
+        while (File.Exists(path))
+        {
+            path = Path.Combine(directory, $"{fileName}({count}){extension}");
+            count++;
+        }
+
+        return Path.GetFileName(path);
     }
 }

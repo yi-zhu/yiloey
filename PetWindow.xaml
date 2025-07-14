@@ -125,13 +125,19 @@
                                 <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
                                 <MenuItem Header="显示电源" Click="PowerItem_OnClick"></MenuItem>
                             </MenuItem>
-                           
                             <MenuItem Header="fps">
                                 <MenuItem Header="中心放大" Name="CentZoom" PreviewMouseDown="CentZomm_OnItemClick"></MenuItem>
                                 <MenuItem Header="中心准星"  Name="Crosshair" PreviewMouseDown="Crosshair_OnItemClick"></MenuItem>
                             </MenuItem>
-                            <MenuItem Header="ico转换" Click="IcoItem_OnClick"></MenuItem>
+                            <MenuItem Header="img">
+                                <MenuItem Header="ico转换" Click="IcoItem_OnClick"></MenuItem>
+                                <MenuItem Header="Gif转联系表" Click="OgvItem_OnClick"></MenuItem>
+                                <MenuItem Header="Fla转联系表" Click="FlaItem_OnClick"></MenuItem>
+                                <MenuItem Header="ogv转联系表" Click="OgvItem_OnClick"></MenuItem>
+                            </MenuItem>
                             <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
+
+                      
                             <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
                             <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
                             <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
