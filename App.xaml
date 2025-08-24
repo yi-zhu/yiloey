@@ -5,7 +5,21 @@
              Startup="App_OnStartup"
              >
     <Application.Resources>
-           <!-- Colors -->
+        
+        <CornerRadius x:Key="ButtonCornerRadius">4</CornerRadius>
+        <CornerRadius x:Key="DisplayCornerRadius">8</CornerRadius>
+        <ResourceDictionary x:Key="VDD">
+            <!-- 本地资源可以放在这里 -->
+
+            <!-- 合并其他资源字典 -->
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Vdd/Languages/zh.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
+
+
+      
+        <!-- Colors -->
         <Color x:Key="AKY_DarkGray">#121212</Color>
         <Color x:Key="AKY_Yellow">#FFC107</Color>
         <Color x:Key="AKY_DarkYellow">#997300</Color>

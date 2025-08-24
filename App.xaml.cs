@@ -1,14 +1,22 @@
 ﻿using System;
 using System.Collections;
+using System.Collections.Generic;
 using System.Configuration.Install;
 using System.Diagnostics;
+using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Net;
 using System.Reflection;
+using System.Resources;
 using System.ServiceProcess;
 using System.Threading;
 using System.Windows;
+using System.Windows.Interop;
+using System.Windows.Markup;
+using System.Windows.Media;
 using holey.Services;
+using ParsecVDisplay;
 using YiKits;
 
 namespace holey
@@ -18,22 +26,6 @@ namespace holey
     /// </summary>
     public partial class App : Application
     {
-        
-        
-        
-        
-      
-
-     
-
-    
-        
-        
-        
-        
-        
-        
-        
         //检查系统是否安装了.NET Framework 4.6.1
         private static bool CheckNetFramework()
         {
@@ -54,12 +46,13 @@ namespace holey
                 }
             }
         }
+
         //下载
         private static void WebClientDownloadNetFramework()
         {
             System.Net.WebClient webClient = new System.Net.WebClient();
-            webClient.Credentials=CredentialCache.DefaultNetworkCredentials; 
-            
+            webClient.Credentials = CredentialCache.DefaultNetworkCredentials;
+
             webClient.DownloadFile(
                 "https://download.microsoft.com/download/E/4/1/E4173890-A24A-4936-9FC9-AF930FE3FA40/NDP461-KB3102436-x86-x64-AllOS-ENU.exe",
                 "dotNetFx461_Full_setup.exe");
@@ -74,7 +67,7 @@ namespace holey
             process.StartInfo.FileName = "wget.exe";
             process.StartInfo.Arguments =
                 "https://download.microsoft.com/download/3/5/9/35980F81-60F4-4DE3-88FC-8F962B97253B/NDP461-KB3102438-Web.exe";
-                // "https://download.microsoft.com/download/E/4/1/E4173890-A24A-4936-9FC9-AF930FE3FA40/NDP461-KB3102436-x86-x64-AllOS-ENU.exe";
+            // "https://download.microsoft.com/download/E/4/1/E4173890-A24A-4936-9FC9-AF930FE3FA40/NDP461-KB3102436-x86-x64-AllOS-ENU.exe";
             process.StartInfo.UseShellExecute = true;
             process.StartInfo.CreateNoWindow = true;
             process.Start();
@@ -92,7 +85,7 @@ namespace holey
             process.Start();
             process.WaitForExit();
         }
-        
+
         //后台安装.NET Framework 4.6.1
         private static void InstallNetFramework(string dotnetfx461FullSetupExe)
         {
@@ -103,7 +96,6 @@ namespace holey
             process.StartInfo.CreateNoWindow = true;
             process.Start();
             process.WaitForExit();
-            
         }
 
         //获取系统缓存路径
@@ -112,43 +104,41 @@ namespace holey
             return System.IO.Path.Combine(
                 System.Environment.GetFolderPath(System.Environment.SpecialFolder.LocalApplicationData), "holey");
         }
-     
-        
+
+
         private void App_OnStartup(object sender, StartupEventArgs e)
         {
-       
-
-            if (YiKit.IniGetInt("eyi",0)==1)
+            if (YiKit.IniGetInt("eyi", 0) == 1)
             {
-              YiKit.RunThread((state =>
-              {
-                  try
-                  {
-                      ServiceController   mSc = new ServiceController(holey.MainWindow.Svname);
-                      if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
-                      {
-                          holey.MainWindow.StarteYi();
-                      }
-                      else if (mSc.Status == ServiceControllerStatus.Running ||
-                               mSc.Status == ServiceControllerStatus.StartPending)
-                      {
-                          YiKit.Print(mSc.Status);
-                      }
-                 
-                  }
-                  catch (Exception exception)
-                  {
-                      YiKit.ShowToastError("网络启动失败！");
-                  }
-                  
-              }));
+                YiKit.RunThread((state =>
+                {
+                    try
+                    {
+                        ServiceController mSc = new ServiceController(holey.MainWindow.Svname);
+                        if (mSc.Status == ServiceControllerStatus.Stopped ||
+                            mSc.Status == ServiceControllerStatus.StopPending)
+                        {
+                            holey.MainWindow.StarteYi();
+                        }
+                        else if (mSc.Status == ServiceControllerStatus.Running ||
+                                 mSc.Status == ServiceControllerStatus.StartPending)
+                        {
+                            YiKit.Print(mSc.Status);
+                        }
+                    }
+                    catch (Exception exception)
+                    {
+                        YiKit.ShowToastError("网络启动失败！");
+                    }
+                }));
             }
-            
-  
-           
+
+
             if (!CheckNetFramework())
             {
-                YiKit.ShowToastError("未检测到程序必须组件，【NDP461-KB3102436-x86-x64-AllOS-ENU】正在下载。。。\nUntested program must be installed, and the [NDP461-KB3102436-x86-x64-AllOS-ENU] file is being downloaded...",time:120);
+                YiKit.ShowToastError(
+                    "未检测到程序必须组件，【NDP461-KB3102436-x86-x64-AllOS-ENU】正在下载。。。\nUntested program must be installed, and the [NDP461-KB3102436-x86-x64-AllOS-ENU] file is being downloaded...",
+                    time: 120);
                 YiKit.RunThread((state =>
                 {
                     string fn = "dotNetFx461_Full_setup.exe";
@@ -156,25 +146,35 @@ namespace holey
                         "https://download.microsoft.com/download/E/4/1/E4173890-A24A-4936-9FC9-AF930FE3FA40/NDP461-KB3102436-x86-x64-AllOS-ENU.exe",
                         fn, GetCachePath());
 
-                    YiKit.RunOnUIThread(() => {  YiKit.ShowToastError("【NDP461-KB3102436-x86-x64-AllOS-ENU】下载完成！正在安装。。。请稍后。。。\n[NDP461-KB3102436-x86-x64-AllOS-ENU] Download is complete!  is being installed...",time:120); });
-                    InstallNetFramework(GetCachePath()+"\\"+fn);
-          
-                    YiKit.RunOnUIThread(() => { YiKit.ShowToastWaring("恭喜您。程序依赖下载并安装完成！\nCongratulations.The program depends on download and installation to complete!"); }); }));
-                
-                
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        YiKit.ShowToastError(
+                            "【NDP461-KB3102436-x86-x64-AllOS-ENU】下载完成！正在安装。。。请稍后。。。\n[NDP461-KB3102436-x86-x64-AllOS-ENU] Download is complete!  is being installed...",
+                            time: 120);
+                    });
+                    InstallNetFramework(GetCachePath() + "\\" + fn);
+
+                    YiKit.RunOnUIThread(() =>
+                    {
+                        YiKit.ShowToastWaring(
+                            "恭喜您。程序依赖下载并安装完成！\nCongratulations.The program depends on download and installation to complete!");
+                    });
+                }));
             }
-            YiKit.ShowToastError("检查程序更新，当前程序版本："+System.Reflection.Assembly.GetExecutingAssembly().GetName().Version,time:2);
-           string page= YiKit.IniGet("autostartpage", def: null);
-           if (page!=null&& page.Length>1)
-           {
-               new MainWindow(page).Show();
-           }else
-            
-            if (YiKit.IniGetInt("boot",0)==0)
+
+            YiKit.ShowToastError("检查程序更新，当前程序版本：" + System.Reflection.Assembly.GetExecutingAssembly().GetName().Version,
+                time: 2);
+            string page = YiKit.IniGet("autostartpage", def: null);
+            if (page != null && page.Length > 1)
+            {
+                new MainWindow(page).Show();
+            }
+            else if (YiKit.IniGetInt("boot", 0) == 0)
             {
                 new MainWindow().Show();
-                YiKit.IniWrite("boot","1");
-            }else if (e.Args.Length == 0)
+                YiKit.IniWrite("boot", "1");
+            }
+            else if (e.Args.Length == 0)
             {
                 new PetWindow().Show();
             }
@@ -200,7 +200,7 @@ namespace holey
                     }
                 }
 
-            if (YiKit.IniGetInt("eyi",0)==1)
+            if (YiKit.IniGetInt("eyi", 0) == 1)
             {
                 //启动服务
                 string serviceName = "EsYi";
@@ -216,12 +216,11 @@ namespace holey
 
                 if (mSc == null)
                 {
-                    
                     /*using (AssemblyInstaller installer = new AssemblyInstaller())
                     {
                         installer.UseNewContext = true;
                         installer.Path = Assembly.GetExecutingAssembly().Location;
-                
+
                         IDictionary savedState = new Hashtable();
                         installer.Install(savedState);
                         installer.Commit(savedState);
@@ -229,27 +228,130 @@ namespace holey
                 }
                 else
                 {
-                    if (mSc.Status == ServiceControllerStatus.Stopped || mSc.Status == ServiceControllerStatus.StopPending)
+                    if (mSc.Status == ServiceControllerStatus.Stopped ||
+                        mSc.Status == ServiceControllerStatus.StopPending)
                     {
                         mSc.Start();
-                        YiKit.IniWrite("eyi","1");
+                        YiKit.IniWrite("eyi", "1");
                     }
                     else if (mSc.Status == ServiceControllerStatus.Running ||
                              mSc.Status == ServiceControllerStatus.StartPending)
                     {
                         mSc.Stop();
-                        YiKit.IniWrite("eyi","0");
+                        YiKit.IniWrite("eyi", "0");
                     }
-                    
-                    
+                }
+            }
+
+            int i = 0;
+        }
+        //vdd
+
+        #region vdd
+
+        public static string[] Languages => LanguageDicts.Keys.ToArray();
+        static Dictionary<string, ResourceDictionary> LanguageDicts;
+        static ResourceDictionary CurrentLanguage;
+
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            // Disable GPU to prevent flickering when adding display
+            RenderOptions.ProcessRenderMode = RenderMode.SoftwareOnly;
+            base.OnStartup(e);
+            var silent = e.Args.Contains("-silent");
+            /*var window = new VddMainWindow();
+            if (!silent)
+            {
+                window.Show();
+            }*/
+
+            SetLanguage(Config.Language, false);
+        }
+
+        public static void LoadTranslations()
+        {
+            LanguageDicts = new Dictionary<string, ResourceDictionary>();
+
+            var assembly = ResourceAssembly;
+            var rm = new ResourceManager(assembly.GetName().Name + ".g", assembly);
+
+            try
+            {
+                var list = rm.GetResourceSet(CultureInfo.CurrentCulture, true, true);
+                foreach (DictionaryEntry item in list)
+                {
+                    if (item.Key is string key
+                        && key.StartsWith("languages/"))
+                    {
+                        try
+                        {
+                            var source = key
+                                .Replace("languages/", "/Languages/")
+                                .Replace(".baml", ".xaml");
+
+                            var sri = GetResourceStream(new Uri(source, UriKind.Relative));
+                            var resources = LoadBaml<ResourceDictionary>(sri.Stream);
+
+                            var name = resources["lang_name"].ToString();
+                            LanguageDicts.Add(name, resources);
+                        }
+                        catch
+                        {
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                rm.ReleaseAllResources();
+            }
+
+            SetLanguage(Config.Language, saveConfig: false);
+        }
+
+        public static void SetLanguage(string name, bool saveConfig = true)
+        {
+            if (LanguageDicts != null)
+            if (LanguageDicts.TryGetValue(name, out var dict))
+            {
+                CurrentLanguage = dict;
+
+                if (Current != null)
+                {
+                    Current.Dispatcher.Invoke(() => { Current.Resources.MergedDictionaries.Add(dict); });
                 }
 
-               
+                if (saveConfig)
+                {
+                    Config.Language = name;
+                }
             }
-            
-            int i = 0;
-
-
         }
+
+        public static string GetTranslation(string key, params object[] args)
+        {
+            if (CurrentLanguage != null)
+            {
+                if (CurrentLanguage.Contains(key))
+                {
+                    var t = CurrentLanguage[key]
+                        .ToString()
+                        .Replace("\\n", "\n");
+                    return string.Format(t, args);
+                }
+            }
+
+            return string.Format("{{{{{0}}}}}", key);
+        }
+
+        static T LoadBaml<T>(Stream stream)
+        {
+            ParserContext pc = new ParserContext();
+            MethodInfo loadBamlMethod = typeof(XamlReader).GetMethod("LoadBaml",
+                BindingFlags.NonPublic | BindingFlags.Static);
+            return (T)loadBamlMethod.Invoke(null, new object[] { stream, pc, null, false });
+        }
+
+        #endregion
     }
 }

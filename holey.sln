@@ -7,6 +7,17 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "holey", "holey.csproj", "{A
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "YiKits", "..\YiKits\YiKits.csproj", "{F09AA247-CF95-4815-943B-DD32B0D26D64}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "core", "core", "{9B03AE1C-BE49-45A8-9B89-11CE21AD1BF8}"
+	ProjectSection(SolutionItems) = preProject
+		vdd\core\parsec-vdd.h = vdd\core\parsec-vdd.h
+		vdd\core\vdd-demo.cc = vdd\core\vdd-demo.cc
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "build", "build", "{44F3B28D-7C30-43D1-8153-C7A88B29B511}"
+	ProjectSection(SolutionItems) = preProject
+		vdd\build\build.yml = vdd\build\build.yml
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

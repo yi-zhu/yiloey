@@ -16,131 +16,143 @@
         <Description>yizhu.space</Description>
         <PackageProjectUrl>yizhu.space</PackageProjectUrl>
         <PackageLicenseUrl>yizhu.space</PackageLicenseUrl>
+        <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     </PropertyGroup>
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
-      <Optimize>True</Optimize>
+        <Optimize>True</Optimize>
     </PropertyGroup>
 
     <ItemGroup>
 
-      <None Remove="Img\*.png" />
-      <None Remove="Img\*.gif" />
-      <None Remove="Img\*.psd" />
-      <Resource Include="Img\*.png">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Resource>
-     <!-- <Resource Include="Img\*.gif">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Resource>-->
-      <None Remove="drv\*\*" />
-      <Content Include="drv\*\*">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Include="drv\*">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <Content Include="Binaries\*">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      
-      <None Remove="eyi.exe" />
-      <Content Include="eyi.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <None Remove="ey.exe" />
-      <Content Include="ey.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </Content>
-      <None Update="ico.png">
-        <Pack>True</Pack>
-        <PackagePath></PackagePath>
-      </None>
-      <None Update="Tools\RAMMap.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
-      <None Update="Tools\poolmon.exe">
-        <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-      </None>
+        <None Remove="Img\*.png"/>
+        <None Remove="Img\*.gif"/>
+        <None Remove="Img\*.psd"/>
+        <Resource Include="Img\*.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Resource>
+        <!-- <Resource Include="Img\*.gif">
+           <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+         </Resource>-->
+        <None Remove="drv\*\*"/>
+        <Content Include="drv\*\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="drv\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="Binaries\*">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+
+        <None Remove="eyi.exe"/>
+        <Content Include="eyi.exe">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <None Remove="ey.exe"/>
+        <Content Include="ey.exe">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <None Update="ico.png">
+            <Pack>True</Pack>
+            <PackagePath></PackagePath>
+        </None>
+        <None Update="Tools\RAMMap.exe">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <None Update="Tools\poolmon.exe">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </None>
+        <Content Include="Vdd\Resources\**\*.*">
+                <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Page Remove="Vdd\Languages\zh.xaml" />
+        <Resource Include="Vdd\Languages\zh.xaml">
+          <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Resource>
+
     </ItemGroup>
 
     <ItemGroup>
-      <Compile Update="Properties\Settings.Designer.cs">
-        <DesignTimeSharedInput>True</DesignTimeSharedInput>
-        <AutoGen>True</AutoGen>
-        <DependentUpon>Settings.settings</DependentUpon>
-      </Compile>
+        <Compile Update="Properties\Settings.Designer.cs">
+            <DesignTimeSharedInput>True</DesignTimeSharedInput>
+            <AutoGen>True</AutoGen>
+            <DependentUpon>Settings.settings</DependentUpon>
+        </Compile>
     </ItemGroup>
 
     <ItemGroup>
-      <None Update="Properties\Settings.settings">
-        <Generator>SettingsSingleFileGenerator</Generator>
-        <LastGenOutput>Settings.Designer.cs</LastGenOutput>
-      </None>
+        <None Update="Properties\Settings.settings">
+            <Generator>SettingsSingleFileGenerator</Generator>
+            <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+        </None>
+    </ItemGroup>
+
+
+    <ItemGroup>
+        <Resource Update="Img\btncolor.png">
+            <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+        </Resource>
+
     </ItemGroup>
 
     <ItemGroup>
-      <Resource Update="Img\btncolor.png">
-        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      </Resource>
+        <EditorConfigFiles Remove=".editorconfig"/>
     </ItemGroup>
 
     <ItemGroup>
-      <EditorConfigFiles Remove=".editorconfig" />
+        <None Include=".editorconfig"/>
     </ItemGroup>
 
     <ItemGroup>
-      <None Include=".editorconfig" />
+        <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39"/>
+        <PackageReference Include="NAudio" Version="1.8.5"/>
+        <PackageReference Include="Obfuscar" Version="2.2.38">
+            <PrivateAssets>all</PrivateAssets>
+            <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+        </PackageReference>
     </ItemGroup>
 
     <ItemGroup>
-      <PackageReference Include="Microsoft.Xaml.Behaviors.Wpf" Version="1.1.39" />
-      <PackageReference Include="NAudio" Version="1.8.5" />
-      <PackageReference Include="Obfuscar" Version="2.2.38">
-        <PrivateAssets>all</PrivateAssets>
-        <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
-      </PackageReference>
+        <Folder Include="Remote"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Folder Include="Remote" />
+        <ProjectReference Include="..\YiKits\YiKits.csproj">
+            <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
+            <Private>True</Private>
+            <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
+        </ProjectReference>
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\YiKits\YiKits.csproj">
-          <ReferenceOutputAssembly>true</ReferenceOutputAssembly>
-        <Private>True</Private>
-        <CopyLocalSatelliteAssemblies>True</CopyLocalSatelliteAssemblies>
-      </ProjectReference>
+        <COMReference Include="ShockwaveFlashObjects">
+            <Guid>{D27CDB6B-AE6D-11CF-96B8-444553540000}</Guid>
+            <VersionMajor>1</VersionMajor>
+            <VersionMinor>0</VersionMinor>
+            <Lcid>0</Lcid>
+            <WrapperTool>tlbimp</WrapperTool>
+            <Isolated>False</Isolated>
+            <EmbedInteropTypes>True</EmbedInteropTypes>
+        </COMReference>
     </ItemGroup>
 
     <ItemGroup>
-      <COMReference Include="ShockwaveFlashObjects">
-        <Guid>{D27CDB6B-AE6D-11CF-96B8-444553540000}</Guid>
-        <VersionMajor>1</VersionMajor>
-        <VersionMinor>0</VersionMinor>
-        <Lcid>0</Lcid>
-        <WrapperTool>tlbimp</WrapperTool>
-        <Isolated>False</Isolated>
-        <EmbedInteropTypes>True</EmbedInteropTypes>
-      </COMReference>
+        <Reference Include="System.Configuration.Install"/>
+        <Reference Include="System.IO.Compression"/>
+        <Reference Include="System.Management"/>
+        <Reference Include="System.Net.Http"/>
+        <Reference Include="System.ServiceProcess"/>
+        <Reference Include="System.Windows.Forms"/>
+        <Reference Include="WindowsFormsIntegration"/>
     </ItemGroup>
 
     <ItemGroup>
-      <Reference Include="System.Configuration.Install" />
-      <Reference Include="System.IO.Compression" />
-      <Reference Include="System.Management" />
-      <Reference Include="System.ServiceProcess" />
-      <Reference Include="System.Windows.Forms" />
-      <Reference Include="WindowsFormsIntegration" />
-    </ItemGroup>
-
-    <ItemGroup>
-      <Page Update="Crosshair.xaml">
-        <Generator>MSBuild:Compile</Generator>
-        <XamlRuntime>Wpf</XamlRuntime>
-        <SubType>Designer</SubType>
-      </Page>
+        <Page Update="Crosshair.xaml">
+            <Generator>MSBuild:Compile</Generator>
+            <XamlRuntime>Wpf</XamlRuntime>
+            <SubType>Designer</SubType>
+        </Page>
     </ItemGroup>
 
 </Project>

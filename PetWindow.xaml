@@ -9,10 +9,13 @@
         mc:Ignorable="d"
         Title="PetWindow" Height="60" Width="120" Background="Transparent"
         WindowStyle="None" ShowInTaskbar="False" ShowActivated="False"
-        AllowsTransparency="True" Loaded="FormLoaded" Topmost="True"
-        PreviewMouseMove="PetWindow_OnPreviewMouseMove">
+        AllowsTransparency="True" Loaded="FormLoaded" Topmost="True">
     <Viewbox Stretch="Fill">
-        <Grid Name="Grid">
+        <Grid Name="Grid" Width="120" Height="60">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="100" />
+                <ColumnDefinition Width="20" />
+            </Grid.ColumnDefinitions>
             <Grid.Resources>
                 <Style TargetType="ProgressBar">
                     <Setter Property="Width" Value="50" />
@@ -96,54 +99,12 @@
 
             </Grid.Resources>
             <!-- <local:GifImage Source="../Img/giphy.gif" Stretch="Uniform" Cursor="Hand"/> -->
-            <Viewbox Height="60" Width="120" Name="Viewbox">
 
-                <Grid Margin="0" Height="60" Width="120" Name="MenuItemGrid">
-                    <Grid.ContextMenu>
-                        <ContextMenu>
-                            <MenuItem Header="打开主页" Click="ShowItem_OnClick"></MenuItem>
-                            <MenuItem Header="动态桌面" PreviewMouseLeftButtonUp="WallPaperItem_OnClick"
-                                      PreviewMouseRightButtonUp="UIElement_OnPreviewMouseRightButtonUp">
-                            </MenuItem>
-                            <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
-                            <MenuItem Name="TranslateMenuItem" Header="开启翻译" Click="TranslateItemOnClick"></MenuItem>
-                            <MenuItem Header="窗口">
-                                <MenuItem Name="ChangeSizeMenuItem" Header="变更窗口大小"
-                                          Click="ChangeSizeMenuItem_OnClickItemOnClick">
-                                </MenuItem>
-                                <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
-                                <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
-                                <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
-                                <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
-                                <MenuItem Header="放大/缩小" Click="ZoomItem_OnClick"></MenuItem>
-                                <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
-                            </MenuItem>
+            <Viewbox Height="60" Name="ViewboxPet" HorizontalAlignment="Left">
 
-                            <!-- <MenuItem Name="TranslateShowMenuItem" Header="显示翻译" Click="TranslateShowItemOnClick"></MenuItem> -->
-                            <!-- <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem> -->
-                            <MenuItem Header="其他">
-                                <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
-                                <MenuItem Header="显示电源" Click="PowerItem_OnClick"></MenuItem>
-                            </MenuItem>
-                            <MenuItem Header="fps">
-                                <MenuItem Header="中心放大" Name="CentZoom" PreviewMouseDown="CentZomm_OnItemClick"></MenuItem>
-                                <MenuItem Header="中心准星"  Name="Crosshair" PreviewMouseDown="Crosshair_OnItemClick"></MenuItem>
-                            </MenuItem>
-                            <MenuItem Header="img">
-                                <MenuItem Header="ico转换" Click="IcoItem_OnClick"></MenuItem>
-                                <MenuItem Header="Gif转联系表" Click="OgvItem_OnClick"></MenuItem>
-                                <MenuItem Header="Fla转联系表" Click="FlaItem_OnClick"></MenuItem>
-                                <MenuItem Header="ogv转联系表" Click="OgvItem_OnClick"></MenuItem>
-                            </MenuItem>
-                            <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
+                <Grid Background="Transparent" Margin="0" Height="60" Name="MenuItemGrid" 
+                      PreviewMouseMove="MenuItemGrid_OnPreviewMouseMove" MouseLeave="ViewboxPet_OnMouseLeave"   >
 
-                      
-                            <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
-                            <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
-                            <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
-                            <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
-                        </ContextMenu>
-                    </Grid.ContextMenu>
 
                     <Border HorizontalAlignment="Stretch" VerticalAlignment="Stretch" CornerRadius="10,10,10,10">
                         <Border.Effect>
@@ -152,21 +113,22 @@
                     </Border>
 
                     <!-- 主体 -->
-                    <Button Name="MainStr" MouseDoubleClick="Control_OnMouseDoubleClick" Width="120" Height="50"
-                            VerticalContentAlignment="Stretch" FontSize="12" Margin="0" Padding="0"
-                            HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
-                            Background="Transparent" Foreground="Red" FontWeight="Bold"
-                            IsHitTestVisible="False"
-                            Style="{StaticResource NoneButton}" Cursor="Hand">
-                        <Button.Content>
-                            <StackPanel Orientation="Vertical" Margin="0,-3,0,0">
-                                <TextBlock Name="MainStrN">power</TextBlock>
-                                <TextBlock Name="MainStrU">by</TextBlock>
-                                <TextBlock Name="MainStrD">yi</TextBlock>
-                            </StackPanel>
-                        </Button.Content>
-                        <!-- 内容 -->
-                        <!--<media:TextShape x:Name="MainStr"
+                    <Grid Width="100" Height="50" HorizontalAlignment="Left" Margin="0" VerticalAlignment="Bottom">
+                        <Button Name="MainStr" Width="100" Height="50"
+                                VerticalContentAlignment="Stretch" FontSize="12" Margin="0" Padding="0"
+                                HorizontalAlignment="Left" VerticalAlignment="Bottom" HorizontalContentAlignment="Left"
+                                Background="Transparent" Foreground="Red" FontWeight="Bold"
+                                IsHitTestVisible="False"
+                                Style="{StaticResource NoneButton}" Cursor="Hand">
+                            <Button.Content>
+                                <StackPanel Orientation="Vertical" Margin="0,-3,0,0">
+                                    <TextBlock Name="MainStrN">power</TextBlock>
+                                    <TextBlock Name="MainStrU">by</TextBlock>
+                                    <TextBlock Name="MainStrD">yi</TextBlock>
+                                </StackPanel>
+                            </Button.Content>
+                            <!-- 内容 -->
+                            <!--<media:TextShape x:Name="MainStr"
                                      HorizontalAlignment="Left"
                                      Fill="Red"
                                      FontWeight="Heavy"
@@ -177,17 +139,19 @@
                                      
                                      Text="正在加载">
                     </media:TextShape>-->
-                        <Button.Effect>
-                            <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="3" ShadowDepth="1"
-                                              Opacity="1" Direction="300" />
-                        </Button.Effect>
-                    </Button>
+                            <Button.Effect>
+                                <DropShadowEffect x:Name="MainStrShadow" Color="#f000" BlurRadius="3" ShadowDepth="1"
+                                                  Opacity="1" Direction="300" />
+                            </Button.Effect>
+                        </Button>
+                    </Grid>
+
                     <!-- CPU -->
-                    <Grid Margin="0">
+                    <Grid Margin="0,0,0,0" Width="100" Height="10" VerticalAlignment="Top" HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="80" />
                             <ColumnDefinition Width="20" />
-                            <ColumnDefinition Width="20" />
+
                         </Grid.ColumnDefinitions>
                         <Grid Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
                             <Rectangle Name="CpuRect" Stroke="Transparent" Height="10"
@@ -272,27 +236,10 @@
                         </Grid>
 
 
-                        <Ellipse Grid.Column="2" Stroke="Transparent" Width="10" Height="15" Cursor="Hand"
-                                 HorizontalAlignment="Right" Visibility="Collapsed" VerticalAlignment="Top">
-                            <Ellipse.Fill>
-                                <RadialGradientBrush GradientOrigin="0.2,0.8" RadiusX="0.75" RadiusY="0.75">
-                                    <RadialGradientBrush.RelativeTransform>
-                                        <TransformGroup>
-                                            <RotateTransform Angle="90" CenterX="0.5" CenterY="0.5" />
-                                            <TranslateTransform />
-                                        </TransformGroup>
-                                    </RadialGradientBrush.RelativeTransform>
-                                    <GradientStop Color="#33FFFFFF" Offset="0" />
-                                    <GradientStop Color="#AA312dea" Offset="0.66" />
-                                    <GradientStop Color="#FF1a15ff" Offset="1" />
-                                </RadialGradientBrush>
-                            </Ellipse.Fill>
-                        </Ellipse>
-
-
                     </Grid>
-                    <!-- 标识 -->
-                    <Button MouseDoubleClick="Control_OnMouseDoubleClick" Height="10" Width="20" Grid.Column="2"
+                    <!-- 标识,这个不要用处鼠标穿透 -->
+                    <!--
+                    <Button Name="tag" MouseDoubleClick="Control_OnMouseDoubleClick" Height="10" Width="20" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
                             Padding="0"
                             Style="{StaticResource NoneButton}" Cursor="Hand" HorizontalAlignment="Right"
@@ -311,11 +258,11 @@
                                         <GradientStop Color="#ff0000ff" Offset="0.51" />
 
 
-                                        <!--<GradientStop Color="#ffff0000" Offset="0.1" />
+                                        ~1~<GradientStop Color="#ffff0000" Offset="0.1" />
                                     <GradientStop Color="#a0f00000" Offset="0.2" />
                                     <GradientStop Color="#a0f00000" Offset="0.5" />
                                     <GradientStop Color="#88ff0000" Offset="0.5" />
-                                    <GradientStop Color="#99ff0000" Offset="0.9" />-->
+                                    <GradientStop Color="#99ff0000" Offset="0.9" />@1@
 
                                         <GradientStop Color="#ffff0000" Offset="0.49" />
                                         <GradientStop Color="#ffff0000" Offset="0" />
@@ -335,111 +282,14 @@
                             </Viewbox>
                         </Grid>
                     </Button>
-                    <!-- mem -->
-                    <Button x:Name="MemBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="10" Height="50"
-                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="2"
-                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Margin="0,0,10.5,-0.8"
-                            Style="{StaticResource NoneButton}" Cursor="Hand">
-                        <Grid VerticalAlignment="Bottom">
-                            <Rectangle Stroke="Transparent" Height="50" Width="12" Cursor="Hand"
-                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
-                                       StrokeThickness="0">
-                                <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50"
-                                                         SpreadMethod="Pad">
-                                        <LinearGradientBrush.RelativeTransform>
-                                            <TransformGroup>
-                                                <RotateTransform Angle="0" CenterX="0" CenterY="0" />
-                                                <TranslateTransform />
-                                            </TransformGroup>
-                                        </LinearGradientBrush.RelativeTransform>
+                    -->
 
 
-                                        <GradientStop Color="#f00" Offset="0" />
-                                        <GradientStop Color="#ef0010" Offset=".09" />
-                                        <GradientStop Color="#fff" Offset=".1" />
-                                        <GradientStop Color="#df0020" Offset=".12" />
-                                        <GradientStop Color="#af0050" Offset=".48" />
-                                        <GradientStop Color="#800080" Offset=".5" />
-                                        <GradientStop Color="#5000af" Offset=".52" />
-                                        <GradientStop Color="#00f" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Rectangle.Fill>
-
-                            </Rectangle>
-                            <Viewbox>
-                                <TextBlock x:Name="MemStr" FontSize="13" Width="8" TextWrapping="Wrap"
-                                           Foreground="#ffff" HorizontalAlignment="Stretch">
-                                    100
-                                    <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2"
-                                                          ShadowDepth="1" Opacity="1" Direction="0" />
-                                    </TextBlock.Effect>
-                                </TextBlock>
-                            </Viewbox>
-
-
-                        </Grid>
-
-                    </Button>
-                    <!-- mem -->
-                    <Button x:Name="GpuMemBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="11" Height="50"
-                            HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="2"
-                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Margin="0,8.7,-0.5,0"
-                            Style="{StaticResource NoneButton}" Cursor="Hand">
-                        <Grid VerticalAlignment="Bottom">
-                            <Rectangle Stroke="Transparent" Height="50"
-                                       Width="{Binding ElementName=GpuMemBtn,Path=Width}" Cursor="Hand"
-                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
-                                       StrokeThickness="0">
-                                <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50"
-                                                         SpreadMethod="Pad">
-                                        <LinearGradientBrush.RelativeTransform>
-                                            <TransformGroup>
-                                                <RotateTransform Angle="180" CenterX="5" CenterY="25" />
-                                                <TranslateTransform />
-                                            </TransformGroup>
-                                        </LinearGradientBrush.RelativeTransform>
-
-
-                                        <GradientStop Color="#f00" Offset="0" />
-                                        <GradientStop Color="#ef0010" Offset=".09" />
-                                        <GradientStop Color="#fff" Offset=".1" />
-                                        <GradientStop Color="#df0020" Offset=".12" />
-                                        <GradientStop Color="#af0050" Offset=".48" />
-                                        <GradientStop Color="#800080" Offset=".5" />
-                                        <GradientStop Color="#5000af" Offset=".52" />
-                                        <GradientStop Color="#00f" Offset="1" />
-                                    </LinearGradientBrush>
-                                </Rectangle.Fill>
-                                <Rectangle.Effect>
-                                    <DropShadowEffect Color="#ff00" BlurRadius="5" ShadowDepth="5"
-                                                      Opacity="1" Direction="315" />
-                                </Rectangle.Effect>
-                            </Rectangle>
-                            <Viewbox>
-                                <TextBlock x:Name="GpuMemStr" FontSize="13" Width="8" TextWrapping="Wrap"
-                                           Foreground="#ffff" HorizontalAlignment="Stretch">
-                                    100
-                                    <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="GpuMemStrShadow" Color="#f000" BlurRadius="2"
-                                                          ShadowDepth="1" Opacity="1" Direction="0" />
-                                    </TextBlock.Effect>
-                                </TextBlock>
-                            </Viewbox>
-
-
-                        </Grid>
-
-                    </Button>
                     <!-- disk -->
-                    <Button x:Name="DiskBtn" MouseDoubleClick="Control_OnMouseDoubleClick" Width="100" Height="7"
+                    <Button x:Name="DiskBtn" Width="100" Height="7"
                             HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Margin="-19,0,0,0" Padding="0"
+                            Margin="0,0,0,0" Padding="0"
                             Style="{StaticResource NoneButton}" Cursor="Hand">
                         <Grid VerticalAlignment="Bottom" HorizontalAlignment="Stretch" Margin="0,0,0,0">
                             <Rectangle Stroke="Transparent" Height="10" Width="100" Cursor="Hand"
@@ -501,8 +351,207 @@
 
                 </Grid>
 
-            </Viewbox>
 
+            </Viewbox>
+            <Viewbox Grid.Column="1" VerticalAlignment="Top" HorizontalAlignment="Right" >
+                <Viewbox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="打开主页" Click="ShowItem_OnClick"></MenuItem>
+                        <MenuItem Header="动态桌面" PreviewMouseLeftButtonUp="WallPaperItem_OnClick"
+                                  PreviewMouseRightButtonUp="UIElement_OnPreviewMouseRightButtonUp">
+                        </MenuItem>
+                        <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
+                        <MenuItem Name="TranslateMenuItem" Header="开启翻译" Click="TranslateItemOnClick"></MenuItem>
+                        <MenuItem Header="窗口">
+                            <MenuItem Name="ChangeSizeMenuItem" Header="变更窗口大小"
+                                      Click="ChangeSizeMenuItem_OnClickItemOnClick">
+                            </MenuItem>
+                            <MenuItem Header="任务管理器" Click="TaskmgrItem_OnClick"></MenuItem>
+                            <MenuItem Header="隐藏/恢复" Click="HideItem_OnClick"></MenuItem>
+                            <MenuItem Header="挂起/恢复" Click="PauseItem_OnClick"></MenuItem>
+                            <!-- <MenuItem Header="恢复" Click="ResumItem_OnClick"></MenuItem> -->
+                            <MenuItem Header="放大/缩小" Click="ZoomItem_OnClick"></MenuItem>
+                            <MenuItem Header="刷新时间" Click="SleepItem_OnClick"></MenuItem>
+                        </MenuItem>
+
+                        <!-- <MenuItem Name="TranslateShowMenuItem" Header="显示翻译" Click="TranslateShowItemOnClick"></MenuItem> -->
+                        <!-- <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem> -->
+                        <MenuItem Header="其他">
+                            <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
+                            <MenuItem Header="显示电源" Click="PowerItem_OnClick"></MenuItem>
+                        </MenuItem>
+                        <MenuItem Header="fps">
+                            <MenuItem Header="中心放大" Name="CentZoom" PreviewMouseDown="CentZomm_OnItemClick"></MenuItem>
+                            <MenuItem Header="中心准星" Name="Crosshair" PreviewMouseDown="Crosshair_OnItemClick"></MenuItem>
+                        </MenuItem>
+                        <MenuItem Header="img">
+                            <MenuItem Header="ico转换" Click="IcoItem_OnClick"></MenuItem>
+                            <MenuItem Header="Gif转联系表" Click="OgvItem_OnClick"></MenuItem>
+                            <MenuItem Header="Fla转联系表" Click="FlaItem_OnClick"></MenuItem>
+                            <MenuItem Header="影片转联系表" Click="OgvItem_OnClick"></MenuItem>
+                        </MenuItem>
+                        <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
+                        <MenuItem Header="虚拟显卡" Click="VddItem_OnClick"></MenuItem>
+                        <MenuItem Header="表格" Click="From_OnClick"></MenuItem>
+
+
+                        <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
+                        <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
+                        <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>
+                        <MenuItem Header="退出" Click="ExitItem_OnClick"></MenuItem>
+                    </ContextMenu>
+                </Viewbox.ContextMenu>
+                <!-- 标识,这个不要用处鼠标穿透 -->
+                <Grid Height="60" Width="20" HorizontalAlignment="Right" VerticalAlignment="Bottom"  PreviewMouseMove="Tag_OnPreviewMouseMove">
+                    <Button Name="tag" Height="10" Width="20" Grid.Column="2"
+                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
+                            Padding="0" MouseDoubleClick="Control_OnMouseDoubleClick"
+                            
+                            Style="{StaticResource NoneButton}" Cursor="Hand" HorizontalAlignment="Right"
+                            VerticalAlignment="Top">
+                        <Grid>
+
+
+                            <Rectangle Name="StatStrRect" Stroke="Transparent" Width="20" Height="10"
+                                       Cursor="Hand"
+                                       ToolTip="speed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,0"
+                                                         SpreadMethod="Pad"
+                                                         ColorInterpolationMode="ScRgbLinearInterpolation">
+                                        <GradientStop Color="#ff0000ff" Offset="1" />
+                                        <GradientStop Color="#ff0000ff" Offset="0.51" />
+
+
+                                        <!--<GradientStop Color="#ffff0000" Offset="0.1" />
+                                    <GradientStop Color="#a0f00000" Offset="0.2" />
+                                    <GradientStop Color="#a0f00000" Offset="0.5" />
+                                    <GradientStop Color="#88ff0000" Offset="0.5" />
+                                    <GradientStop Color="#99ff0000" Offset="0.9" />-->
+
+                                        <GradientStop Color="#ffff0000" Offset="0.49" />
+                                        <GradientStop Color="#ffff0000" Offset="0" />
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+
+                            </Rectangle>
+                            <Viewbox>
+                                <TextBlock x:Name="StatStr" FontSize="16"
+                                           Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">
+                                    H
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3"
+                                                          ShadowDepth="0" Opacity="0.8" Direction="0" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Viewbox>
+                        </Grid>
+                    </Button>
+
+                    <!-- mem -->
+                    <Button x:Name="MemBtn" Width="10" Height="50"
+                            HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="2"
+                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
+                            Margin="0,0,10.5,-0.8"
+                            Style="{StaticResource NoneButton}" Cursor="Hand">
+                        <Grid VerticalAlignment="Bottom">
+                            <Rectangle Stroke="Transparent" Height="50" Width="12" Cursor="Hand"
+                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
+                                       StrokeThickness="0">
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50"
+                                                         SpreadMethod="Pad">
+                                        <LinearGradientBrush.RelativeTransform>
+                                            <TransformGroup>
+                                                <RotateTransform Angle="0" CenterX="0" CenterY="0" />
+                                                <TranslateTransform />
+                                            </TransformGroup>
+                                        </LinearGradientBrush.RelativeTransform>
+
+
+                                        <GradientStop Color="#f00" Offset="0" />
+                                        <GradientStop Color="#ef0010" Offset=".09" />
+                                        <GradientStop Color="#fff" Offset=".1" />
+                                        <GradientStop Color="#df0020" Offset=".12" />
+                                        <GradientStop Color="#af0050" Offset=".48" />
+                                        <GradientStop Color="#800080" Offset=".5" />
+                                        <GradientStop Color="#5000af" Offset=".52" />
+                                        <GradientStop Color="#00f" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+
+                            </Rectangle>
+                            <Viewbox>
+                                <TextBlock x:Name="MemStr" FontSize="13" Width="8" TextWrapping="Wrap"
+                                           Foreground="#ffff" HorizontalAlignment="Stretch">
+                                    100
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect x:Name="MemStrShadow" Color="#f000" BlurRadius="2"
+                                                          ShadowDepth="1" Opacity="1" Direction="0" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Viewbox>
+
+
+                        </Grid>
+
+                    </Button>
+                    <!-- mem -->
+                    <Button x:Name="GpuMemBtn" Width="11" Height="50"
+                            HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="2"
+                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
+                            Margin="0,8.7,-0.5,0"
+                            Style="{StaticResource NoneButton}" Cursor="Hand">
+                        <Grid VerticalAlignment="Bottom">
+                            <Rectangle Stroke="Transparent" Height="50"
+                                       Width="{Binding ElementName=GpuMemBtn,Path=Width}" Cursor="Hand"
+                                       HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="0"
+                                       StrokeThickness="0">
+                                <Rectangle.Fill>
+                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,50"
+                                                         SpreadMethod="Pad">
+                                        <LinearGradientBrush.RelativeTransform>
+                                            <TransformGroup>
+                                                <RotateTransform Angle="180" CenterX="5" CenterY="25" />
+                                                <TranslateTransform />
+                                            </TransformGroup>
+                                        </LinearGradientBrush.RelativeTransform>
+
+
+                                        <GradientStop Color="#f00" Offset="0" />
+                                        <GradientStop Color="#ef0010" Offset=".09" />
+                                        <GradientStop Color="#fff" Offset=".1" />
+                                        <GradientStop Color="#df0020" Offset=".12" />
+                                        <GradientStop Color="#af0050" Offset=".48" />
+                                        <GradientStop Color="#800080" Offset=".5" />
+                                        <GradientStop Color="#5000af" Offset=".52" />
+                                        <GradientStop Color="#00f" Offset="1" />
+                                    </LinearGradientBrush>
+                                </Rectangle.Fill>
+                                <Rectangle.Effect>
+                                    <DropShadowEffect Color="#ff00" BlurRadius="5" ShadowDepth="5"
+                                                      Opacity="1" Direction="315" />
+                                </Rectangle.Effect>
+                            </Rectangle>
+                            <Viewbox>
+                                <TextBlock x:Name="GpuMemStr" FontSize="13" Width="8" TextWrapping="Wrap"
+                                           Foreground="#ffff" HorizontalAlignment="Stretch">
+                                    100
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect x:Name="GpuMemStrShadow" Color="#f000" BlurRadius="2"
+                                                          ShadowDepth="1" Opacity="1" Direction="0" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Viewbox>
+
+
+                        </Grid>
+
+                    </Button>
+
+                </Grid>
+
+            </Viewbox>
             <!-- Viewport3D is the rendering surface. -->
 
         </Grid>

@@ -7,27 +7,25 @@ using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using System.Net;
-using System.Net.Mime;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
+using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Forms;
 using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
-using System.Net.WebSockets;
-using System.Threading.Tasks;
-using System.Windows.Automation;
-using System.Windows.Controls;
-using System.Windows.Forms;
-using System.Windows.Media.Effects;
+using System.Windows.Threading;
 using holey.Dialog;
 using holey.Page;
+using ParsecVDisplay;
 using YiKits;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
@@ -39,6 +37,7 @@ using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
 using Point = System.Windows.Point;
+using ProgressBar = System.Windows.Controls.ProgressBar;
 using Size = System.Drawing.Size;
 
 namespace holey;
@@ -302,7 +301,7 @@ public partial class PetWindow : Window
         if (_clipboard == 1 || _translate == 1)
         {
             YiKit.ClipboardMonitor(this, OnClipboardUpdated);
-            clbname = YiKit.IniGet("clbname", "ini", def: System.Environment.UserName);
+            clbname = YiKit.IniGet("clbname", "ini", def: Environment.UserName);
             lastClipboardText = YiKit.GetClipboardText();
             StartWb();
 
@@ -688,9 +687,98 @@ public partial class PetWindow : Window
 
     private void PetWindow_OnPreviewMouseMove(object sender, MouseEventArgs e)
     {
-        if (e.LeftButton == MouseButtonState.Pressed)
+        // YiKit.Print(e.ToString());
+    }
+
+    private bool isThrough = false;
+    private DispatcherTimer _releaseTimer;
+
+    /// <summary>
+    /// 设置窗口是否开启鼠标穿透
+    /// </summary>
+    /// <param name="enable">是否开启穿透</param>
+    /// <param name="autoReleaseAfterMs">开启后多少毫秒自动解除，null 表示不自动解除</param>
+    public void SetWindowMouseThrough(bool enable, int? autoReleaseAfterMs = null)
+    {
+        // 如果状态没有变化，直接返回
+        if (isThrough == enable)
+            return;
+        if (enable)
         {
-            DragMove();
+            ViewboxPet.Opacity = 0.1;
+            GpuMemBtn.Opacity = 0.1;
+            MemBtn.Opacity = 0.1;
+        }
+
+        var helper = new System.Windows.Interop.WindowInteropHelper(this);
+        IntPtr hwnd = helper.Handle;
+
+        const int GWL_EXSTYLE = -20;
+        const uint WS_EX_TRANSPARENT = 0x00000020;
+
+        uint currentStyle;
+
+        if (IntPtr.Size == 8)
+        {
+            currentStyle = (uint)YiKit.GetWindowLongPtr(hwnd, GWL_EXSTYLE);
+        }
+        else
+        {
+            currentStyle = (uint)YiKit.GetWindowLong(hwnd, GWL_EXSTYLE);
+        }
+
+        if (enable)
+        {
+            currentStyle |= WS_EX_TRANSPARENT;
+        }
+        else
+        {
+            currentStyle &= ~WS_EX_TRANSPARENT;
+        }
+
+        if (IntPtr.Size == 8)
+        {
+            YiKit.SetWindowLongPtr(hwnd, GWL_EXSTYLE, new IntPtr(currentStyle));
+        }
+        else
+        {
+            YiKit.SetWindowLong(hwnd, GWL_EXSTYLE, (int)currentStyle);
+        }
+
+        isThrough = enable;
+
+        // 超时释放逻辑
+        if (autoReleaseAfterMs.HasValue && enable)
+        {
+            if (_releaseTimer == null)
+            {
+                _releaseTimer = new DispatcherTimer();
+                _releaseTimer.Tick += (s, e) =>
+                {
+                    if (isMouseInside)
+                    {
+                    }
+                    else
+                    {
+                        _releaseTimer.Stop();
+                        SetWindowMouseThrough(false); // 自动关闭穿透
+                        if (isMouseInside) return;
+                        ViewboxPet.Opacity = 1;
+                        MemBtn.Opacity = 1;
+                        GpuMemBtn.Opacity = 1;
+
+
+                    }
+                };
+            }
+
+            _releaseTimer.Interval = TimeSpan.FromMilliseconds(autoReleaseAfterMs.Value);
+            _releaseTimer.Stop(); // 防止重复启动
+            _releaseTimer.Start();
+        }
+        else if (!enable)
+        {
+            _releaseTimer?.Stop(); // 关闭穿透时停止定时器
         }
     }
 
@@ -836,7 +924,7 @@ public partial class PetWindow : Window
 
     private List<string> ShowInputDialog(string name, params string[] names)
     {
-        YiKits.Dialog.InputDialog inputDialog = new InputDialog(name, names);
+        InputDialog inputDialog = new InputDialog(name, names);
         List<string> strs = null;
 
         inputDialog.Result += (sender, _) => { strs = sender as List<string>; };
@@ -901,7 +989,7 @@ public partial class PetWindow : Window
         }
     }
 
-    private List<string> suspendsList = new List<string>();
+    private List<string> suspendsList = [];
 
     public void Suspend()
     {
@@ -1953,17 +2041,17 @@ public partial class PetWindow : Window
         //ffmpeg -i input.ogv -vf fps=30 -c:v png -pix_fmt rgba output_%04d.png
 
 
-        string type = "ogv";
+        string type = "媒体文件";
         if ((sender as MenuItem).Header.ToString().Contains("Gif")) type = "gif";
-
         List<string> strs = YiKit.ShowInputDialog(
             type + "转png联系表",
-            type + "文件位置（可为空）：",
+            "媒体类型（gif忽略此项）:ogv",
+             "文件位置（可为空）：",
+            "文件夹位置（和文件二选一）：",
             "列数(自动计算请填0):0",
             "目标宽度等比缩放:256",
-            type + "帧率:24",
-            type + "文件夹位置（和文件二选一）：",
-            type + "删除黑色背景强度:0.005",
+            "帧率:24",
+             "删除黑色背景强度:0.005",
             "是否删除缓存图片："
         );
         if (strs == null || strs.Count < 1)
@@ -1971,11 +2059,13 @@ public partial class PetWindow : Window
             YiKit.ShowToastError("参数错误");
             return;
         }
+        if ((sender as MenuItem).Header.ToString().Contains("Gif")) type = "gif";
+        else type=strs[0];
 
-        string ogvFilePath = strs[0].Trim();
-        int columns = int.TryParse(strs[1], out var col) ? col : 0;
-        int targetWidth = int.TryParse(strs[2], out var width) ? width : 256;
-        int fps = int.TryParse(strs[3], out var f) ? f : 30;
+        string ogvFilePath = strs[1].Trim();
+        int columns = int.TryParse(strs[3], out var col) ? col : 0;
+        int targetWidth = int.TryParse(strs[4], out var width) ? width : 256;
+        int fps = int.TryParse(strs[5], out var f) ? f : 30;
         string color = "black";
 
         double delDark = 0.005;
@@ -1986,11 +2076,11 @@ public partial class PetWindow : Window
             color = colors[0];
         }
         else
-            delDark = double.TryParse(strs[5], out var d) ? d : 0.005;
+            delDark = double.TryParse(strs[6], out var d) ? d : 0.005;
 
-        string ogvFolder = strs[4].Trim();
+        string ogvFolder = strs[2].Trim();
         bool isDel = false;
-        bool.TryParse(strs[6], out isDel);
+        bool.TryParse(strs[7], out isDel);
 
         YiKit.RunThread(async s =>
         {
@@ -2071,7 +2161,7 @@ public partial class PetWindow : Window
                         ffmpegArgs =
                             $"-i \"{ogvFile}\" -vf \"scale={targetWidth}:-1,format=rgba,colorkey={color}:{delDark}:0.1\" \"{Path.Combine(outputDir, "frame_%04d.png")}\"";
                     }
-                    else if (type.Equals("ogv"))
+                    else 
                     {
                         ffmpegArgs =
                             $"-i \"{ogvFile}\" -vf \"scale={targetWidth}:-1,format=rgba,colorkey={color}:{delDark}:0.1,fps={fps}\"  \"{Path.Combine(outputDir, "frame_%04d.png")}\"";
@@ -2121,10 +2211,10 @@ public partial class PetWindow : Window
         List<string> strs = YiKit.ShowInputDialog(
             "fla转png联系表",
             "fla文件位置（可为空）：",
+            "fla文件夹位置（和文件二选一）：",
             "列数(自动计算请填0)：",
             "目标宽度(等比缩放)：",
-            "Animate.exe文件位置：",
-            "fla文件夹位置（和文件二选一）："
+            "Animate.exe文件位置："
         );
 
 
@@ -2133,13 +2223,13 @@ public partial class PetWindow : Window
             YiKit.RunThread((s) =>
             {
                 string flaFile = strs[0]; // 单个 .fla 文件（可为空）
-                string folderPath = strs[4]; // fla文件夹位置（可能为空）
+                string folderPath = strs[1]; // fla文件夹位置（可能为空）
                 int columns = 0;
-                if (strs[1] != null && !string.IsNullOrEmpty(strs[1]))
+                if (strs[2] != null && !string.IsNullOrEmpty(strs[2]))
                 {
                     try
                     {
-                        columns = int.Parse(strs[1]);
+                        columns = int.Parse(strs[2]);
                     }
                     catch (Exception)
                     {
@@ -2147,8 +2237,8 @@ public partial class PetWindow : Window
                     }
                 }
 
-                int targetWidth = int.Parse(strs[2]);
-                string animateExe = strs[3];
+                int targetWidth = int.Parse(strs[3]);
+                string animateExe = strs[4];
 
                 // 准备要处理的 .fla 文件列表
                 List<string> flaFilesToProcess = new List<string>();
@@ -2488,7 +2578,7 @@ public partial class PetWindow : Window
         if (!Directory.Exists(outputDirectory))
             Directory.CreateDirectory(outputDirectory);
 
-        var extractedFiles = new System.Collections.Generic.List<string>();
+        var extractedFiles = new List<string>();
 
         using (var archive = ZipFile.OpenRead(zipFilePath))
         {
@@ -2525,9 +2615,70 @@ public partial class PetWindow : Window
         while (File.Exists(path))
         {
             path = Path.Combine(directory, $"{fileName}({count}){extension}");
+
             count++;
         }
 
         return Path.GetFileName(path);
+    }
+
+    private void MainStr_OnMouseEnter(object sender, MouseEventArgs e)
+    {
+        MainStr.Opacity = 0.1;
+    }
+
+    private void MainStr_OnMouseLeave(object sender, MouseEventArgs e)
+    {
+        MainStr.Opacity = 1;
+    }
+
+    private void VddItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        // Program.StartVdd([" -cli"]);
+        VddMainWindow vdd = new VddMainWindow();
+        vdd.Show();
+        CLI.Execute([" -cli"]);
+        new Tray();
+    }
+
+    private void ViewboxPet_OnMouseDown(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+    }
+
+    private bool isMoveing = false;
+
+    private void Tag_OnPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            isMoveing = true;
+            DragMove();
+        }
+        else if (isMoveing == true) isMoveing = false;
+    }
+
+    bool isMouseInside = false;
+
+    private void ViewboxPet_OnMouseLeave(object sender, MouseEventArgs e)
+    {
+        isMouseInside = false;
+    }
+
+
+    private void MenuItemGrid_OnPreviewMouseMove(object sender, MouseEventArgs e)
+    {
+        isMouseInside = true;
+        if (isMoveing)
+            return;
+        SetWindowMouseThrough(true, 5000);
+    }
+
+
+    private void From_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (RowAndCol.me == null)
+            new RowAndCol();
+        RowAndCol.me.Show();
     }
 }
