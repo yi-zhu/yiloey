@@ -1,4 +1,6 @@
 using System;
+using System.Collections;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -7,6 +9,7 @@ using System.Drawing.Imaging;
 using System.Globalization;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
@@ -14,6 +17,7 @@ using System.Net.WebSockets;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Security.Principal;
+using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
@@ -25,7 +29,9 @@ using System.Windows.Media;
 using System.Windows.Threading;
 using holey.Dialog;
 using holey.Page;
-using ParsecVDisplay;
+using holey.Vdd;
+using holey.Vdd.Vdd;
+using holey.WebView;
 using YiKits;
 using Application = System.Windows.Application;
 using Clipboard = System.Windows.Clipboard;
@@ -33,6 +39,7 @@ using Color = System.Drawing.Color;
 using Control = System.Windows.Forms.Control;
 using Image = System.Drawing.Image;
 using InputDialog = YiKits.Dialog.InputDialog;
+using Label = System.Windows.Forms.Label;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
@@ -103,10 +110,6 @@ public partial class PetWindow : Window
             this.Height = h * _zoom;
         }
 
-        // YiKit.Print(Left);
-        // YiKit.Print(Width);
-        // YiKit.Print(Top);
-        // YiKit.GetAllCate();
         try
         {
             _sleep = (int)(Convert.ToSingle(YiKit.IniGet("sleep", "ini", def: "1")) * 1000);
@@ -116,37 +119,23 @@ public partial class PetWindow : Window
             _sleep = 1000;
         }
 
-        if (_sleep <= 1)
-        {
-            _sleep = 1000;
-        }
+        if (_sleep <= 1) _sleep = 1000;
 
         r = SystemParameters.WorkArea;
 
         l = YiKit.IniGetDouble("petleft", r.Width - Width - 10);
         t = YiKit.IniGetDouble("pettop", r.Bottom - Height - 10);
 
-        if (l >= r.Width)
-        {
-            l = r.Width - Width - 10;
-        }
-
-        if (t >= r.Height)
-        {
-            t = r.Bottom - Height - 10;
-        }
+        if (l >= r.Width || l < -10) l = r.Width - Width - 10;
+        if (t >= r.Height || t < -10) t = r.Bottom - Height - 10;
 
         IsVpn = YiKit.IniGetBool("isvpn", true);
 
         if (this.Left != l)
-        {
             Left = l;
-        }
 
         if (this.Top != t)
-        {
             Top = t;
-        }
 
         //屏蔽贴边放大
         this.ResizeMode = ResizeMode.NoResize;
@@ -159,23 +148,14 @@ public partial class PetWindow : Window
             t = this.Top;
         };
 
-
         PreviewMouseLeftButtonUp += (sender, args) =>
         {
             // this.ResizeMode = ResizeMode.CanResize;
-
             if (this.Left != l)
-            {
                 YiKit.IniWrite("petleft", this.Left.ToString(), "ini");
-            }
 
             if (this.Top != t)
-            {
                 YiKit.IniWrite("pettop", this.Top.ToString(), "ini");
-            }
-
-
-            ;
         };
 
 
@@ -188,8 +168,6 @@ public partial class PetWindow : Window
                 (Control.ModifierKeys & Keys.Control) == Keys.Control)
             {
                 isTranslateing = true;
-
-                // YiKit.Print("按下了Ctrl+alt+Q:");
             }
             else if (e.KeyValue == (int)Keys.Q && (int)Control.ModifierKeys == (int)Keys.Control)
             {
@@ -277,6 +255,7 @@ public partial class PetWindow : Window
         LoadPet();
         if (YiKit.IniGetInt("wallpaper", 0) == 1)
         {
+            WallPaperMenuItem.IsChecked = true;
             new WallPaper();
             WallPaper.me.Show();
             WallPaper.me.Activate();
@@ -287,8 +266,15 @@ public partial class PetWindow : Window
             CentZomm_OnItemClick(CentZoom, null);
         if (YiKit.IniGet("crosshair", def: "0").Equals("1"))
             Crosshair_OnItemClick(Crosshair, null);
+        //VDD自动启动
+        VDD = YiKit.IniGetBool("vdd", def: false);
+        VddItem.IsChecked = VDD;
+        if (VDD) ProgramVdd.StartVdd(["-a"], true);
+
+        AutoStartMenuItem.IsChecked = YiKit.IniGetBool("autostart", false);
     }
 
+    public static bool VDD = false;
 
     protected override void OnSourceInitialized(EventArgs e)
     {
@@ -766,8 +752,6 @@ public partial class PetWindow : Window
                         ViewboxPet.Opacity = 1;
                         MemBtn.Opacity = 1;
                         GpuMemBtn.Opacity = 1;
-
-
                     }
                 };
             }
@@ -1145,6 +1129,7 @@ public partial class PetWindow : Window
         {
             _clipboard = 0;
             ((sender as MenuItem)!).Header = "已关闭剪切板监听";
+            ((sender as MenuItem)!).IsChecked = false;
             YiKit.CloseClipboardMonitor(OnClipboardUpdated);
             YiKit.IniWrite("clipboard", area: "ini", value: 0 + "");
             if (YiWscClient != null && YiWscClient.State == WebSocketState.Open)
@@ -1260,7 +1245,7 @@ public partial class PetWindow : Window
                 isTranslateing = false;
                 return;
             }
-            else if (text == lastClipboardText)
+            else if (text == lastClipboardText || text.Length > 65535)
             {
                 return;
             }
@@ -1289,16 +1274,20 @@ public partial class PetWindow : Window
         YiWscClient?.Close();
     }
 
+    private string[] yiwsUrl = ["ws://27.221.101.137:10011/", "ws://10.10.107.23:10011/", "ws://172.27.1.2:10011/"];
+    private int yiwsUrlIndex = 0;
+
     public void StartWb()
     {
         if (YiWscClient != null)
         {
+            YiWscClient.Reconnect();
             return;
         }
 
         YiKit.RunThread((state =>
         {
-            YiWscClient = new YiWebSocketClient("ws://27.221.101.137:10011/", clbname);
+            YiWscClient = new YiWebSocketClient(yiwsUrl, clbname);
             // YiWscClient = new YiWebSocketClient("ws://172.27.1.3:10011/", clbname);
             YiWscClient.OnOpen += YiWscClientOnOpen;
             YiWscClient.OnMessage += YiWscClientOnMessage;
@@ -1310,6 +1299,13 @@ public partial class PetWindow : Window
 
     private void YiWscClientOnError(object sender, Exception ex)
     {
+        YiKit.RunOnUIThread(() =>
+        {
+            ClipboardMenuItem.Header = "剪切板异常";
+            ClipboardMenuItem.IsChecked = false;
+            yiwsUrlIndex = new Random().Next(0, yiwsUrl.Length - 1);
+            ClipboardMenuItem.ToolTip = ex.Message;
+        });
     }
 
     private void YiWscClientOnClose(object sender, EventArgs e)
@@ -1317,6 +1313,7 @@ public partial class PetWindow : Window
         YiKit.RunOnUIThread(() =>
         {
             ClipboardMenuItem.Header = "剪切板已关闭";
+            ClipboardMenuItem.IsChecked = false;
             YiKit.ShowToastWaring("剪切板共享已关闭");
         });
     }
@@ -1383,12 +1380,14 @@ public partial class PetWindow : Window
             if (_clipboard == 1)
             {
                 ClipboardMenuItem.Header = "已开启剪切板";
+                ClipboardMenuItem.IsChecked = true;
                 msg += "剪切板共享 ";
             }
 
             if (_translate == 1)
             {
                 TranslateMenuItem.Header = "已开启翻译";
+                TranslateMenuItem.IsChecked = true;
                 msg += " 实时翻译翻译";
             }
 
@@ -1519,6 +1518,7 @@ public partial class PetWindow : Window
             isTranslate = false;
             YiKit.IniWrite("translate", "0", "ini");
             ((sender as MenuItem)!).Header = "翻译已关闭";
+            ((sender as MenuItem)!).IsChecked = false;
         }
         else
         {
@@ -1533,6 +1533,7 @@ public partial class PetWindow : Window
 
             YiKit.IniWrite("translate", "1", "ini");
             ((sender as MenuItem)!).Header = "已开启翻译";
+            ((sender as MenuItem)!).IsChecked = true;
         }
     }
 
@@ -1575,6 +1576,7 @@ public partial class PetWindow : Window
             WallPaper.me.Show();
             WallPaper.me.Activate();
             YiKit.IniWrite("wallpaper", "1");
+            (sender as MenuItem).IsChecked = true;
             _isWallPage = true;
             if (!string.IsNullOrEmpty(YiKit.IniGet("Source", "WallPaper")))
             {
@@ -1586,6 +1588,7 @@ public partial class PetWindow : Window
         {
             _isWallPage = false;
             YiKit.IniWrite("wallpaper", "0");
+            (sender as MenuItem).IsChecked = false;
             WallPaper.me.Close();
             WallPaper.me = null;
         }
@@ -2046,12 +2049,12 @@ public partial class PetWindow : Window
         List<string> strs = YiKit.ShowInputDialog(
             type + "转png联系表",
             "媒体类型（gif忽略此项）:ogv",
-             "文件位置（可为空）：",
+            "文件位置（可为空）：",
             "文件夹位置（和文件二选一）：",
             "列数(自动计算请填0):0",
             "目标宽度等比缩放:256",
             "帧率:24",
-             "删除黑色背景强度:0.005",
+            "删除黑色背景强度:0.005",
             "是否删除缓存图片："
         );
         if (strs == null || strs.Count < 1)
@@ -2059,8 +2062,9 @@ public partial class PetWindow : Window
             YiKit.ShowToastError("参数错误");
             return;
         }
+
         if ((sender as MenuItem).Header.ToString().Contains("Gif")) type = "gif";
-        else type=strs[0];
+        else type = strs[0];
 
         string ogvFilePath = strs[1].Trim();
         int columns = int.TryParse(strs[3], out var col) ? col : 0;
@@ -2161,7 +2165,7 @@ public partial class PetWindow : Window
                         ffmpegArgs =
                             $"-i \"{ogvFile}\" -vf \"scale={targetWidth}:-1,format=rgba,colorkey={color}:{delDark}:0.1\" \"{Path.Combine(outputDir, "frame_%04d.png")}\"";
                     }
-                    else 
+                    else
                     {
                         ffmpegArgs =
                             $"-i \"{ogvFile}\" -vf \"scale={targetWidth}:-1,format=rgba,colorkey={color}:{delDark}:0.1,fps={fps}\"  \"{Path.Combine(outputDir, "frame_%04d.png")}\"";
@@ -2634,11 +2638,28 @@ public partial class PetWindow : Window
 
     private void VddItem_OnClick(object sender, RoutedEventArgs e)
     {
+        var item = sender as MenuItem;
+        if (item != null)
+        {
+            item.IsChecked = !item.IsChecked;
+            YiKit.IniWrite("vdd", item.IsChecked.ToString());
+            if (item.IsChecked)
+            {
+                if (Core.GetDisplays().Count == 0)
+                {
+                    ProgramVdd.StartVdd(["-a"], true);
+                }
+            }
+        }
+    }
+
+    private void VddItem_OnRClick(object sender, RoutedEventArgs e)
+    {
         // Program.StartVdd([" -cli"]);
         VddMainWindow vdd = new VddMainWindow();
         vdd.Show();
-        CLI.Execute([" -cli"]);
-        new Tray();
+        // CLI.Execute([" -cli"]);
+        // new Tray();
     }
 
     private void ViewboxPet_OnMouseDown(object sender, MouseButtonEventArgs e)
@@ -2680,5 +2701,797 @@ public partial class PetWindow : Window
         if (RowAndCol.me == null)
             new RowAndCol();
         RowAndCol.me.Show();
+    }
+
+    private const int WM_SYSCOMMAND = 0x0112;
+    private const int SC_MONITORPOWER = 0xF170;
+
+    private void CloseMonItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog("定时关闭显示器", "指定时间", "等待时间");
+        if (null == strs || strs.Count < 2)
+        {
+            return;
+        }
+
+        string zdtime = strs[0];
+        string ddtime = strs[1];
+
+        // -1：关闭显示器
+        // 0：打开显示器
+        // 1：低功耗模式
+        // 2：完全关闭显示器
+        System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ =>
+        {
+            // 1. 先声明：我们正在使用显示器（防止系统干扰）
+            YiKit.SetThreadExecutionState(YiKit.EXECUTION_STATE.ES_DISPLAY_REQUIRED |
+                                          YiKit.EXECUTION_STATE.ES_CONTINUOUS);
+            YiKit.ShowToast("sdsds");
+            // 2. 发送关闭显示器命令
+            // YiKit.SendMessage((IntPtr)0xFFFF, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)(-1));
+            YiKit.SendMessage(IntPtr.Zero, WM_SYSCOMMAND, (IntPtr)SC_MONITORPOWER, (IntPtr)(2));
+
+            // 3. 释放状态（可选，但推荐）
+            YiKit.SetThreadExecutionState(YiKit.EXECUTION_STATE.ES_CONTINUOUS);
+        });
+    }
+
+    private async void CalcLteFrom_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog("LTECDR计算", "选择文件位置", "选择文件夹位置", "分隔符(\t)");
+        if (null == strs || strs.Count < 2)
+        {
+            return;
+        }
+
+        string group =
+            "车管所(51024989)堵截组(51024972)高架路大队(51025906)高架路大队备用组(51025908)高速备用组(51024984)高速支队(51024983)高新备用组(51024986)高新大队(51024985)槐荫备用组(51024993)槐荫大队(51024992)济阳大队(51024982)交警108组(51024968)警卫组(51024967)警务保障组(51024969)救援备用组(51024987)救援中心(51024977)历城备用组(51025910)历城大队(51025909)历下备用组(51024974)历下大队(51024973)南山备用组(51024971)南山大队(51024970)平阴大队(51024976)起步区大队(51025905)起步区大队备用组(51025907)商河大队(51024975)市中备用组(51024979)市中大队(51024978)天桥备用组(51024991)天桥大队(51024990)章丘大队(51024981)长清大队(51024980)支队备用组1(51024994)支队备用组10(51025904)支队备用组2(51024995)支队备用组3(51024996)支队备用组4(51024997)支队备用组5(51024998)支队备用组6(51024999)支队备用组7(51025901)支队备用组8(51025902)支队备用组9(51025903)直属大队(51024988)";
+
+        var gs = group.Split(')');
+        Dictionary<string, string> group_str = new Dictionary<string, string>();
+        foreach (var item in gs)
+        {
+            if (item.Split('(').Length > 1)
+            {
+                string id = item.Split('(')[1];
+                string name = item.Split('(')[0];
+                group_str[id] = name;
+            }
+        }
+
+        string filePath = strs[0];
+        string dirPath = strs[1];
+        string delimiter = YiKit.ParseEscapeSequences(strs[2]);
+
+        YiKit.ShowToast("开始计算，请稍候...");
+
+        try
+        {
+            // ✅ 关键：使用扩展类型接收结果，不要丢弃 Caller 数据
+            var resultExtended = await Task.Run(() => AnalyzeByCallee_Extended(dirPath, filePath, group_str));
+
+            if (resultExtended != null)
+            {
+                if (string.IsNullOrWhiteSpace(dirPath))
+                    throw new ArgumentException("输出文件路径不能为空", nameof(dirPath));
+
+                string directory = Path.GetDirectoryName(dirPath);
+                if (!string.IsNullOrEmpty(directory) && !Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                // 主输出：组级统计
+                string summaryFile = Path.Combine(dirPath, $"{YiKit.NowD()}.csv");
+                using (var writer = new StreamWriter(summaryFile, false, System.Text.Encoding.UTF8))
+                {
+                    writer.WriteLine($"组号{delimiter}组名{delimiter}次数{delimiter}总计秒");
+                    foreach (var kvp in resultExtended.OrderBy(r => r.Key))
+                    {
+                        var res = kvp.Value;
+                        writer.WriteLine(
+                            $"{kvp.Key}{delimiter}{(group_str.ContainsKey(kvp.Key) ? group_str[kvp.Key] : "")}{delimiter}{res.Count}{delimiter}{res.TotalDurationSeconds}");
+                    }
+                }
+
+                var num = 0;
+                // 详细输出：每个 CALLER 的数据 ✅ 现在能访问 CallerCount 和 CallerDuration
+                string detailFile = Path.Combine(dirPath, $"{YiKit.NowD()}_detail.csv");
+                using (var writer = new StreamWriter(detailFile, false, System.Text.Encoding.UTF8))
+                {
+                    writer.WriteLine($"组号{delimiter}组名{delimiter}CALLER{delimiter}呼叫次数{delimiter}累计时长(秒)");
+                    foreach (var kvp in resultExtended.OrderBy(r => r.Key))
+                    {
+                        var extended = kvp.Value; // 直接就是 CallDurationResultExtended
+                        foreach (var caller in extended.CallerCount.Keys)
+                        {
+                            num++;
+                            writer.WriteLine(
+                                $"{kvp.Key}{delimiter}{(group_str.ContainsKey(kvp.Key) ? group_str[kvp.Key] : "")}" +
+                                $"{delimiter}{caller}{delimiter}{extended.CallerCount[caller]}" +
+                                $"{delimiter}{extended.CallerDuration[caller]}");
+                        }
+                    }
+                }
+
+                // 详细输出：每个 CALLER 的数据 ✅ 现在能访问 CallerCount 和 CallerDuration
+                string detailSumFile = Path.Combine(dirPath, $"{YiKit.NowD()}_sum_detail.csv");
+                using (var writer = new StreamWriter(detailSumFile, false, System.Text.Encoding.UTF8))
+                {
+                    Dictionary<string, CallDurationResult> res = new Dictionary<string, CallDurationResult>();
+                    writer.WriteLine($"号码{delimiter}呼叫次数{delimiter}累计时长(秒)");
+                    foreach (var kvp in resultExtended.OrderBy(r => r.Key))
+                    {
+                        var extended = kvp.Value; // 直接就是 CallDurationResultExtended
+                        foreach (var caller in extended.CallerCount.Keys)
+                        {
+                            if (res.ContainsKey(caller))
+                            {
+                                res[caller].Count += extended.CallerCount[caller];
+                                res[caller].TotalDurationSeconds += extended.CallerDuration[caller];
+                            }
+                            else
+                                res[caller] = new CallDurationResult()
+                                {
+                                    Count = extended.CallerCount[caller],
+                                    TotalDurationSeconds = extended.CallerDuration[caller]
+                                };
+                        }
+                    }
+
+                    foreach (var kvp in res)
+                    {
+                        writer.WriteLine(
+                            $"{kvp.Key}{delimiter}{kvp.Value.Count}{delimiter}{kvp.Value.TotalDurationSeconds}");
+                    }
+                }
+
+                MessageBox.Show($"计算完成！计算{lte_all_count}次。\n已生成：\n{summaryFile}\n{detailFile}\n{detailSumFile}", "完成",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"计算出错: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private static long lte_all_count = 0;
+
+// 返回扩展类型，保留 Caller 细节
+    private static Dictionary<string, CallDurationResultExtended> AnalyzeByCallee_Extended(
+        string folderPath, string fire = "", Dictionary<string, string> group_str = null,
+        string[] fileExtensions = null, bool showToast = true)
+    {
+        fileExtensions = fileExtensions ?? new[] { ".txt", ".csv" };
+
+        if (!Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException($"文件夹不存在: {folderPath}");
+
+        var files = new List<string>();
+        if (Directory.Exists(folderPath))
+        {
+            foreach (var file in Directory.GetFiles(folderPath))
+            {
+                string ext = Path.GetExtension(file).ToLower();
+                if (fileExtensions.Contains(ext))
+                {
+                    files.Add(file);
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(fire))
+            files.Add(fire);
+
+        if (files.Count == 0)
+            return new Dictionary<string, CallDurationResultExtended>();
+
+        var allRecords = new ConcurrentBag<CallRecord>();
+        var validCallees = new HashSet<string>();
+        if (group_str != null)
+        {
+            foreach (var key in group_str.Keys)
+            {
+                validCallees.Add(key);
+            }
+        }
+
+        foreach (var file in files)
+        {
+            try
+            {
+                if (!file.Contains("CDR_")) continue;
+                var records = ProcessFile(file);
+                if (showToast)
+                    YiKit.ShowToast("【" + Path.GetFileName(file) + "】处理完成: " + records.Count);
+                foreach (var record in records)
+                {
+                    allRecords.Add(record);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"处理文件失败: {file} - {ex.Message}");
+            }
+        }
+
+        lte_all_count = allRecords.Count;
+        var sessionGroups = allRecords
+            .GroupBy(r => new { r.FileName, r.SessionId })
+            .Select(g =>
+            {
+                var sorted = g.OrderBy(r => r.StartTime).ToList();
+                var last = sorted.Last();
+                return new
+                {
+                    Callee = sorted[0].Callee,
+                    CallerFirstJoin = g.GroupBy(x => x.Caller).ToDictionary(x => x.Key, x => x.Min(y => y.StartTime)),
+                    EndTime = last.EndTime,
+                    SessionId = g.Key.SessionId
+                };
+            })
+            .Where(x => x.EndTime.HasValue)
+            .ToList();
+
+        var result = new Dictionary<string, CallDurationResultExtended>();
+
+        foreach (var session in sessionGroups)
+        {
+            string callee = session.Callee;
+            if (validCallees.Count > 0 && !validCallees.Contains(callee)) continue;
+
+            if (!result.ContainsKey(callee))
+                result[callee] = new CallDurationResultExtended();
+
+            var res = result[callee];
+
+            foreach (var callerEntry in session.CallerFirstJoin)
+            {
+                string caller = callerEntry.Key;
+                DateTime joinTime = callerEntry.Value;
+                long duration = (long)(session.EndTime.Value - joinTime).TotalSeconds + 1;
+
+                res.TotalDurationSeconds += duration;
+                res.Count++;
+
+                if (res.CallerCount.ContainsKey(caller))
+                    res.CallerCount[caller]++;
+                else
+                    res.CallerCount[caller] = 1;
+
+                if (res.CallerDuration.ContainsKey(caller))
+                    res.CallerDuration[caller] += duration;
+                else
+                    res.CallerDuration[caller] = duration;
+            }
+        }
+
+        return result; // ✅ 直接返回扩展类型
+    }
+
+    public static Dictionary<string, CallDurationResult> AnalyzeByCallee(
+        string folderPath, string fire = "", Dictionary<string, string> group_str = null,
+        string[] fileExtensions = null, bool showToast = true)
+    {
+        fileExtensions = fileExtensions ?? new[] { ".txt", ".csv" };
+
+        if (!Directory.Exists(folderPath))
+            throw new DirectoryNotFoundException($"文件夹不存在: {folderPath}");
+
+        var files = new List<string>();
+        if (Directory.Exists(folderPath))
+        {
+            foreach (var file in Directory.GetFiles(folderPath))
+            {
+                string ext = Path.GetExtension(file).ToLower();
+                if (fileExtensions.Contains(ext))
+                {
+                    files.Add(file);
+                }
+            }
+        }
+
+        if (!string.IsNullOrEmpty(fire))
+            files.Add(fire);
+
+        if (files.Count == 0)
+            return new Dictionary<string, CallDurationResult>();
+
+        var allRecords = new ConcurrentBag<CallRecord>();
+        var validCallees = new HashSet<string>();
+        if (group_str != null)
+        {
+            foreach (var key in group_str.Keys)
+            {
+                validCallees.Add(key);
+            }
+        }
+
+        foreach (var file in files)
+        {
+            try
+            {
+                if (!file.Contains("CDR_")) continue;
+                var records = ProcessFile(file);
+                if (showToast)
+                    YiKit.ShowToast("【" + Path.GetFileName(file) + "】处理完成: " + records.Count);
+                foreach (var record in records)
+                {
+                    allRecords.Add(record);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"处理文件失败: {file} - {ex.Message}");
+            }
+        }
+
+        // 按 (文件名, SessionId) 唯一分组
+        var sessionGroups = allRecords
+            .GroupBy(r => new { r.FileName, r.SessionId })
+            .Select(g =>
+            {
+                var sorted = g.OrderBy(r => r.StartTime).ToList();
+                var last = sorted.Last();
+                return new
+                {
+                    Callee = sorted[0].Callee,
+                    CallerFirstJoin = g.GroupBy(x => x.Caller).ToDictionary(x => x.Key, x => x.Min(y => y.StartTime)),
+                    EndTime = last.EndTime,
+                    SessionId = g.Key.SessionId
+                };
+            })
+            .Where(x => x.EndTime.HasValue)
+            .ToList();
+
+        var result = new Dictionary<string, CallDurationResultExtended>();
+
+        foreach (var session in sessionGroups)
+        {
+            string callee = session.Callee;
+            if (validCallees.Count > 0 && !validCallees.Contains(callee)) continue;
+
+            if (!result.ContainsKey(callee))
+                result[callee] = new CallDurationResultExtended();
+
+            var res = result[callee];
+
+            foreach (var callerEntry in session.CallerFirstJoin)
+            {
+                string caller = callerEntry.Key;
+                DateTime joinTime = callerEntry.Value;
+                long duration = (long)(session.EndTime.Value - joinTime).TotalSeconds + 1;
+
+                res.TotalDurationSeconds += duration;
+                res.Count++;
+
+                // 手动实现 GetValueOrDefault 兼容
+                if (res.CallerCount.ContainsKey(caller))
+                    res.CallerCount[caller]++;
+                else
+                    res.CallerCount[caller] = 1;
+
+                if (res.CallerDuration.ContainsKey(caller))
+                    res.CallerDuration[caller] += duration;
+                else
+                    res.CallerDuration[caller] = duration;
+            }
+        }
+
+        // 转为标准结果类型
+        var finalResult = new Dictionary<string, CallDurationResult>();
+        foreach (var kvp in result)
+        {
+            finalResult[kvp.Key] = new CallDurationResult
+            {
+                TotalDurationSeconds = kvp.Value.TotalDurationSeconds,
+                Count = kvp.Value.Count,
+                AverageDurationSeconds =
+                    kvp.Value.Count > 0 ? (int)(kvp.Value.TotalDurationSeconds / kvp.Value.Count) : 0
+            };
+        }
+
+        return finalResult;
+    }
+
+    private static List<CallRecord> ProcessFile(string filePath)
+    {
+        var records = new List<CallRecord>();
+        string[] lines;
+
+        try
+        {
+            lines = File.ReadAllLines(filePath);
+        }
+        catch (Exception e)
+        {
+            YiKit.Print(e.Message);
+            return records;
+        }
+
+        if (lines.Length == 0) return records;
+
+        char delimiter = lines[0].Contains('\t') ? '\t' :
+            lines[0].Contains(',') ? ',' : '\t';
+
+        for (int i = 1; i < lines.Length; i++)
+        {
+            var line = lines[i]?.Trim();
+            if (string.IsNullOrEmpty(line)) continue;
+
+            var fields = line.Split(delimiter);
+            if (fields.Length < 10) continue;
+
+            try
+            {
+                records.Add(new CallRecord
+                {
+                    FileName = Path.GetFileNameWithoutExtension(filePath),
+                    SvcType = fields[0],
+                    SessionId = int.Parse(fields[1]),
+                    Caller = fields[2],
+                    Callee = fields[3],
+                    StartTime = ParseDateTime(fields[4]),
+                    EndTime = string.IsNullOrWhiteSpace(fields[5]) ? (DateTime?)null : ParseDateTime(fields[5]),
+                    Result = fields[6],
+                    Cause = fields[7],
+                    CallingMsisdn = fields[8],
+                    CalledMsisdn = fields[9]
+                });
+            }
+            catch
+            {
+                continue;
+            }
+        }
+
+        return records;
+    }
+
+    private static DateTime ParseDateTime(string input)
+    {
+        input = input.Trim();
+        string[] formats =
+        {
+            "yyyy/M/d H:mm", "yyyy/M/d H:mm:ss",
+            "yyyy/M/d HH:mm", "yyyy/M/d HH:mm:ss",
+            "yyyy-MM-dd HH:mm", "yyyy-MM-dd HH:mm:ss"
+        };
+
+        return DateTime.TryParseExact(input, formats, CultureInfo.InvariantCulture, DateTimeStyles.None,
+            out DateTime dt)
+            ? dt
+            : throw new FormatException($"无法解析日期: {input}");
+    }
+
+    // 通话记录模型
+    private class CallRecord
+    {
+        public string FileName { get; set; }
+        public string SvcType { get; set; }
+        public int SessionId { get; set; }
+        public string Caller { get; set; }
+        public string Callee { get; set; }
+        public DateTime StartTime { get; set; }
+        public DateTime? EndTime { get; set; }
+        public string Result { get; set; }
+        public string Cause { get; set; }
+        public string CallingMsisdn { get; set; }
+        public string CalledMsisdn { get; set; }
+    }
+
+    // 统计结果
+    public class CallDurationResult
+    {
+        public long TotalDurationSeconds { get; set; }
+        public int Count { get; set; }
+        public int AverageDurationSeconds { get; set; }
+    }
+
+    // 扩展结果（支持 Caller 细节）
+    public class CallDurationResultExtended : CallDurationResult
+    {
+        public Dictionary<string, int> CallerCount { get; set; } = new Dictionary<string, int>();
+        public Dictionary<string, long> CallerDuration { get; set; } = new Dictionary<string, long>();
+    }
+
+    /// <summary>
+    /// 从结构相同的 en/zh XML 字典中，提取 英文文本 -> 中文文本 映射
+    /// 只提取 <t> 标签内的文本内容，结果为扁平字典
+    /// </summary>
+    void ExtractTranslation(
+        Dictionary<string, object> enDict,
+        Dictionary<string, object> zhDict,
+        Dictionary<string, string> enZhdict,
+        HashSet<object> visited = null)
+    {
+        // 防止循环引用
+        visited ??= new HashSet<object>();
+        if (!visited.Add(enDict)) return;
+        if (!visited.Add(zhDict))
+        {
+            visited.Remove(enDict);
+            return;
+        }
+
+        foreach (var kvp in enDict)
+        {
+            string key = kvp.Key;
+            object enValue = kvp.Value;
+            object zhValue = null;
+
+            // 确保中文字典有相同 key
+            if (!zhDict.TryGetValue(key, out zhValue))
+                continue;
+
+            // --- 特殊处理: <t> 标签 ---
+            if (key == "t")
+            {
+                // 情况1: 单个 <t> 节点（字典）
+                if (enValue is Dictionary<string, object> enT &&
+                    zhValue is Dictionary<string, object> zhT)
+                {
+                    if (enT.TryGetValue("#text", out var enText) &&
+                        zhT.TryGetValue("#text", out var zhText) &&
+                        enText is string enStr &&
+                        zhText is string zhStr &&
+                        !string.IsNullOrEmpty(enStr))
+                    {
+                        // 直接添加映射（英文 → 中文）
+                        if (!enZhdict.ContainsKey(enStr))
+                        {
+                            if (enStr.Length > 1)
+                                enZhdict[enStr] = zhStr;
+                        }
+                    }
+                }
+                // 情况2: 多个 <t>（列表）
+                else if (enValue is IList enList && zhValue is IList zhList)
+                {
+                    int count = Math.Min(enList.Count, zhList.Count);
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (enList[i] is Dictionary<string, object> enItem &&
+                            zhList[i] is Dictionary<string, object> zhItem)
+                        {
+                            if (enItem.TryGetValue("#text", out var enText) &&
+                                zhItem.TryGetValue("#text", out var zhText) &&
+                                enText is string enStr &&
+                                zhText is string zhStr &&
+                                !string.IsNullOrEmpty(enStr))
+                            {
+                                if (!enZhdict.ContainsKey(enStr))
+                                {
+                                    if (enStr.Length > 1)
+                                        enZhdict[enStr] = zhStr;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // --- 递归处理嵌套结构 ---
+            else if (enValue is Dictionary<string, object> enSubDict &&
+                     zhValue is Dictionary<string, object> zhSubDict)
+            {
+                ExtractTranslation(enSubDict, zhSubDict, enZhdict, visited);
+            }
+            else if (enValue is IList enList && zhValue is IList zhList)
+            {
+                int count = Math.Min(enList.Count, zhList.Count);
+                for (int i = 0; i < count; i++)
+                {
+                    if (enList[i] is Dictionary<string, object> enItem &&
+                        zhList[i] is Dictionary<string, object> zhItem)
+                    {
+                        ExtractTranslation(enItem, zhItem, enZhdict, visited);
+                    }
+                }
+            }
+            // 其他字符串值（如 page 的 title）也可提取（可选）
+            // else if (enValue is string enStr && zhValue is string zhStr)
+            // {
+            //     if (!string.IsNullOrEmpty(enStr) && !enZhdict.ContainsKey(enStr))
+            //         enZhdict[enStr] = zhStr;
+            // }
+        }
+    }
+
+    private void X4TranItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog("X4翻译",
+            "选择英文原文文件位置", "选择中文文文件位置", "选择待翻译的文件夹位置", "文件类型(配合文件夹):xml", "选择待翻译的文件位置");
+
+        if (strs == null || strs.Count < 1) return;
+        string file1 = strs[0];
+        string file2 = strs[1];
+        string dir1 = strs[2];
+        string type1 = strs[3];
+        string file3 = strs[4];
+        List<string> files = new List<string>();
+
+        YiKit.RunThread((state =>
+        {
+            // 如果提供了文件夹，则优先使用文件夹中的 .ogv 文件
+            if (!string.IsNullOrEmpty(dir1) && Directory.Exists(dir1))
+            {
+                files.AddRange(Directory.GetFiles(dir1, "*." + type1, SearchOption.TopDirectoryOnly));
+            }
+
+            // 如果提供了单个文件，则加入列表
+            if (!string.IsNullOrEmpty(file3) && File.Exists(file3))
+            {
+                files.Add(file3);
+            }
+
+            var endict = YiKit.xmlToDict(file1);
+            var zhdict = YiKit.xmlToDict(file2);
+            Dictionary<string, string> enZhdict = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            // 递归遍历英文字典，同步查找中文字典中的对应值
+            ExtractTranslation(endict, zhdict, enZhdict);
+
+            var sorted = enZhdict.OrderByDescending(kv => kv.Key.Length);
+            int num = files.Count;
+            foreach (string file in files)
+            {
+                YiKit.RunThread(s =>
+                {
+                    string tempFile = file + ".tmp";
+                    try
+                    {
+                        YiKit.ShowToast($"开始处理：{file}");
+                        // === 第一步：读取原始编码和原始字节流信息 ===
+                        byte[] originalBytes;
+                        Encoding detectedEncoding;
+
+                        using (var fs = new FileStream(file, FileMode.Open, FileAccess.Read))
+                        {
+                            originalBytes = new byte[fs.Length];
+                            fs.Read(originalBytes, 0, originalBytes.Length);
+                        }
+
+                        using (var reader = new StreamReader(file, true)) // true 表示自动检测编码
+                        {
+                            detectedEncoding = reader.CurrentEncoding;
+                        }
+
+                        // === 第二步：转换为字符串并检测换行符 ===
+                        string content = detectedEncoding.GetString(originalBytes);
+
+                        string originalNewLine = "\r\n"; // 默认
+                        if (content.Contains("\r\n")) originalNewLine = "\r\n";
+                        else if (content.Contains("\n")) originalNewLine = "\n";
+                        else if (content.Contains("\r")) originalNewLine = "\r";
+
+                        // === 第三步：预构建替换对（使用传统类或数组）===
+
+
+                        var replacements = new System.Collections.Generic.List<ReplaceItem>();
+
+                        foreach (var kv in sorted)
+                        {
+                            string key = kv.Key;
+                            string value = kv.Value;
+
+                            // 添加三种模式
+                            replacements.Add(new ReplaceItem("\"" + key + "\"", "\"" + value + "\""));
+                            replacements.Add(new ReplaceItem("\"" + key, "\"" + value));
+                            replacements.Add(new ReplaceItem(key + "\"", value + "\""));
+                        }
+
+                        // 按 OldText 长度降序排序，避免短 key 干扰长 key（如 "OK" 和 "OK_Button"）
+                        replacements.Sort((a, b) => b.OldText.Length.CompareTo(a.OldText.Length));
+
+                        // === 第四步：使用 StringBuilder 批量处理 ===
+                        // 预分配容量，减少内存重分配
+                        var sb = new System.Text.StringBuilder(content, content.Length + content.Length / 10);
+
+                        foreach (var item in replacements)
+                        {
+                            // 可选：提前判断是否包含，避免无效 Replace 扫描
+                            if (content.Contains(item.OldText))
+                            {
+                                sb.Replace(item.OldText, item.NewText);
+                            }
+                        }
+
+                        string modifiedContent = sb.ToString();
+
+                        // === 第五步：还原原始换行符 ===
+                        modifiedContent = modifiedContent.Replace("\r\n", "\n").Replace('\r', '\n');
+                        modifiedContent = modifiedContent.Replace("\n", originalNewLine);
+
+                        // === 第六步：写回文件（保留原始编码）===
+                        System.IO.File.WriteAllText(tempFile, modifiedContent, detectedEncoding);
+
+                        // === 第七步：原子替换 ===
+                        System.IO.File.Delete(file);
+                        System.IO.File.Move(tempFile, file);
+
+                        num--;
+                        YiKit.ShowToast($"{file}处理完成,剩余{num}个文件");
+                    }
+                    catch (System.Exception ex)
+                    {
+                        if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile);
+                        YiKit.ShowToastError($"{file} 错误信息：{ex.Message}");
+                    }
+                });
+            }
+        }));
+    }
+
+    // 定义一个简单类来存储替换项
+    class ReplaceItem
+    {
+        public string OldText;
+        public string NewText;
+
+        public ReplaceItem(string oldText, string newText)
+        {
+            OldText = oldText;
+            NewText = newText;
+        }
+    }
+
+    private void WebViewItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (YiWebView.me == null) new YiWebView();
+        YiWebView.me.Show();
+    }
+
+    private void PortCheck_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs =
+            YiKit.ShowInputDialog("端口检查", "ip或域名:127.0.0.1,192.168.0.1/24", "端口:80,81,82-83", "最大线程:100");
+        if (strs.Count == 0) return;
+        if (strs.Count == 3)
+        {
+            string ipstr = strs[0];
+            string portstr = strs[1];
+            int maxthreadcount = 100;
+            int.TryParse(strs[2], out maxthreadcount);
+            var ipstrs = ipstr.Split(',');
+            var portstrs = portstr.Split(',');
+            List<string> ips = new List<string>();
+
+            for (int i = 0; i < ipstrs.Length; i++)
+            {
+                var ip = ipstrs[i];
+                if (ip.Contains("_"))
+                    ip = ip.Replace("_", "-");
+                if (ip.Contains("--"))
+                    ip = ip.Replace("--", "-");
+                if (ip.Contains("-"))
+                {
+                    ips.Add(ip);
+                }
+            }
+        }
+    }
+
+    private void AutoStart_OnClickItemOnClick(object sender, RoutedEventArgs e)
+    {
+        var item = sender as MenuItem;
+        if (item != null)
+        {
+            YiKit.SetAutoStart(Assembly.GetExecutingAssembly().Location, "StartHoley", !item.IsChecked);
+            // YiKit.CreateTaskIgnoreBattery("StartHoley", Assembly.GetExecutingAssembly().Location);
+            YiKit.SetAutoStartOnBoot(Assembly.GetExecutingAssembly().Location, "StartHoley", !item.IsChecked, true);
+            item.IsChecked = !item.IsChecked;
+            YiKit.IniWrite("autostart", item.IsChecked.ToString());
+        }
+    }
+
+    private void GetSys_OnClick(object sender, RoutedEventArgs e)
+    {
+        List<string> strs = YiKit.ShowInputDialog("获得system",
+            "选择要被提权的程序文件位置");
+
+        if (strs == null || strs.Count < 1) return;
+        string exepath = strs[0];
+        YiKit.GetSystem(exepath);
     }
 }

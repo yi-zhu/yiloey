@@ -5,80 +5,94 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:local="clr-namespace:holey"
         mc:Ignorable="d"
-        Title="行列" Height="450" Width="800">
+        Title="行列" Height="500" Width="800">
 
-     <Grid Margin="10">
+    <Grid Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
         </Grid.RowDefinitions>
 
         <!-- 控件区 1：加载参数 -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
-            <Button Content="加载文件" Click="LoadFile_Click" Width="100" Margin="0,0,10,0"/>
-            <TextBlock Text="分隔符:" Margin="0,0,5,0" VerticalAlignment="Center"/>
-            <TextBox x:Name="txtSeparator" Text="," Width="50" Margin="0,0,10,0"/>
-            <TextBlock Text="换行符:" Margin="0,0,5,0" VerticalAlignment="Center"/>
-            <TextBox x:Name="txtNewLine" Text="\r\n" Width="60" Margin="0,0,10,0"/>
-            <CheckBox x:Name="chkHasHeader" Content="首行为表头" Margin="0,0,10,0" Foreground="Black"/>
-            <TextBlock Text="最大行数:" Margin="0,0,5,0" VerticalAlignment="Center"/>
-            <TextBox x:Name="txtMaxRows" Text="10000" Width="60" Margin="0,0,10,0"/>
-            <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center"/>
+            <Button Content="加载文件" Click="LoadFile_Click" Width="100" Margin="0,0,10,0" />
+            <TextBlock Text="分隔符:" Margin="0,0,5,0" VerticalAlignment="Center" />
+            <TextBox x:Name="txtSeparator" Text="," Width="50" Margin="0,0,10,0"  ToolTip="所有字符为单个分隔符" />
+            <TextBox x:Name="txtSeparator1" Text="," Width="30" Margin="0,0,10,0" ToolTip="可输入多个分隔符以||进行分割" />
+            <TextBlock Text="换行符:" Margin="0,0,5,0" VerticalAlignment="Center" />
+            <TextBox x:Name="txtNewLine" Text="\r\n" Width="60" Margin="0,0,10,0" />
+            <CheckBox x:Name="chkHasHeader" Content="首行为表头" Margin="0,0,10,0" Foreground="Black" />
+            <TextBlock Text="最大行数:" Margin="0,0,5,0" VerticalAlignment="Center" />
+            <TextBox x:Name="txtMaxRows" Text="10000" Width="60" Margin="0,0,10,0" />
+            <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center" />
+            <TextBlock Text="最大列数:" Margin="0,0,5,0" VerticalAlignment="Center" />
+            <TextBox x:Name="txtMaxClos" Text="200" Width="60" Margin="0,0,10,0" />
+            <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center" />
+            <Button Content="加载符合的内容" Click="LoadFitleTxtFile_Click" Width="100" Margin="0,0,10,0" />
+            <TextBox x:Name="fitleTxtStart" Text="200" Width="60" Margin="0,0,10,0" />
+            <TextBox x:Name="fitleTxtEnd" Text="200" Width="60" Margin="0,0,10,0" />
         </StackPanel>
 
- 
+
         <!-- 当前文件路径 -->
-        <TextBlock Grid.Row="3" x:Name="tbFilePath" Margin="0,0,0,10" Foreground="Gray" TextTrimming="CharacterEllipsis"/>
+        <TextBlock Grid.Row="3" x:Name="tbFilePath" Margin="0,0,0,10" Foreground="Gray"
+                   TextTrimming="CharacterEllipsis" />
 
         <!-- 批量操作区 -->
         <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,0,0,10">
-            <GroupBox Header="条件：固定列(或当前列)包含/不包含文本框中的内容" >
+            <GroupBox Header="条件：固定列(或当前列)包含/不包含文本框中的内容">
                 <StackPanel Orientation="Horizontal">
-                  
-                    <StackPanel  HorizontalAlignment="Left">
+
+                    <StackPanel HorizontalAlignment="Left">
                         <CheckBox x:Name="cboCKif" Foreground="Black" ToolTip="勾选则启用条件运算" IsChecked="False">条件启</CheckBox>
-                        <CheckBox x:Name="cboCKifcol" Foreground="Black" ToolTip="勾选则判断选中的固定列，否者判断要运算/替换的列" IsChecked="True">固定列</CheckBox>
+                        <CheckBox x:Name="cboCKifcol" Foreground="Black" ToolTip="勾选则判断选中的固定列，否者判断要运算/替换的列"
+                                  IsChecked="True">
+                            固定列
+                        </CheckBox>
                     </StackPanel>
-                    <ComboBox x:Name="cboColumnif" Width="80" Margin="0,0,5,0"/>
-                    <CheckBox x:Name="cboCKifCon" Foreground="Black" ToolTip="勾选包含，取消勾选不包含"  IsChecked="True">包含</CheckBox>
-                    <TextBox x:Name="txtCon" Width="80" Margin="0,0,5,0" ToolTip="包含的内容"/>
+                    <ComboBox x:Name="cboColumnif" Width="80" Margin="0,0,5,0" />
+                    <StackPanel HorizontalAlignment="Left">
+                        <CheckBox x:Name="cboCKifCon" Foreground="Black" ToolTip="勾选包含，取消勾选不包含" IsChecked="True">包含</CheckBox>
+                        <CheckBox x:Name="cboCKifConRev" Foreground="Black" ToolTip="勾选则反向包含/不包含" IsChecked="True">反向</CheckBox>
+                    </StackPanel>
+                    <TextBox x:Name="txtCon" Width="80" Margin="0,0,5,0" ToolTip="包含的内容" />
                 </StackPanel>
             </GroupBox>
-            
-            <GroupBox Header="目标列" >
-            <ComboBox x:Name="cboColumn" Width="80" Margin="0,0,5,0"/>
+
+            <GroupBox Header="目标列">
+                <ComboBox x:Name="cboColumn" Width="80" Margin="0,0,5,0" />
             </GroupBox>
-            <GroupBox Header="批量数值运算自动获取单元格内数字设为x，可填写公式" >
+            <GroupBox Header="批量数值运算自动获取单元格内数字设为x，可填写公式">
                 <StackPanel Orientation="Horizontal">
-                    
+
                     <StackPanel>
                         <CheckBox x:Name="cboCK" Foreground="Black" ToolTip="只替换选中目标列的数据" IsChecked="True">目标列</CheckBox>
                         <CheckBox x:Name="cborowCK" Foreground="Black" ToolTip="只替换鼠标选中的行" IsChecked="False">选中行</CheckBox>
                     </StackPanel>
-                    
+
                     <!-- <ComboBox x:Name="cboOp" Width="50" Margin="0,0,5,0"> -->
                     <!--     <ComboBoxItem>+</ComboBoxItem> -->
                     <!--     <ComboBoxItem>-</ComboBoxItem> -->
                     <!--     <ComboBoxItem>×</ComboBoxItem> -->
                     <!--     <ComboBoxItem>÷</ComboBoxItem> -->
                     <!-- </ComboBox> -->
-                    <TextBox x:Name="txtValue" MinWidth="160" Margin="0,0,5,0"  ToolTip="if (x > 0,log(x),x)" > </TextBox>
-                    <Button Content="应用" Click="ApplyMathOperation_Click" Width="50"/>
+                    <TextBox x:Name="txtValue" MinWidth="160" Margin="0,0,5,0" ToolTip="if (x > 0,log(x),x)"> </TextBox>
+                    <Button Content="应用" Click="ApplyMathOperation_Click" Width="50" />
                 </StackPanel>
             </GroupBox>
 
-            <GroupBox Header="批量替换"  Margin="0,0,0,0">
+            <GroupBox Header="批量替换" Margin="0,0,0,0">
                 <StackPanel Orientation="Horizontal">
                     <StackPanel>
                         <CheckBox x:Name="replaceCK" Foreground="Black" ToolTip="只替换目标列的列" IsChecked="True">目标列</CheckBox>
                         <CheckBox x:Name="replaceRowCK" Foreground="Black" ToolTip="只替换s鼠标选中的列" IsChecked="False">选中行</CheckBox>
                     </StackPanel>
-                   
-                    <TextBox x:Name="txtFind" Width="80" Margin="0,0,5,0" ToolTip="查找"/>
-                    <TextBox x:Name="txtReplace" Width="80" Margin="0,0,5,0" ToolTip="替换为"/>
-                    <Button Content="替换" Click="ApplyReplace_Click" Width="60"/>
+
+                    <TextBox x:Name="txtFind" Width="80" Margin="0,0,5,0" ToolTip="查找" />
+                    <TextBox x:Name="txtReplace" Width="80" Margin="0,0,5,0" ToolTip="替换为" />
+                    <Button Content="替换" Click="ApplyReplace_Click" Width="60" />
                 </StackPanel>
             </GroupBox>
         </StackPanel>
@@ -99,22 +113,24 @@
                   EnableColumnVirtualization="True"
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   ScrollViewer.IsDeferredScrollingEnabled="True"
-                  ColumnWidth="80"
+                  ColumnWidth="60"
                   RowHeight="25"
                   Background="White"
+
                   GridLinesVisibility="Horizontal">
             <DataGrid.Resources>
                 <Style TargetType="DataGridCell">
-                    <Setter Property="Padding" Value="2"/>
-                    <Setter Property="FontSize" Value="12"/>
+                    <Setter Property="Padding" Value="2" />
+                    <Setter Property="FontSize" Value="12" />
                 </Style>
             </DataGrid.Resources>
         </DataGrid>
 
         <!-- 保存按钮 -->
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
-            <Button Content="保存原格式" ToolTip="程序内排序不影响原保存顺序，保存时还是按照读取时原顺序进行保存" Click="SaveOriginalFormat_Click" Width="120" Margin="0,0,10,0"/>
-            <Button Content="重载文件"  ToolTip="重新加载文件" Click="RefreshPreview_Click" Width="100"/>
+            <Button Content="保存原格式" ToolTip="程序内排序不影响原保存顺序，保存时还是按照读取时原顺序进行保存" Click="SaveOriginalFormat_Click"
+                    Width="120" Margin="0,0,10,0" />
+            <Button Content="重载文件" ToolTip="重新加载文件" Click="RefreshPreview_Click" Width="100" />
         </StackPanel>
     </Grid>
 </Window>

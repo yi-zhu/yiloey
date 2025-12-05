@@ -1,0 +1,65 @@
+﻿<UserControl
+    x:Class="holey.Vdd.Components.DisplayItem"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    mc:Ignorable="d" 
+    Width="180" Height="110"
+    d:Background="Black"
+>
+    <Border Margin="4"
+            MouseDown="UserControl_MouseDown" MouseUp="UserControl_MouseUp"
+            BorderThickness="2" CornerRadius="{DynamicResource DisplayCornerRadius}">
+        <Border.Style>
+            <Style TargetType="{x:Type Border}">
+                <Setter Property="Background" Value="#1FFF"/>
+                <Setter Property="BorderBrush" Value="#8FFF"/>
+                <Style.Triggers>
+                    <Trigger Property="IsMouseOver" Value="True">
+                        <Setter Property="Background" Value="#3FFF"/>
+                        <Setter Property="BorderBrush" Value="#AFFF"/>
+                    </Trigger>
+                </Style.Triggers>
+            </Style>
+        </Border.Style>
+        <Grid>
+            <TextBlock x:Name="xDeg" d:Text="90°" Foreground="White" Margin="8,4,0,0" HorizontalAlignment="Left" VerticalAlignment="Top" />
+            <TextBlock Text="{Binding DisplayNum}" d:Text="1" FontSize="24" FontWeight="SemiBold" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,5" />
+            <TextBlock Grid.Row="1" Text="{Binding DisplayMode}" d:Text="1920 x 1080 @ 60 Hz" FontSize="12" Foreground="White" TextAlignment="Center" VerticalAlignment="Bottom" Margin="0,0,0,8" />
+        </Grid>
+    </Border>
+
+    <UserControl.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="{Binding DisplayName}" />
+            <MenuItem Header="{Binding DisplayPath}" />
+            <MenuItem IsEnabled="False" Header="ParsecVDA">
+                <MenuItem.Icon>
+                    <Image Source="../../icon.ico" />
+                </MenuItem.Icon>
+            </MenuItem>
+            <Separator />
+            <MenuItem x:Name="xResolution" Click="ChangeResolution" Header="分辨率" IsEnabled="{Binding Active}">
+                <MenuItem Header="3260 x 2140" />
+                <MenuItem Header="1920 x 1080" />
+                <MenuItem Header="1280 x 720" />
+            </MenuItem>
+            <MenuItem x:Name="xRefreshRate" Click="ChangeRefreshRate" Header="刷新率" IsEnabled="{Binding Active}">
+                <MenuItem Header="60 Hz" />
+            </MenuItem>
+            <MenuItem x:Name="xOrientation" Click="ChangeOrientation" Header="朝向" IsEnabled="{Binding Active}">
+                <MenuItem Header="横向" />
+                <MenuItem Header="纵响" />
+                <MenuItem Header="横向翻转（180°）" />
+                <MenuItem Header="纵向翻转" />
+            </MenuItem>
+            <Separator />
+            <MenuItem Click="TakeScreenshot" Header="截屏" IsEnabled="{Binding Active}" />
+            <MenuItem Click="MirrorScreen" Header="监视屏幕" IsEnabled="{Binding Active}" />
+            <Separator />
+            <MenuItem Click="RemoveDisplay" Header="删除显示器" />
+        </ContextMenu>
+    </UserControl.ContextMenu>
+    
+</UserControl>

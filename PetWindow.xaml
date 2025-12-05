@@ -357,7 +357,7 @@
                 <Viewbox.ContextMenu>
                     <ContextMenu>
                         <MenuItem Header="打开主页" Click="ShowItem_OnClick"></MenuItem>
-                        <MenuItem Header="动态桌面" PreviewMouseLeftButtonUp="WallPaperItem_OnClick"
+                        <MenuItem Name="WallPaperMenuItem" Header="动态桌面" PreviewMouseLeftButtonUp="WallPaperItem_OnClick"
                                   PreviewMouseRightButtonUp="UIElement_OnPreviewMouseRightButtonUp">
                         </MenuItem>
                         <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
@@ -377,8 +377,13 @@
                         <!-- <MenuItem Name="TranslateShowMenuItem" Header="显示翻译" Click="TranslateShowItemOnClick"></MenuItem> -->
                         <!-- <MenuItem Header="关闭剪切板" Click="UnlockClipboardItemOnClick"></MenuItem> -->
                         <MenuItem Header="其他">
+                            <MenuItem Name="AutoStartMenuItem" Header="自启" Click="AutoStart_OnClickItemOnClick"></MenuItem>
                             <MenuItem Header="内存分析" Click="MemoMenuItem_OnClickItemOnClick"></MenuItem>
                             <MenuItem Header="显示电源" Click="PowerItem_OnClick"></MenuItem>
+                            <MenuItem Header="关闭显示器" Click="CloseMonItem_OnClick"></MenuItem>
+                            <MenuItem Header="x4翻译" Click="X4TranItem_OnClick"></MenuItem>
+                            <MenuItem Header="检查端口" Click="PortCheck_OnClick"></MenuItem>
+                            <MenuItem Header="获取system" Click="GetSys_OnClick"></MenuItem>
                         </MenuItem>
                         <MenuItem Header="fps">
                             <MenuItem Header="中心放大" Name="CentZoom" PreviewMouseDown="CentZomm_OnItemClick"></MenuItem>
@@ -391,10 +396,13 @@
                             <MenuItem Header="影片转联系表" Click="OgvItem_OnClick"></MenuItem>
                         </MenuItem>
                         <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
-                        <MenuItem Header="虚拟显卡" Click="VddItem_OnClick"></MenuItem>
-                        <MenuItem Header="表格" Click="From_OnClick"></MenuItem>
-
-
+                        <MenuItem Header="虚拟显卡" Name="VddItem" Click="VddItem_OnClick" PreviewMouseRightButtonDown="VddItem_OnRClick"></MenuItem>
+                        <MenuItem Header="表格">
+                            <MenuItem Header="表格" Click="From_OnClick"></MenuItem>
+                            <MenuItem Header="计算LTE时长" Click="CalcLteFrom_OnClick"></MenuItem>
+                        </MenuItem>
+                        <MenuItem Header="浏览器" Click="WebViewItem_OnClick"></MenuItem>
+                        
                         <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
                         <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>

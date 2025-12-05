@@ -4,13 +4,18 @@ using System.Drawing;
 using System.IO;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Forms.Integration;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using Microsoft.Web.WebView2.Core;
+using Microsoft.Web.WebView2.Wpf;
 using YiKits;
 using Color = System.Windows.Media.Color;
+
 
 namespace holey.Page;
 
@@ -90,7 +95,6 @@ public partial class WallPaper : Window
         }
         else
         {
-            
             _pictime = YiKit.IniGetInt("Pictime", 0, "WallPaper");
             BMedia.Volume = _volume = YiKit.IniGetInt("Volume", 0, "WallPaper");
             if (YiKit.IsDir(file))
@@ -99,10 +103,7 @@ public partial class WallPaper : Window
             }
             else
             {
-                _uris.Add(new Uri(file));
-                BMedia.Source = _uris[0];
-
-                PlayMidea();
+                playFile(file);
             }
         }
 
@@ -132,19 +133,18 @@ public partial class WallPaper : Window
 
     int i = 0;
 
-    
+
     private void NextPlay()
     {
-        if (_uris==null||_uris.Count < 1)
+        if (_uris == null || _uris.Count < 1)
         {
             return;
         }
-        
+
         //判断是否同一个文件，同一个文件时间设为0
-        
+
         try
         {
-
             if (i >= _uris.Count - 1)
             {
                 i = 0;
@@ -154,7 +154,6 @@ public partial class WallPaper : Window
                 i = i + 1;
             }
 
- 
 
             /*if (BMedia.HasVideo || BMedia.HasAudio)
         {
@@ -164,7 +163,7 @@ public partial class WallPaper : Window
                 //图片
                 YiKit.RunThread((state =>
                 {
-                    Thread.Sleep((int) (_pictime * 60000));
+                    Thread.Sleep((int)(_pictime * 60000));
                     Dispatcher.Invoke(() =>
                     {
                         BMedia.Stop();
@@ -188,7 +187,7 @@ public partial class WallPaper : Window
             {
                 //视频和上一个一直
                 BMedia.Position = TimeSpan.Zero;
-                BMedia.Play();  
+                BMedia.Play();
                 // PlayMidea();
             }
         }
@@ -202,11 +201,11 @@ public partial class WallPaper : Window
     {
         List<string> strs = YiKit.ShowInputDialog("桌面背景配置：支持图片、视频。如果不想改变 点【取消】",
             "选择文件位置（点击选择）", "或选择文件夹位置（点击选择）",
-            "音量(0最小-1最大)默认0", "图片轮换时间（分钟）（只对文件夹图片生效！）默认0.5");
-        if (null == strs || strs.Count != 4)
-        {
+            "音量(0最小-1最大)默认0", "图片轮换时间（分钟）（只对文件夹图片生效！）默认0.5", "是否不设置为背景");
+        if (null == strs || strs.Count != 5)
             return;
-        }
+
+        changeBackground(!strs[4].Equals("true"));
 
         if (!string.IsNullOrEmpty(strs[2]))
 
@@ -255,17 +254,48 @@ public partial class WallPaper : Window
 
         if (!string.IsNullOrEmpty(strs[0]))
         {
-            _uris.Clear();
-            _uris.Add(new Uri(strs[0]));
-            BMedia.Source = new Uri(strs[0]);
-            Source = strs[0];
-            PlayMidea();
+            playFile(file: strs[0]);
         }
 
         if (!string.IsNullOrEmpty(strs[1]))
         {
             Source = strs[1];
             PlayDir(strs[1]);
+        }
+    }
+
+    private WebView2 wb = null;
+    private string wbUrl = "";
+
+    public async Task playFile(string file)
+    {
+        if (file.StartsWith("http"))
+        {
+            if (wbUrl.Equals(file))
+                return;
+            _uris.Clear();
+            BMedia.Stop();
+            YiKit.IniWrite("Source", file, "WallPaper");
+            if (wb == null)
+            {
+                var env1 = await CoreWebView2Environment.CreateAsync(
+                    browserExecutableFolder: null,
+                    userDataFolder: Path.Combine(YiKit.GetAppPath(),"WebView2", "WallPaper")
+                );
+                wb = new WebView2();
+                GridRoot.Children.Add(wb);
+                await wb.EnsureCoreWebView2Async(env1);
+            }
+            wb.CoreWebView2.Navigate(file);
+            wbUrl = file;
+        }
+        else
+        {
+            _uris.Clear();
+            _uris.Add(new Uri(file));
+            BMedia.Source = new Uri(file);
+            Source = file;
+            PlayMidea();
         }
     }
 
@@ -304,14 +334,13 @@ public partial class WallPaper : Window
             BMedia.Play();
             if (!_uriBitmaps.ContainsKey(BMedia.Source) || _uriBitmaps[BMedia.Source] == null)
             {
-                RenderTargetBitmap bmp = new((int) SystemParameters.PrimaryScreenWidth,
-                    (int) SystemParameters.PrimaryScreenHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
+                RenderTargetBitmap bmp = new((int)SystemParameters.PrimaryScreenWidth,
+                    (int)SystemParameters.PrimaryScreenHeight, 96, 96, System.Windows.Media.PixelFormats.Pbgra32);
                 bmp.Render(BMedia);
                 _uriBitmaps[BMedia.Source] = bmp;
             }
 
             BImage.Source = _uriBitmaps[BMedia.Source];
-            
         }
         catch
         {
@@ -335,8 +364,6 @@ public partial class WallPaper : Window
             BMedia.Play();
         }
     }
-    
-
 
 
     protected virtual IntPtr WndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
@@ -345,9 +372,9 @@ public partial class WallPaper : Window
         {
             case YiKit.WmSizeing:
 
-                if (wParam.ToInt32() == (int) YiKit.AbNotify.ABN_FULLSCREENAPP)
+                if (wParam.ToInt32() == (int)YiKit.AbNotify.ABN_FULLSCREENAPP)
                 {
-                    if (lParam == (IntPtr) 1)
+                    if (lParam == (IntPtr)1)
                     {
                         PausePlay();
                     }
@@ -377,6 +404,8 @@ public partial class WallPaper : Window
         try
         {
             if (inited) return;
+            changeBackground();
+            return;
             // 通过类名查找一个窗口，返回窗口句柄。
             programIntPtr = YiKit.FindWindow("Progman", null);
 
@@ -412,6 +441,56 @@ public partial class WallPaper : Window
         }
         catch (Exception ex)
         {
+        }
+    }
+
+
+    /// <summary>
+    /// 设置成桌面背景或恢复成普通窗口
+    /// </summary>
+    /// <param name="bg">true: 设置为桌面背景；false: 恢复为普通窗口</param>
+    public void changeBackground(bool bg = true)
+    {
+        var programIntPtr =YiKit.FindWindow("Progman", null);
+        var hwnd = YiKit.GetWindowHandle(this);
+        if (bg)
+        {
+            // 窗口句柄有效
+            if (programIntPtr != IntPtr.Zero)
+            {
+                IntPtr result = IntPtr.Zero;
+
+                // 向 Program Manager 窗口发送 0x52c 的一个消息，超时设置为0x3e8（1秒）。
+                YiKit.SendMessageTimeout(programIntPtr, 0x52c, IntPtr.Zero, IntPtr.Zero, 0, 0x3e8, result);
+
+                // 遍历顶级窗口
+                YiKit.EnumWindows((hwnd, lParam) =>
+                {
+                    // 找到包含 SHELLDLL_DefView 这个窗口句柄的 WorkerW
+                    if (YiKit.FindWindowEx(hwnd, IntPtr.Zero, "SHELLDLL_DefView", null) != IntPtr.Zero)
+                    {
+                        // 找到当前 WorkerW 窗口的，后一个 WorkerW 窗口。 
+                        IntPtr tempHwnd = YiKit.FindWindowEx(IntPtr.Zero, hwnd, "WorkerW", null);
+
+                        // 隐藏这个窗口
+                        YiKit.ShowWindow(tempHwnd, 0);
+                    }
+
+                    return true;
+                }, IntPtr.Zero);
+            }
+            YiKit.SetParent(hwnd, programIntPtr);
+        }
+        else
+        {
+            // --- 恢复为普通窗口 ---
+            // 解除父窗口关系
+            YiKit.SetParent(hwnd, IntPtr.Zero);
+            // 恢复窗口样式：显示在 Alt+Tab 和任务栏
+            // 恢复正常窗口样式
+            // int exStyle = YiKit.GetWindowLong(hwnd, YiKit.GwlExstyle);
+            // exStyle &= ~YiKit.WS_EX_TRANSPARENT;                  // ✅ 移除 WS_EX_TRANSPARENT（关键！）
+            // YiKit.SetWindowLong(hwnd, YiKit.GwlExstyle,exStyle);
         }
     }
 

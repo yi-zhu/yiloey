@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
@@ -16,7 +17,8 @@ namespace holey;
 public partial class RowAndCol : Window
 {
     public static RowAndCol me;
-
+    public string area = "rac";
+    
     public RowAndCol()
     {
         InitializeComponent();
@@ -33,6 +35,21 @@ public partial class RowAndCol : Window
 
     private void InitializeDisplayTable()
     {
+        txtSeparator.Text=YiKit.IniGet("txtseparator",area,def:",");
+        txtSeparator1.Text=YiKit.IniGet("txtSeparator1",area,def:"");
+        txtNewLine.Text=YiKit.IniGet("txtnewline",area,def:"\\r\\n");
+        txtMaxRows.Text=YiKit.IniGet("txtmaxrows",area,def:"10000");
+        txtMaxClos.Text=YiKit.IniGet("txtmaxclos",area,def:"500");
+        fitleTxtStart.Text=YiKit.IniGet("fitleTxtStart",area,def:"\"");
+        fitleTxtEnd.Text=YiKit.IniGet("fitleTxtEnd",area,def:"\"");
+        txtCon.Text=YiKit.IniGet("txtc",area,def:"");
+        txtValue.Text=YiKit.IniGet("txtm",area,def:"");
+        txtFind.Text=YiKit.IniGet("txtf",area,def:"");
+        txtReplace.Text=YiKit.IniGet("txtr",area,def:"");
+        cboCKif.IsChecked=YiKit.IniGetBool("ckif",false,area);
+        cboCKifcol.IsChecked=YiKit.IniGetBool("ckifc",true,area);
+        cboCKifCon.IsChecked=YiKit.IniGetBool("ckifcc",true,area);
+        chkHasHeader.IsChecked=YiKit.IniGetBool("ckhh",true,area);
         displayTable = new DataTable("显示表");
         displayTable.Columns.Add("列1", typeof(string));
     }
@@ -55,9 +72,20 @@ public partial class RowAndCol : Window
         {
             await LoadFileAsync(dialog.FileName);
         }
+    }  private async void LoadFitleTxtFile_Click(object sender, RoutedEventArgs e)
+    {
+        OpenFileDialog dialog = new OpenFileDialog
+        {
+            Filter = "文本文件 (*.txt;*.csv;*.dat;*.js)|*.txt;*.csv;*.dat;*.js|所有文件 (*.*)|*.*",
+            Multiselect = false
+        };
+        if (dialog.ShowDialog() == true)
+        {
+            await LoadFitleTxtFileAsync(dialog.FileName);
+        }
     }
 
-    private async Task LoadFileAsync(string filePath)
+    private async Task LoadFitleTxtFileAsync(string filePath)
     {
         try
         {
@@ -66,14 +94,149 @@ public partial class RowAndCol : Window
                 tbFilePath.Text = "正在加载...";
                 dataGrid.ItemsSource = null;
             });
-
+            YiKit.IniWrite("txtseparator",txtSeparator.Text,area);
+            YiKit.IniWrite("txtSeparator1",txtSeparator1.Text,area);
+            YiKit.IniWrite("txtnewline",txtNewLine.Text,area);
+            YiKit.IniWrite("txtmaxrows",txtMaxRows.Text,area);
+            YiKit.IniWrite("txtmaxclos",txtMaxClos.Text,area);
+            YiKit.IniWrite("fitleTxtStart",fitleTxtStart.Text,area);
+            YiKit.IniWrite("fitleTxtEnd",fitleTxtEnd.Text,area);
+            YiKit.IniWrite("ckhh",chkHasHeader.IsChecked.ToString(),area);
             string separator = txtSeparator.Text;
+            string separator1 = txtSeparator1.Text;
+            List<string> separators= separator1.Split('|').ToList();
+            separators.Add(separator);
+            string newLineStr = txtNewLine.Text;
+            int maxRows = int.TryParse(txtMaxRows.Text, out int temp) ? temp : 10000;
+            bool hasHeader = chkHasHeader.IsChecked == true;
+            string fs = fitleTxtStart.Text;
+            string fe = fitleTxtEnd.Text;
+            // ========== 修复 1：正确解析 \r\n 等转义字符 ==========
+            for (int i = 0; i < separators.Count; i++)
+            {
+                separators[i]=ParseEscapeSequences(separators[i]);
+            }
+            
+            // separator = ParseEscapeSequences(separator);
+            newLineStr = ParseEscapeSequences(newLineStr);
+
+            var lines = await Task.Run(() =>
+            {
+                var result = new List<string>();
+                using (var reader = new StreamReader(filePath, Encoding.UTF8))
+                {
+                    string content = reader.ReadToEnd();
+                    int fsi = 0;
+                    int fei = 0;
+                    while (fsi >= 0)
+                    {
+                        fsi = content.IndexOf(fs);
+                        content = content.Substring(fsi+fs.Length);
+                        fei=content.IndexOf(fe);
+                        if (fei ==-1) fei=content.Length;
+                        result.Add(content.Substring(0,fei));
+                        content=content.Substring(fei);
+                    }
+                    return result;
+                }
+            });
+
+            if (lines.Count == 0)
+            {
+                MessageBox.Show("文件为空或无法读取。", "提示");
+                return;
+            }
+
+            originalLines = new List<string>(lines);
+            cellData = new List<string[]>();
+            int maxCol = 0;
+
+            foreach (string line in lines)
+            {
+                string[] cells = line.Split(separators.ToArray(), StringSplitOptions.None);
+                cellData.Add(cells);
+                if (cells.Length > maxCol) maxCol = cells.Length;
+            }
+
+            if (maxCol == 0) maxCol = 1;
+
+            int MAX_COLUMNS = int.TryParse(txtMaxClos.Text, out int temp1) ? temp1 : 500;;
+            if (MAX_COLUMNS > 0 && maxCol > MAX_COLUMNS)
+            {
+                MessageBox.Show($"列数超过 {MAX_COLUMNS}，已截断显示。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
+                maxCol = MAX_COLUMNS;
+            }
+
+            displayTable = new DataTable("数据");
+            for (int i = 0; i < maxCol; i++)
+            {
+                string colName = hasHeader && i < cellData[0].Length ? cellData[0][i] : $"列{i + 1}";
+                string uniqueName = MakeUniqueColumnName(displayTable, colName);
+                displayTable.Columns.Add(uniqueName, typeof(string));
+            }
+
+            int startRow = hasHeader ? 1 : 0;
+            for (int i = startRow; i < cellData.Count; i++)
+            {
+                DataRow row = displayTable.NewRow();
+                for (int j = 0; j < maxCol; j++)
+                {
+                    row[j] = j < cellData[i].Length ? cellData[i][j] : "";
+                }
+
+                displayTable.Rows.Add(row);
+            }
+
+            this.Dispatcher.Invoke(() =>
+            {
+                dataGrid.ItemsSource = displayTable.DefaultView;
+                currentFilePath = filePath;
+                tbFilePath.Text = $"当前文件: {filePath} | 行数: {displayTable.Rows.Count} | 列数: {maxCol}";
+
+                UpdateColumnComboBox();
+            });
+        }
+        catch (Exception ex)
+        {
+            this.Dispatcher.Invoke(() =>
+            {
+                MessageBox.Show($"加载失败:表头中含有特殊字符！！！请取消勾选【首行为表头】 {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                chkHasHeader.IsChecked = false;
+                LoadFitleTxtFileAsync(filePath);
+                
+            });
+        }
+    }
+   private async Task LoadFileAsync(string filePath)
+    {
+        try
+        {
+            this.Dispatcher.Invoke(() =>
+            {
+                tbFilePath.Text = "正在加载...";
+                dataGrid.ItemsSource = null;
+            });
+            YiKit.IniWrite("txtseparator",txtSeparator.Text,area);
+            YiKit.IniWrite("txtSeparator1",txtSeparator1.Text,area);
+            YiKit.IniWrite("txtnewline",txtNewLine.Text,area);
+            YiKit.IniWrite("txtmaxrows",txtMaxRows.Text,area);
+            YiKit.IniWrite("txtmaxclos",txtMaxClos.Text,area);
+            YiKit.IniWrite("ckhh",chkHasHeader.IsChecked.ToString(),area);
+            string separator = txtSeparator.Text;
+            string separator1 = txtSeparator1.Text;
+            List<string> separators= separator1.Split('|').ToList();
+            separators.Add(separator);
             string newLineStr = txtNewLine.Text;
             int maxRows = int.TryParse(txtMaxRows.Text, out int temp) ? temp : 10000;
             bool hasHeader = chkHasHeader.IsChecked == true;
 
             // ========== 修复 1：正确解析 \r\n 等转义字符 ==========
-            separator = ParseEscapeSequences(separator);
+            for (int i = 0; i < separators.Count; i++)
+            {
+                separators[i]=ParseEscapeSequences(separators[i]);
+            }
+            
+            // separator = ParseEscapeSequences(separator);
             newLineStr = ParseEscapeSequences(newLineStr);
 
             var lines = await Task.Run(() =>
@@ -118,15 +281,15 @@ public partial class RowAndCol : Window
 
             foreach (string line in lines)
             {
-                string[] cells = line.Split(new string[] { separator }, StringSplitOptions.None);
+                string[] cells = line.Split(separators.ToArray(), StringSplitOptions.None);
                 cellData.Add(cells);
                 if (cells.Length > maxCol) maxCol = cells.Length;
             }
 
             if (maxCol == 0) maxCol = 1;
 
-            const int MAX_COLUMNS = 500;
-            if (maxCol > MAX_COLUMNS)
+            int MAX_COLUMNS = int.TryParse(txtMaxClos.Text, out int temp1) ? temp1 : 500;;
+            if (MAX_COLUMNS > 0 && maxCol > MAX_COLUMNS)
             {
                 MessageBox.Show($"列数超过 {MAX_COLUMNS}，已截断显示。", "提示", MessageBoxButton.OK, MessageBoxImage.Warning);
                 maxCol = MAX_COLUMNS;
@@ -165,7 +328,10 @@ public partial class RowAndCol : Window
         {
             this.Dispatcher.Invoke(() =>
             {
-                MessageBox.Show($"加载失败: {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"加载失败:表头中含有特殊字符！！！请取消勾选【首行为表头】 {ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                chkHasHeader.IsChecked = false;
+                LoadFileAsync(filePath);
+                
             });
         }
     }
@@ -216,6 +382,11 @@ public partial class RowAndCol : Window
     // ========== 修复 2：提取数字并保留非数字部分 ==========
     private void ApplyMathOperation_Click(object sender, RoutedEventArgs e)
     {
+        YiKit.IniWrite("txtc",txtCon.Text,area);
+        YiKit.IniWrite("txtm",txtValue.Text,area);
+        YiKit.IniWrite("ckif",cboCKif.IsChecked.ToString(),area);
+        YiKit.IniWrite("ckifc",cboCKifcol.IsChecked.ToString(),area);
+        YiKit.IniWrite("ckifcc",cboCKifCon.IsChecked.ToString(),area);
         if (cboColumn.SelectedItem == null || string.IsNullOrWhiteSpace(txtValue.Text))
         {
             MessageBox.Show("请选择列并输入表达式。");
@@ -290,30 +461,45 @@ public partial class RowAndCol : Window
                     if (is_selctcol == false)
                         if (is_ifconck != original.Contains(conStr))
                             continue;
-
+                long? dateNum=null;
+                dateNum = YiKit.getDateLong(original);
+                Match match = null;;
                 // 提取第一个数字
-                var match = System.Text.RegularExpressions.Regex.Match(original, @"-?\d+\.?\d*");
-                if (!match.Success) continue;
-
-                if (double.TryParse(match.Value, out double num))
+                if (dateNum == null)
                 {
-                    try
-                    {
-                        double resultValue = YiMathKit.EvaluateAdvanced(expressionStr, num);
+                    match = System.Text.RegularExpressions.Regex.Match(original, @"-?\d+\.?\d*");
+                
+                    if (!match.Success) continue;
 
-                        string replaced = original.Substring(0, match.Index) +
-                                          resultValue.ToString() +
-                                          original.Substring(match.Index + match.Length);
-                        count++;
-                        row[colIndex] = replaced;
-                    }
-                    catch (Exception ex)
+                    if (double.TryParse(match.Value, out double num))
                     {
-                        MessageBox.Show($"表达式错误: {ex.Message}\n表达式: {expressionStr}",
-                            "公式错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                        return;
+                        try
+                        {
+                            double resultValue = YiMathKit.EvaluateAdvanced(expressionStr, num);
+
+                            string replaced = original.Substring(0, match.Index) +
+                                              resultValue.ToString() +
+                                              original.Substring(match.Index + match.Length);
+                            count++;
+                            row[colIndex] = replaced;
+                        }
+                        catch (Exception ex)
+                        {
+                            MessageBox.Show($"表达式错误: {ex.Message}\n表达式: {expressionStr}",
+                                "公式错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                            return;
+                        }
                     }
                 }
+                else
+                {
+                    double resultValue = YiMathKit.EvaluateAdvanced(expressionStr, double.Parse(dateNum+""));
+                    string replaced = resultValue.ToString() ;
+                    count++;
+                    row[colIndex] = replaced;
+                }
+
+
             }
             else
             {
@@ -358,6 +544,14 @@ public partial class RowAndCol : Window
 
     private void ApplyReplace_Click(object sender, RoutedEventArgs e)
     {
+        YiKit.IniWrite("txtc",txtCon.Text,area);
+        YiKit.IniWrite("txtm",txtValue.Text,area);
+        YiKit.IniWrite("txtf",txtFind.Text,area);
+        YiKit.IniWrite("txtr",txtReplace.Text,area);
+        YiKit.IniWrite("ckif",cboCKif.IsChecked.ToString(),area);
+        YiKit.IniWrite("ckifc",cboCKifcol.IsChecked.ToString(),area);
+        YiKit.IniWrite("ckifcc",cboCKifCon.IsChecked.ToString(),area);
+        
         if (cboColumn.SelectedItem == null || string.IsNullOrWhiteSpace(txtFind.Text))
         {
             MessageBox.Show("请选择列并输入查找内容。");

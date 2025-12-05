@@ -198,6 +198,62 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
     public bool watched = false;
     private Polyline waveformPolyline;
 
+    public bool isReadingNames = false;
+
+    public void readNames(object? sender=null, RoutedEventArgs? routedEventArgs=null)
+    {
+        if (isReadingNames) return;
+        YiKit.RunThread(s =>
+        {
+            
+            isReadingNames = true;
+            char spx = ';';
+            string filep = null;
+
+            if (File.Exists("ids.txt")) filep = "ids.txt";
+            else if (File.Exists("id.txt")) filep = "id.txt";
+            else if (File.Exists("ids")) filep = "ids";
+            else if (File.Exists("id")) filep = "ids";
+
+            if (filep != null)
+
+            {
+                try
+                {
+                    foreach (string line in File.ReadLines(filep))
+                    {
+                        if (spx == ';')
+                        {
+                            if (line.Contains('\t')) spx = '\t';
+                            if (line.Contains(' ')) spx = ' ';
+                            else if (line.Contains(',')) spx = ',';
+                            else if (line.Contains('，')) spx = '，';
+                            else if (line.Contains('\t')) spx = '\t';
+                            else if (line.Contains('-')) spx = '-';
+                            else if (line.Contains(';')) spx = ';';
+                            else if (line.Contains('；')) spx = '；';
+                        }
+
+                        var l_s = line.Split(spx);
+                        if(l_s.Length>1)
+                            ids[line.Split(spx)[0]] = line.Split(spx)[1];
+                        // ids.Add(line.Split(spx)[0], line.Split(spx)[1]);
+                        // Console.WriteLine(line);
+                    }
+                    YiKit.ShowToast($"{filep}加载完成");
+                }
+                catch (Exception e)
+                {
+                    isReadingNames = false;
+                    YiKit.ShowToastWaring($"{filep}加载失败"+e.Message);
+                }
+
+                
+            }
+
+            isReadingNames = false;
+        });
+    }
 
     public bool startCap(bool start = true)
     {
@@ -225,6 +281,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
         try
         {
+            
             if (t == RecordType.microphone)
             {
                 waveIn = new WaveInEvent();
@@ -242,38 +299,6 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             }
             else
             {
-                YiKit.RunThread(s =>
-                {
-                    char spx = ';';
-                    string filep=null;
-                    
-                    if (File.Exists("ids.txt")) filep= "ids.txt";
-                    else if (File.Exists("id.txt")) filep= "id.txt";
-                    else if (File.Exists("ids")) filep= "ids";
-                    else if (File.Exists("id")) filep= "ids";
-                    
-                    if (filep==null) return;
-                    
-                    foreach (string line in File.ReadLines(filep))
-                    {
-                        if (spx == ';')
-                        {
-                            if (line.Contains('\t')) spx = '\t';
-                            if (line.Contains(' ')) spx = ' ';
-                            else if (line.Contains(',')) spx = ',';
-                            else if (line.Contains('，')) spx = '，';
-                            else if (line.Contains('\t')) spx = '\t';
-                            else if (line.Contains('-')) spx = '-';
-                            else if (line.Contains(';')) spx = ';';
-                            else if (line.Contains('；')) spx = '；';
-                        }
-                        ids[line.Split(spx)[0]] = line.Split(spx)[1];
-                        // ids.Add(line.Split(spx)[0], line.Split(spx)[1]);
-                        // Console.WriteLine(line);
-                    }
-                    // YiKit.ShowToast("加载完成");
-
-                });
                 if (null != capture)
                 {
                     capture.Dispose();
@@ -370,6 +395,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             startCap();
         }
 
+        readNames();
         watched = true;
         startListingLogDir1S();
         playErrorThrea();
@@ -533,7 +559,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
     ObservableCollection<string> hllogs = new ObservableCollection<string>();
     ObservableCollection<string> hlelogs = new ObservableCollection<string>();
-    private string logeFilePath = YiKit.GetAppStartPath()+ "\\idswatch\\监控派接异常通话.csv";
+    private string logeFilePath = YiKit.GetAppStartPath() + "\\idswatch\\监控派接异常通话.csv";
     private string logFilePath = YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接.csv";
 
     private bool ismove = false;
@@ -604,6 +630,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
     public void restartProgress()
     {
+        return;
         try
         {
             numr++;
@@ -678,7 +705,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
         {
             while (watched)
             {
-                if (errorExNum<2&&((lxwsy > (bjsc / delay)) || jknumsoundbj > (bjsc / delay)))
+                if (errorExNum < 2 && ((lxwsy > (bjsc / delay)) || jknumsoundbj > (bjsc / delay)))
                 {
                     if (!ismove)
                     {
@@ -690,8 +717,8 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                             while (ismove)
                             {
                                 Console.Beep();
-                                Thread.Sleep(100/sn);
-                                sn+=1;
+                                Thread.Sleep(100 / sn);
+                                sn += 1;
                             }
                         });
 
@@ -699,7 +726,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                         //200,950
                         // YiKit.ProgressMouseClick("济南公安融合通信", xtb, ytb);
                         var h = YiKit.GetWindowPtr("济南公安融合通信");
-                     
+
                         // 设置焦点到目标窗口
                         YiKit.SetForegroundWindow(h);
                         Thread.Sleep(500);
@@ -714,10 +741,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
                     // 播放系统报警音
                     // SystemSounds.Beep.Play();
-                    
+
                     // 最终恢复原始背景色
                 }
-                else if (errorExNum>=2)
+                else if (errorExNum >= 2)
                 {
                     jknumsoundbj = 0;
                     lxwsy = 0;
@@ -838,6 +865,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                     continue;
                 }
 
+                if (ids.Count==0)
+                {
+                    readNames();
+                }
                 List<string> list =
                     new List<string>(log.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None));
                 foreach (string s in list)
@@ -851,7 +882,7 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                             gid = YiKit.SubStr(s, "gid:", " ");
                             cid = YiKit.SubStr(s, "channelid", " ");
                             uid = YiKit.SubStr(s, "uid:");
-                            sn =ids.ContainsKey(uid)?ids[uid] :"";
+                            sn = ids.ContainsKey(uid) ? ids[uid] : "";
                             if (gcDic.ContainsKey(cid))
                             {
                                 gcDic[cid] = gid;
@@ -860,9 +891,9 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                 gcDic.Add(cid, gid);
 
                             if (!gcLogLine.ContainsKey(cid))
-                                gcLogLine.Add(cid, gid + "-" + uid +sn+ "," + YiKit.NowD());
+                                gcLogLine.Add(cid, gid + "-" + uid + sn + "," + YiKit.NowD());
                             else
-                                gcLogLine[cid] = gid + "-" + uid +sn+ "," + YiKit.NowD();
+                                gcLogLine[cid] = gid + "-" + uid + sn + "," + YiKit.NowD();
                             if (gcDic.ContainsKey(cid) && gcDic[cid].Equals(pjGid))
                             {
                                 faqi = true;
@@ -875,8 +906,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                             //讲话
                             cid = YiKit.SubStr(s, "channleid: ", " ");
                             sm = YiKit.SubStr(s, "speekNum: ", " ");
-                            
-                            sn =ids.ContainsKey(sm)?ids[sm] :(s.Contains("speakName:")? YiKit.SubStr(s, "speakName:"):"");
+
+                            sn = ids.ContainsKey(sm)
+                                ? ids[sm]
+                                : (s.Contains("speakName:") ? YiKit.SubStr(s, "speakName:") : "");
 
                             if (gcLogLine.ContainsKey(cid))
                                 gcLogLine[cid] += "🔊" + sn + "(" + sm + "):" + YiKit.NowT();
@@ -953,11 +986,11 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                     {
                                         errorMsg = gcLogLine[cid] + ",信道占用，有背景音，无人声\r\n";
                                     }
-                                    else if (jknumyx == 0 ||
+                                    /*else if (jknumyx == 0 ||
                                              Math.Round((jknumsoundyx / (jknumyx * 1f)) * 100.0f, 2) <= 30)
                                     {
                                         errorMsg = gcLogLine[cid] + ",讲话声音短\r\n";
-                                    }
+                                    }*/
 
                                     YiKit.RunOnUIThread(() => { hlelogs.Add(errorMsg); });
 
@@ -967,14 +1000,16 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                         if (lastErrorFails.Count > 0)
                                         {
                                             YiKit.FileWriteAppend(string.Join("", lastErrorFails),
-                                                YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接异常通话.csv");
+                                                YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() +
+                                                "监控派接异常通话.csv");
                                             lastErrorFails.Clear();
                                         }
 
                                         if (!lastError.Equals(errorMsg))
                                         {
                                             YiKit.FileWriteAppend(errorMsg,
-                                                YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() + "监控派接异常通话.csv");
+                                                YiKit.GetAppStartPath() + "\\idswatch\\" + YiKit.NowD() +
+                                                "监控派接异常通话.csv");
                                             lastError = errorMsg + "";
                                         }
 
@@ -1099,15 +1134,19 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
 
             while (fs.Length == 0)
             {
-                Thread.Sleep(10);
+                Thread.Sleep(100);
             }
 
             long position = fs.Length;
             bufferSize = (position - _lastlen);
 
-            if (bufferSize > 1024 * 1024)
+            if (_lastlen==0)
             {
-                bufferSize = 8;
+                _lastlen = fs.Length;
+                return null;
+            }else if (bufferSize > 1024 * 1024)
+            {
+                bufferSize = 64*1024;
             }
             else if (bufferSize == 0)
             {
@@ -1358,6 +1397,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             {
                 selectLogItem.Content += ",LTE未起来\r\n";
             }
+            else if (menuItem.Header.Equals("违规占用信道"))
+            {
+                selectLogItem.Content += ",违规占用信道\r\n";
+            }
             else if (menuItem.Header.Equals("其他"))
             {
                 List<string> strs = YiKit.ShowInputDialog("输入异常详情", new[] { "发现的问题" });
@@ -1366,8 +1409,12 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                     selectLogItem.Content += "," + (strs[0].Length == 0 ? "其他" : strs[0]) + "\r\n";
                 }
             }
-
-            YiKit.RunOnUIThread(() => { hlelogs.Add(selectLogItem.Content.ToString()); });
+            
+            YiKit.RunOnUIThread(() =>
+            {
+                if (!hlelogs.Contains(selectLogItem.Content.ToString()))
+                    hlelogs.Add(selectLogItem.Content.ToString());
+            });
             try
             {
                 YiKit.FileWriteAppend(selectLogItem.Content.ToString().Replace("♦", ",").Replace("🔊", ""),

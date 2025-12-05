@@ -69,11 +69,11 @@
                     <TextBlock VerticalAlignment="Center">报警</TextBlock>
                     <TextBox Name="BjTimeTextBox" ToolTip="报警" MinWidth="30" TextChanged="BjTimeTextBox_OnTextChanged"></TextBox>
                     <TextBlock VerticalAlignment="Center">掐断</TextBlock>
-                    <TextBox Name="XTB" MinWidth="30" Background="Transparent" BorderBrush="Transparent"
+                    <TextBox Name="XTB" Width="0" Background="Transparent" BorderBrush="Transparent"
                              TextChanged="XTB_OnTextChanged">
                     </TextBox>
-                    <TextBlock VerticalAlignment="Center">,</TextBlock>
-                    <TextBox Name="YTB" MinWidth="30" Background="Transparent" BorderBrush="Transparent"
+                    <TextBlock VerticalAlignment="Center" Width="0">,</TextBlock>
+                    <TextBox Name="YTB" Width="0" Background="Transparent" BorderBrush="Transparent"
                              TextChanged="YTB_OnTextChanged">
                     </TextBox>
                 </StackPanel>
@@ -87,6 +87,7 @@
             <TextBlock ToolTip="历史条数" VerticalAlignment="Center">条</TextBlock>
             <TextBlock Margin="10,0,0,0" ToolTip="输入要监控的派接组" VerticalAlignment="Center">派接组：</TextBlock>
             <TextBox Name="JkTextBox" ToolTip="输入要监控的派接组" MinWidth="70" TextChanged="JkTextBox_OnTextChanged"></TextBox>
+            <Button Content="读取人名" Style="{StaticResource NoChromeButton}" Click="readNames"></Button>
         </StackPanel>
         <!-- </Viewbox> -->
         <!-- <Viewbox Grid.Row="0" Grid.Column="6" Grid.ColumnSpan="3" HorizontalAlignment="Stretch" VerticalAlignment="Stretch"> -->
@@ -143,6 +144,8 @@
                     <Separator />
                     <MenuItem Header="PDT没起来" Click="MenuItem_Click" />
                     <MenuItem Header="LTE未起来" Click="MenuItem_Click" />
+                    <Separator />
+                    <MenuItem Header="违规占用信道" Click="MenuItem_Click" />
                     <Separator />
                     <MenuItem Header="其他" Click="MenuItem_Click" />
                 </ContextMenu>
