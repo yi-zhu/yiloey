@@ -28,6 +28,7 @@ using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
 using holey.Dialog;
+using holey.KitWin;
 using holey.Page;
 using holey.Vdd;
 using holey.Vdd.Vdd;
@@ -48,6 +49,14 @@ using ProgressBar = System.Windows.Controls.ProgressBar;
 using Size = System.Drawing.Size;
 
 namespace holey;
+
+// 被监控进程类
+public class MonitoredProcess
+{
+    public string ProcessName { get; set; }
+    public string ProcessPath { get; set; }
+    public bool IsMonitoring { get; set; }
+}
 
 public partial class PetWindow : Window
 {
@@ -272,6 +281,331 @@ public partial class PetWindow : Window
         if (VDD) ProgramVdd.StartVdd(["-a"], true);
 
         AutoStartMenuItem.IsChecked = YiKit.IniGetBool("autostart", false);
+        
+        // 从配置文件加载被监控进程
+        LoadMonitoredProcesses();
+    }
+    
+    // 检查被监控进程
+    private void CheckMonitoredProcesses()
+    {
+        foreach (var monitoredProcess in _monitoredProcesses)
+        {
+            if (monitoredProcess.IsMonitoring)
+            {
+                bool isRunning = IsProcessRunning(monitoredProcess.ProcessName);
+                if (!isRunning)
+                {
+                    // 进程已消失，重启进程
+                    RestartProcess(monitoredProcess);
+                }
+            }
+        }
+    }
+    
+    // 检查进程是否运行
+    private bool IsProcessRunning(string processName)
+    {
+        try
+        {
+            // 移除.exe后缀（如果有）
+            string processNameWithoutExe = processName;
+            if (processNameWithoutExe.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                processNameWithoutExe = processNameWithoutExe.Substring(0, processNameWithoutExe.Length - 4);
+            }
+            
+            Process[] processes = Process.GetProcessesByName(processNameWithoutExe);
+            return processes.Length > 0;
+        }
+        catch (Exception ex)
+        {
+            YiKit.Print("检查进程失败: " + ex.Message);
+            return false;
+        }
+    }
+    
+    // 重启进程
+    private void RestartProcess(MonitoredProcess monitoredProcess)
+    {
+        try
+        {
+            if (File.Exists(monitoredProcess.ProcessPath))
+            {
+                ProcessStartInfo startInfo = new ProcessStartInfo
+                {
+                    FileName = monitoredProcess.ProcessPath,
+                    WorkingDirectory = Path.GetDirectoryName(monitoredProcess.ProcessPath)
+                };
+                Process.Start(startInfo);
+                YiKit.Print("已重启进程: " + monitoredProcess.ProcessName);
+                YiKit.ShowToast("已重启进程: " + monitoredProcess.ProcessName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            }
+            else
+            {
+                YiKit.Print("进程路径不存在: " + monitoredProcess.ProcessPath);
+            }
+        }
+        catch (Exception ex)
+        {
+            YiKit.Print("重启进程失败: " + ex.Message);
+        }
+    }
+   
+    
+    // 添加被监控进程
+    private void AddMonitoredProcess()
+    {
+        try
+        {
+            // 打开文件选择对话框，让用户选择要监控的进程
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "可执行文件 (*.exe)|*.exe|所有文件 (*.*)|*.*",
+                Title = "选择要监控的进程"
+            };
+            
+            if (openFileDialog.ShowDialog() == true)
+            {
+                string processPath = openFileDialog.FileName;
+                string processName = Path.GetFileName(processPath);
+                
+                // 检查是否已经在监控列表中
+                if (!_monitoredProcesses.Any(p => p.ProcessPath.Equals(processPath, StringComparison.OrdinalIgnoreCase)))
+                {
+                    var monitoredProcess = new MonitoredProcess
+                    {
+                        ProcessName = processName,
+                        ProcessPath = processPath,
+                        IsMonitoring = true
+                    };
+                    
+                    _monitoredProcesses.Add(monitoredProcess);
+                    YiKit.Print("已添加被监控进程: " + processName);
+                    YiKit.ShowToast("已添加被监控进程: " + processName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
+                    
+                    // 保存到配置文件
+                    SaveMonitoredProcesses();
+                }
+                else
+                {
+                    YiKit.ShowToast("该进程已在监控列表中", l: (int)(Left + Width / 2), t: (int)(Top + 30));
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            YiKit.Print("添加被监控进程失败: " + ex.Message);
+        }
+    }
+    
+    // 显示被监控进程列表
+    private void ShowMonitoredProcesses()
+    {
+        try
+        {
+            if (_monitoredProcesses.Count == 0)
+            {
+                YiKit.ShowToast("当前没有被监控的进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
+                return;
+            }
+            
+            string message = "被监控进程列表:\n";
+            foreach (var process in _monitoredProcesses)
+            {
+                message += $"{process.ProcessName} - {(process.IsMonitoring ? "监控中" : "已暂停")}\n";
+            }
+            
+            YiKit.ShowToast(message, 0,5,l: (int)(Left + Width / 2), t: (int)(Top + 30));
+        }
+        catch (Exception ex)
+        {
+            YiKit.Print("显示被监控进程失败: " + ex.Message);
+        }
+    }
+    
+    // 杀死进程
+    private void KillProcess_OnClick(object sender, RoutedEventArgs e)
+    {
+        var ret = YiKit.ShowInputDialog("杀死匹配的进程", "进程名:");
+
+        
+        if (ret == null)
+        {
+            return;
+        }
+        
+       string num= YiKit.ProgressEnd(ret[0]);
+       YiKit.ShowToast("杀死了"+num+"个"+ret[0]+"进程");  
+       
+  
+    }
+    // 添加监控进程菜单项点击事件
+    private void AddMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
+    {
+        AddMonitoredProcess();
+    }
+    
+    // 显示监控进程菜单项点击事件
+    private void ShowMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
+    {
+        ShowMonitoredProcesses();
+    }
+    
+    // 保存被监控进程到配置文件
+    private void SaveMonitoredProcesses()
+    {
+        try
+        {
+            // 清空旧配置
+            YiKit.IniWrite("monitored_processes_count", "0", "process_monitor");
+            
+            // 保存进程列表
+            for (int i = 0; i < _monitoredProcesses.Count; i++)
+            {
+                var process = _monitoredProcesses[i];
+                YiKit.IniWrite($"process_{i}_name", process.ProcessName, "process_monitor");
+                YiKit.IniWrite($"process_{i}_path", process.ProcessPath, "process_monitor");
+                YiKit.IniWrite($"process_{i}_monitoring", process.IsMonitoring.ToString(), "process_monitor");
+            }
+            
+            // 保存进程数量
+            YiKit.IniWrite("monitored_processes_count", _monitoredProcesses.Count.ToString(), "process_monitor");
+        }
+        catch (Exception ex)
+        {
+            YiKit.Print("保存被监控进程失败: " + ex.Message);
+        }
+    }
+    
+    // 加载被监控进程从配置文件
+    private void LoadMonitoredProcesses()
+    {
+        try
+        {
+            _monitoredProcesses.Clear();
+            
+            // 读取进程数量
+            int count = YiKit.IniGetInt("monitored_processes_count", 0, "process_monitor");
+            
+            // 读取进程列表
+            for (int i = 0; i < count; i++)
+            {
+                string name = YiKit.IniGet($"process_{i}_name", "", "process_monitor");
+                string path = YiKit.IniGet($"process_{i}_path", "", "process_monitor");
+                bool isMonitoring = YiKit.IniGetBool($"process_{i}_monitoring", true, "process_monitor");
+                
+                if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(path))
+                {
+                    _monitoredProcesses.Add(new MonitoredProcess
+                    {
+                        ProcessName = name,
+                        ProcessPath = path,
+                        IsMonitoring = isMonitoring
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            YiKit.Print("加载被监控进程失败: " + ex.Message);
+        }
+    }
+    
+    // 开启选中进程监控菜单项点击事件
+    private void StartMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
+    {
+        SelectAndOperateProcess("选择要开启监控的进程", (process) =>
+        {
+            process.IsMonitoring = true;
+            YiKit.Print("已开启进程监控: " + process.ProcessName);
+            YiKit.ShowToast("已开启进程监控: " + process.ProcessName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            SaveMonitoredProcesses();
+        });
+    }
+    
+    // 关闭选中进程监控菜单项点击事件
+    private void StopMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
+    {
+        SelectAndOperateProcess("选择要关闭监控的进程", (process) =>
+        {
+            process.IsMonitoring = false;
+            YiKit.Print("已关闭进程监控: " + process.ProcessName);
+            YiKit.ShowToast("已关闭进程监控: " + process.ProcessName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            SaveMonitoredProcesses();
+        });
+    }
+    
+    // 删除选中进程菜单项点击事件
+    private void RemoveMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
+    {
+        SelectAndOperateProcess("选择要删除的进程", (process) =>
+        {
+            _monitoredProcesses.Remove(process);
+            YiKit.Print("已删除进程: " + process.ProcessName);
+            YiKit.ShowToast("已删除进程: " + process.ProcessName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            SaveMonitoredProcesses();
+        });
+    }
+    
+    // 清空所有进程菜单项点击事件
+    private void ClearMonitoredProcesses_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_monitoredProcesses.Count == 0)
+        {
+            YiKit.ShowToast("当前没有被监控的进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            return;
+        }
+        
+        if (MessageBox.Show("确定要清空所有被监控的进程吗？", "确认操作", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        {
+            _monitoredProcesses.Clear();
+            YiKit.Print("已清空所有被监控进程");
+            YiKit.ShowToast("已清空所有被监控进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            SaveMonitoredProcesses();
+        }
+    }
+    
+    // 选择并操作进程的通用方法
+    private void SelectAndOperateProcess(string title, Action<MonitoredProcess> operation)
+    {
+        if (_monitoredProcesses.Count == 0)
+        {
+            YiKit.ShowToast("当前没有被监控的进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
+            return;
+        }
+        
+        // 构建进程选择列表
+        List<string> processNames = _monitoredProcesses.Select(p => $"{p.ProcessName} {(p.IsMonitoring ? "(监控中)" : "(已暂停)")} 是否").ToList();
+        
+        List<string> selected = ShowInputDialog(title, processNames.ToArray());
+        List<string> result = new List<string>();
+        while (selected.Count < processNames.Count)
+        {
+            selected.Insert(0,"");
+        }
+
+        for (int i = 0; i < selected.Count; i++)
+        {
+            if (selected[i] == "true")
+            {
+                result.Add(processNames[i]);
+            }
+        }
+
+        if (result != null && result.Count > 0)
+        {
+            string selectedName = result[0];
+            // 提取进程名称（去掉状态后缀）
+            string processName = selectedName.Split(new[] { " (" }, StringSplitOptions.None)[0];
+            
+            // 查找对应的进程
+            MonitoredProcess process = _monitoredProcesses.FirstOrDefault(p => p.ProcessName == processName);
+            if (process != null)
+            {
+                operation(process);
+            }
+        }
     }
 
     public static bool VDD = false;
@@ -325,6 +659,9 @@ public partial class PetWindow : Window
 
     private bool IsAlive { get; set; } = true;
     private NetworkInterface? tap;
+    
+    // 进程监听相关
+    private List<MonitoredProcess> _monitoredProcesses = new List<MonitoredProcess>();
 
     public bool _isWallPage = false;
 
@@ -456,6 +793,12 @@ public partial class PetWindow : Window
                 }
 
 
+                // 每5秒检查一次被监控进程
+                if (cot % 5 == 0)
+                {
+                    CheckMonitoredProcesses();
+                }
+                
                 Thread.Sleep(_sleep);
             }
         });
@@ -1141,7 +1484,7 @@ public partial class PetWindow : Window
         {
             _clipboard = 1;
             clbname =
-                YiKit.ShowInputDialogDefValue("请输入相同的匹配码或者相同的名称,系统会自动记忆", YiKit.IniGet("clbname", "ini", def: ""))?[0];
+                YiKit.ShowInputDialog("同步剪贴板", "请输入相同的匹配码或者相同的名称,系统会自动记忆:"+YiKit.IniGet("clbname", "ini", def: ""))?[0]+"";
             if (string.IsNullOrEmpty(clbname)) //如果没有输入或者输入为空
             {
                 return;
@@ -1159,7 +1502,13 @@ public partial class PetWindow : Window
 
         YiKit.IniWrite("clipboard", value: _clipboard + "", area: "ini");
     }
-
+    // 新建一个剪切板窗口，窗口实时读取剪切板并记录不同历史记录，并具有自动写入到文件的选项
+    private void ClipboardItemOnRightClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true; // 防止触发左键点击事件
+        var clipboardWindow = new holey.Dialog.ClipboardHistoryWindow();
+        clipboardWindow.Show();
+    }
     //读取cpu温度
 
     private static string lastClipboardText = "";
@@ -2054,7 +2403,7 @@ public partial class PetWindow : Window
             "列数(自动计算请填0):0",
             "目标宽度等比缩放:256",
             "帧率:24",
-            "删除黑色背景强度:0.005",
+            "删除黑色背景强度:black:0.005",
             "是否删除缓存图片："
         );
         if (strs == null || strs.Count < 1)
@@ -2073,9 +2422,9 @@ public partial class PetWindow : Window
         string color = "black";
 
         double delDark = 0.005;
-        if (strs[5].Contains(":"))
+        if (strs[6].Contains(":"))
         {
-            string[] colors = strs[5].Split(':');
+            string[] colors = strs[6].Split(':');
             delDark = double.TryParse(colors[1], out var d) ? d : 0.005;
             color = colors[0];
         }
@@ -2190,7 +2539,7 @@ public partial class PetWindow : Window
 
                     // 合成联系表
 
-                    // 调用 pngPacker（假设你已定义该方法）
+                    // 调用 pngPacker
                     pngPacker(outputDir, contactSheetPath, targetWidth, columns);
 
                     if (isDel)
@@ -2505,13 +2854,14 @@ public partial class PetWindow : Window
     }
 
 
-    public static void pngPacker(string framesDir, string contactSheetPath, int targetFrameWidth = 256, int columns = 0)
+    public static void pngPacker(string framesDir, string contactSheetPath, int targetFrameWidth = 256, int columns = 0,
+        int targetFrameHeight = 256, int rows = 0)
     {
         // 直接从原始 PNG 帧图像创建联系表，不生成缩放后的临时文件
 
 
-        int thumbWidth = targetFrameWidth; // 每个缩略图宽度
-        int thumbHeight = 0; // 稍后根据第一张图像比例计算高度
+        int thumbWidth = targetFrameWidth; // 每个缩略图宽度，如果是0则不改变或自动等比缩放
+        int thumbHeight = targetFrameHeight; //如果是0 稍后根据第一张图像比例计算高度
 
         var images = new List<Bitmap>();
         List<int> actualHeights = new List<int>(); // 可选：记录每个图像的实际高度（非统一）
@@ -2521,19 +2871,60 @@ public partial class PetWindow : Window
         {
             using (Image original = Image.FromFile(file))
             {
-                double ratio = (double)targetFrameWidth / original.Width;
-                int newHeight = (int)(original.Height * ratio);
-                thumbHeight = newHeight; // 所有缩略图统一高度（也可动态处理）
+                double ratio = 1;
+                int newh;
+                int neww;
+                if (targetFrameWidth > 0 && targetFrameHeight > 0)
+                {
+                    newh = targetFrameHeight;
+                    neww = targetFrameWidth;
+                }
 
-                var resized = new Bitmap(original, new Size(targetFrameWidth, newHeight));
+                else if (targetFrameHeight > 0)
+                {
+                    ratio = (double)targetFrameHeight / original.Height;
+                    newh = (int)(original.Height * ratio);
+                    neww = (int)original.Width;
+                }
+
+
+                else if (targetFrameWidth > 0)
+                {
+                    ratio = (double)targetFrameWidth / original.Width;
+                    neww = (int)(original.Width * ratio);
+                    newh = (int)(original.Height);
+                }
+                else
+                {
+                    newh = original.Height;
+                    neww = original.Width;
+                }
+
+                if (newh>thumbHeight)
+                thumbHeight = newh; // 所有缩略图统一高度（也可动态处理）
+                if (neww>thumbWidth)
+                thumbWidth = neww; // 所有缩略图统一高度（也可动态处理）
+
+                var resized = new Bitmap(original, new Size(neww, newh));
                 images.Add(resized); // 添加到列表中
             }
         }
 
         if (images.Count == 0)
-            throw new Exception("未找到 PNG 图像文件");
-        if (columns < 1) columns = (int)Math.Ceiling(Math.Sqrt(images.Count)); // 自动计算行列
-        int rows = (int)Math.Ceiling((double)images.Count / columns);
+            YiKit.Print("未找到 PNG 图像文件");
+        if (columns < 1 && rows < 1)
+        {
+            columns = (int)Math.Ceiling(Math.Sqrt(images.Count)); // 自动计算行列
+            rows = (int)Math.Ceiling((double)images.Count / columns);
+        }
+        else if (columns < 1)
+        {
+            columns = (int)Math.Ceiling((double)images.Count / rows);
+        }
+        else if (rows < 1)
+        {
+            rows = (int)Math.Ceiling((double)images.Count / columns);
+        }
 
 // 创建联系表画布
         Bitmap sheet = new Bitmap(columns * thumbWidth, rows * thumbHeight);
@@ -2544,7 +2935,7 @@ public partial class PetWindow : Window
 
             foreach (var img in images)
             {
-                g.DrawImage(img, new Rectangle(x, y, thumbWidth, thumbHeight));
+                g.DrawImage(img, new Rectangle(x, y, img.Width, img.Height));
                 x += thumbWidth;
 
                 if (x >= sheet.Width)
@@ -3494,4 +3885,370 @@ public partial class PetWindow : Window
         string exepath = strs[0];
         YiKit.GetSystem(exepath);
     }
+
+    private void MouKbo_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (MouseAndKeyboard.me == null)
+            MouseAndKeyboard.me = new MouseAndKeyboard();
+        MouseAndKeyboard.me.Show();
+    }
+
+    private void PicItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        //ffmpeg -i input.ogv -vf fps=30 -c:v png -pix_fmt rgba output_%04d.png
+
+
+        string type = "png";
+        List<string> strs = YiKit.ShowInputDialog(
+            "pic合并成联系表",
+            "图片格式:png",
+            "文件位置（可为空）：",
+            "文件夹位置（和文件二选一）：",
+            "列数(合并为几列):1",
+            "行数(自动计算填0):0",
+            "原文件宽度缩放为(保持不变填0):0",
+            "原文件高度缩放为(保持不变填0):0",
+            "删除黑色背景强度:0x000000:0.005",
+        "是否删除缓存文件:true"
+            );
+        if (strs == null || strs.Count < 1)
+        {
+            YiKit.ShowToastError("参数错误");
+            return;
+        }
+
+        type = strs[0].Replace(".", "");
+        string filePath = strs[1].Trim();
+        int columns = int.TryParse(strs[3], out var col) ? col : 0;
+        int rows = int.TryParse(strs[4], out var row) ? row : 0;
+        int targetWidth = int.TryParse(strs[5], out var width) ? width : 0;
+        int targetHight = int.TryParse(strs[6], out var h) ? h : 0;
+        string color = "black";
+        var isDel = bool.TryParse(strs[8], out var  del) ? del : false;
+
+        double delDark = 0.005;
+        if (strs[7].Contains(":"))
+        {
+            string[] colors = strs[7].Split(':');
+            delDark = double.TryParse(colors[1], out var d) ? d : 0.005;
+            color = colors[0];
+        }
+        else
+            delDark = double.TryParse(strs[7], out var d) ? d : 0.005;
+
+        string folder = strs[2].Trim();
+
+        YiKit.RunThread(async s =>
+        {
+            try
+            {
+                List<string> files = new List<string>();
+
+                // 如果提供了文件夹，则优先使用文件夹中的 .ogv 文件
+                if (!string.IsNullOrEmpty(folder) && Directory.Exists(folder))
+                {
+                    files.AddRange(Directory.GetFiles(folder, "*." + type, SearchOption.TopDirectoryOnly));
+                }
+
+                // 如果提供了单个文件，则加入列表
+                if (!string.IsNullOrEmpty(filePath) && File.Exists(filePath))
+                {
+                    if (!files.Contains(filePath))
+                        files.Add(filePath);
+                }
+
+                if (files.Count == 0)
+                {
+                    // 如果没有找到任何 .fla 文件，则查找 .zip 文件并尝试提取其中的 .fla
+
+                    var zipFiles = Directory.GetFiles(folder, "*.zip", SearchOption.TopDirectoryOnly);
+
+                    foreach (var zipFile in zipFiles)
+                    {
+                        // 确保临时目录干净
+                        // if (Directory.Exists(extractTempDir)) Directory.Delete(extractTempDir, true);
+                        // Directory.CreateDirectory(extractTempDir);
+
+                        // 提取 ZIP 中的 .type 文件
+                        using (var archive = ZipFile.OpenRead(zipFile))
+                        {
+                            foreach (var entry in archive.Entries)
+                            {
+                                if (entry.FullName.EndsWith("." + type, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    string uniqueName = $"{Path.GetFileNameWithoutExtension(zipFile)}.{type}";
+                                    string destPath = Path.Combine(folder, uniqueName);
+                                    entry.ExtractToFile(destPath);
+                                    files.Add(destPath);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (files.Count == 0)
+                {
+                    YiKit.ShowToastError($"未找到有效的{type}文件");
+                    return;
+                }
+
+                string outputDir=null;
+                string contactSheetPath = null;
+                
+                foreach (var path in files)
+                {
+                    string fileDir = Path.GetDirectoryName(path);
+                    if (outputDir==null)
+                     outputDir = Path.Combine(
+                        fileDir,
+                        "sheet"+YiKit.NowTicks()
+                    );
+                    var fileName = Path.GetFileNameWithoutExtension(path);
+                    if (contactSheetPath==null)
+                     contactSheetPath = Path.Combine(fileDir, Path.GetFileName(fileDir)+"_"+Path.GetRandomFileName() + ".png");
+                    Directory.CreateDirectory(outputDir);
+                    // 创建输出目录
+                    // if (Directory.Exists(framesDir)) Directory.Delete(framesDir, true);
+                    // Directory.CreateDirectory(framesDir);
+
+                    // 使用 FFmpeg 提取帧（RGBA 透明通道）
+                    //ffmpeg -i he1.ogv   -vf "scale={targetWidth}:-1,format=rgba,colorkey=black:0.005:0.1,fps={fps}" "D:\soft\Godot\projects\jie-(4.4)\anim\ogv\he1\frame_%04d.png"
+                    string ffmpegArgs = null;
+
+
+                    ffmpegArgs =
+                        $"-i \"{path}\" -vf \"scale={targetWidth}:{targetHight},format=rgba,colorkey={color}:{delDark}:0.1\"  \"{Path.Combine(outputDir, fileName+".png")}\"";
+
+
+                    if (ffmpegArgs == null)
+                        return;
+
+                    YiKit.RunCmd($"ffmpeg.exe {ffmpegArgs}");
+
+                    if (!Directory.Exists(outputDir) || Directory.GetFiles(outputDir, "*.png").Length == 0)
+                    {
+                        YiKit.ShowToastError($"{Path.GetFileName(path)} 导出帧失败");
+                        continue;
+                    }
+
+       
+                }
+                // 计算列数（如果用户设置为0则自动计算）
+
+                // 合成联系表
+
+                // 调用 pngPacker
+                pngPacker(outputDir, contactSheetPath, targetWidth, columns, targetHight, rows);
+
+                if (isDel)
+                {
+                    YiKit.TryDeleteDir(outputDir);
+                }
+
+                YiKit.ShowToast($"文件{contactSheetPath}处理完成！");
+                YiKit.ShowToast($"全部 {type} 处理完成！");
+            }
+            catch (Exception ex)
+            {
+                YiKit.ShowToastError("发生异常：" + ex.Message);
+            }
+        });
+    }
+   private void SplitContactSheet_OnClick(object sender, RoutedEventArgs e)
+{
+    List<string> inputs = YiKit.ShowInputDialog(
+        "拆分联系表",
+        "联系表文件位置（.png）:",
+        "【可选】输出文件夹位置（留空则自动创建子文件夹）:",
+        "列数（横向数量）:0",
+        "行数（纵向数量，可填0自动计算）:0",
+        "【可选】子图宽度（留空则自动计算）:",
+        "【可选】子图高度（留空则自动计算）:"
+    );
+
+    if (inputs == null || inputs.Count < 4)
+    {
+        YiKit.ShowToastError("参数不足");
+        return;
+    }
+
+    string sheetPath = inputs[0].Trim();
+    string customOutputFolder = inputs[1].Trim();
+    int columns = int.TryParse(inputs[2], out var col) ? col : 0;
+    int rows = int.TryParse(inputs[3], out var row) ? row : 0;
+    bool hasWidth = int.TryParse(inputs[4].Trim(), out int tileWidth);
+    bool hasHeight = int.TryParse(inputs[5].Trim(), out int tileHeight);
+
+    if (string.IsNullOrEmpty(sheetPath) || !File.Exists(sheetPath))
+    {
+        YiKit.ShowToastError("联系表文件不存在");
+        return;
+    }
+
+    if (columns <= 0)
+    {
+        YiKit.ShowToastError("列数必须大于0");
+        return;
+    }
+
+    // 获取联系表基本信息
+    string sheetDir = Path.GetDirectoryName(sheetPath);
+    string sheetBaseName = Path.GetFileNameWithoutExtension(sheetPath); // 如 "my_sheet"
+
+    // 确定输出文件夹
+    string outputFolder;
+    if (!string.IsNullOrWhiteSpace(customOutputFolder))
+    {
+        outputFolder = customOutputFolder;
+        if (!Directory.Exists(outputFolder))
+            Directory.CreateDirectory(outputFolder);
+    }
+    else
+    {
+        // 默认：在联系表同目录下创建以文件名命名的文件夹
+        outputFolder = Path.Combine(sheetDir, sheetBaseName);
+        Directory.CreateDirectory(outputFolder); // 如果存在则无操作
+    }
+
+    // 加载图像获取尺寸
+    using var fullImage = new Bitmap(sheetPath);
+    int imageWidth = fullImage.Width;
+    int imageHeight = fullImage.Height;
+
+    // === 自动推导 tileWidth / tileHeight / rows ===
+    if (!hasWidth && !hasHeight)
+    {
+        if (imageWidth % columns != 0)
+        {
+            YiKit.ShowToastError($"图像宽度 {imageWidth} 无法被列数 {columns} 整除！");
+            return;
+        }
+        tileWidth = imageWidth / columns;
+
+        if (rows <= 0)
+        {
+            YiKit.ShowToastError("请提供行数或子图高度，否则无法确定垂直分割。");
+            return;
+        }
+
+        if (imageHeight % rows != 0)
+        {
+            YiKit.ShowToastError($"图像高度 {imageHeight} 无法被行数 {rows} 整除！");
+            return;
+        }
+        tileHeight = imageHeight / rows;
+    }
+    else if (!hasWidth)
+    {
+        if (rows <= 0)
+        {
+            if (imageHeight % tileHeight != 0)
+            {
+                YiKit.ShowToastError($"图像高度 {imageHeight} 无法被子图高度 {tileHeight} 整除！");
+                return;
+            }
+            rows = imageHeight / tileHeight;
+        }
+        else
+        {
+            if (imageHeight != rows * tileHeight)
+            {
+                YiKit.ShowToastError($"图像高度 {imageHeight} ≠ 行数×高度 ({rows}×{tileHeight})");
+                return;
+            }
+        }
+
+        if (imageWidth % columns != 0)
+        {
+            YiKit.ShowToastError($"图像宽度 {imageWidth} 无法被列数 {columns} 整除！");
+            return;
+        }
+        tileWidth = imageWidth / columns;
+    }
+    else if (!hasHeight)
+    {
+        if (imageWidth != columns * tileWidth)
+        {
+            YiKit.ShowToastError($"图像宽度 {imageWidth} ≠ 列数×宽度 ({columns}×{tileWidth})");
+            return;
+        }
+
+        if (rows <= 0)
+        {
+            YiKit.ShowToastError("请提供行数或子图高度，否则无法确定垂直分割。");
+            return;
+        }
+
+        if (imageHeight % rows != 0)
+        {
+            YiKit.ShowToastError($"图像高度 {imageHeight} 无法被行数 {rows} 整除！");
+            return;
+        }
+        tileHeight = imageHeight / rows;
+    }
+    else
+    {
+        if (imageWidth != columns * tileWidth || imageHeight != rows * tileHeight)
+        {
+            YiKit.ShowToastError($"图像尺寸 ({imageWidth}x{imageHeight}) 与网格 ({columns}x{rows} @ {tileWidth}x{tileHeight}) 不匹配！");
+            return;
+        }
+    }
+
+    if (rows <= 0)
+    {
+        YiKit.ShowToastError("无法确定有效行数。");
+        return;
+    }
+
+    // === 执行拆分 ===
+    YiKit.RunThread(async _ =>
+    {
+        try
+        {
+            using var fullImage = new Bitmap(sheetPath);
+            int total = 0;
+
+            for (int r = 0; r < rows; r++)
+            {
+                for (int c = 0; c < columns; c++)
+                {
+                    Rectangle rect = new Rectangle(c * tileWidth, r * tileHeight, tileWidth, tileHeight);
+                    using var tile = fullImage.Clone(rect, fullImage.PixelFormat);
+
+                    // 文件名格式：my_sheet_0000.png
+                    string fileName = $"{sheetBaseName}_{total:D4}.png";
+                    string outputPath = Path.Combine(outputFolder, fileName);
+
+                    tile.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
+                    total++;
+                }
+            }
+
+            YiKit.ShowToast($"成功拆分为 {total} 张 PNG"+"保存至：{outputFolder}");
+        }
+        catch (Exception ex)
+        {
+            YiKit.ShowToastError("拆分失败：" + ex.Message);
+        }
+    });
+}
+
+
+private void RealsePort_OnClick(object sender, RoutedEventArgs e)
+{
+    var ret = YiKit.ShowInputDialog("结束占用端口的程序", "端口号:10010");
+
+    if (ret == null)
+    {
+        return;
+    }
+
+    var o = YiKit.RunCmd("for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :"+ret[0]+"') do @taskkill /F /PID %a 2>nul");
+    if (o!=null)
+        if (0.ToString().Length <= 1)
+            o = "未找到占用"+ret[0]+"的程序，或者其已被结束";
+    YiKit.ShowToast(o);
+
+}
 }

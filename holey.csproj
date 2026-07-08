@@ -1,11 +1,13 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
+        <CETCompat>false</CETCompat><!-- 禁用CET，win10 不支持CET，只有win11支持-->
         <OutputType>WinExe</OutputType>
         <Nullable>enable</Nullable>
         <UseWPF>true</UseWPF>
         <ApplicationIcon>ico.ico</ApplicationIcon>
-        <GenerateDocumentationFile>True</GenerateDocumentationFile>
+        <GenerateDocumentationFile>false</GenerateDocumentationFile>
+        <DebugType>None</DebugType>
         <Copyright>yi</Copyright>
         <LangVersion>latest</LangVersion>
         <TargetFramework>net462</TargetFramework>
@@ -24,6 +26,7 @@
 
     <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|AnyCPU'">
         <Optimize>True</Optimize>
+        <CETCompat>false</CETCompat><!-- 禁用CET，win10 不支持CET，只有win11支持-->
     </PropertyGroup>
 
     <ItemGroup>
@@ -32,6 +35,9 @@
         <None Remove="Img\*.gif"/>
         <None Remove="Img\*.psd"/>
         <Resource Include="Img\*.png">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Resource>
+        <Resource Include="Img\*.jpg">
             <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
         </Resource>
         <!-- <Resource Include="Img\*.gif">

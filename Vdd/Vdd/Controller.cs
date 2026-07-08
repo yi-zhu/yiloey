@@ -2,16 +2,18 @@
 using System.Diagnostics;
 using System.Security.Principal;
 using System.Threading;
+using System.Windows;
+using System.Windows.Threading;
 using YiKits;
 
 namespace holey.Vdd.Vdd
 {
     internal static class Controller
     {
-        static Thread UpdateThread;
+        public static Thread UpdateThread;
         static Thread StatusThread;
         static CancellationTokenSource Cancellation;
-        static IntPtr VddHandle = IntPtr.Zero;
+        public static IntPtr VddHandle = IntPtr.Zero;
 
         static Device.Status LastStatus;
 
@@ -68,38 +70,85 @@ namespace holey.Vdd.Vdd
                     break;
                 if (!Running)
                     Running = true;
-                if (VddHandle.IsValidHandle() && LastStatus == Device.Status.OK)
-                    Core.Update(VddHandle);
-                if (count > 10 )
+                // if (VddHandle.IsValidHandle() && LastStatus == Device.Status.OK)
+                Core.Update(VddHandle);
+                if (count > 10)
                 {
-                    if (count % 5100000 == 1)
+                    if (count % 100 == 1)
                     {
-                        if (wid.User != null && wid.User.Value.StartsWith("S-1-5-"))
-                        {
-                            Thread.Sleep(1600);
-                            YiKit.RunThread((e) =>
-                            {
-                                AddDisplay();
-                            });
-                        }
-                    } else if (count % 100 == 1)
-                    {
-                        YiKit.RunThread((e) =>
-                        {
-                            if (Core.GetDisplays().Count != 0) return;
-                            YiKit.Print("重启!");
                         
-                            CLI.Execute(["-r", "all"]);
-                            AddDisplay();
-                        });
+                        // 只检查显示列表是否为空
+                        // SYSTEM用户无法获取显示列表，所以不重启
+                        if (!IsSystemUser())
+                            try
+                            {
+                                
+                                PetWindow.Me?.Dispatcher.Invoke(() =>
+                                {
+                                    var displays = Vdd.Core.GetDisplays(out bool noMonitors);
+                                    // YiKit.ShowToast("获取显示"+IsSystemUser()+"数量:"+Core.GetDisplays().Count);
+                                    if (displays.Count >= 1) return;
+                                    YiKit.Print("VDD需要重启，正在添加显示...");
+                                    AddDisplay();
+                                    // ProgramVdd.StartVdd(["-a"]);
+                                });
+                            }
+                            catch
+                            {
+                              YiKit.Print("获取显示异常");
+                            }
                     }
-
                 }
+
                 count++;
                 Thread.Sleep(600);
             }
 
             ProgramVdd.isStartup = false;
+        }
+
+        // 判断是否是SYSTEM用户或特殊用户
+        static bool IsSystemUser()
+        {
+           return WindowsIdentity.GetCurrent().IsSystem;
+            try
+            {
+                if (wid?.User == null) return false;
+
+                string userValue = wid.User.Value.ToUpper();
+                // SYSTEM用户的SID是S-1-5-18
+                // LOCAL SERVICE用户的SID是S-1-5-19
+                // NETWORK SERVICE用户的SID是S-1-5-20
+                // LOCAL SYSTEM用户的SID是S-1-5-18 (与SYSTEM相同)
+                // DIALUP用户的SID是S-1-5-1
+                // NETWORK用户的SID是S-1-5-2
+                // BATCH用户的SID是S-1-5-3
+                // INTERACTIVE用户的SID是S-1-5-4
+                // SERVICE用户的SID是S-1-5-6
+                // ANONYMOUS LOGON用户的SID是S-1-5-7
+                // PROXY用户的SID是S-1-5-8
+                // ENTERPRISE CONTROLLERS用户的SID是S-1-5-9
+                // AUTHENTICATED USERS用户的SID是S-1-5-11
+                // TERMINAL SERVER用户的SID是S-1-5-13
+                // RESTRICTED SERVICES BASE用户的SID是S-1-5-99
+                // ALL SERVICE用户的SID是S-1-5-00
+                // LOGON SESSION用户的SID是S-1-5-5-*
+                return userValue.Contains("S-1-5-18") || userValue.Contains("S-1-5-19") ||
+                       userValue.Contains("S-1-5-20") ||
+                       userValue.Contains("S-1-5-1") || userValue.Contains("S-1-5-2") ||
+                       userValue.Contains("S-1-5-3") ||
+                       userValue.Contains("S-1-5-4") || userValue.Contains("S-1-5-6") ||
+                       userValue.Contains("S-1-5-7") ||
+                       userValue.Contains("S-1-5-8") || userValue.Contains("S-1-5-9") ||
+                       userValue.Contains("S-1-5-11") ||
+                       userValue.Contains("S-1-5-13") || userValue.Contains("S-1-5-99") ||
+                       userValue.Contains("S-1-5-00") ||
+                       userValue.Contains("S-1-5-5-");
+            }
+            catch
+            {
+                return false;
+            }
         }
 
         static void StatusLoop(CancellationToken cancellation)
@@ -168,14 +217,18 @@ namespace holey.Vdd.Vdd
         {
             var status = QueryStatus();
             if (status != Device.Status.OK)
-                throw new ErrorDriverStatus(status);
+            {
+                YiKit.ShowToastWaring("设备已存在不需要重启");
+                return;
+            }
 
             int limit = Core.MAX_DISPLAYS;
             var displays = Core.GetDisplays();
 
             if (displays.Count >= limit)
             {
-                throw new ErrorExceededLimit(limit);
+                YiKit.ShowToastError("显示器到达限制" + displays.Count + "/" + limit);
+                return;
             }
 
             // ✅ 调试：打印当前句柄

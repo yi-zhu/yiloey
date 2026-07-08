@@ -3,6 +3,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text.RegularExpressions;
 using System.Threading;
+using holey.Vdd.Vdd;
 using YiKits;
 
 namespace holey.Vdd
@@ -142,8 +143,18 @@ namespace holey.Vdd
             int index = 0;
             if (Vdd.Core.AddDisplay(VddHandle, out  index))
             {
+                PetWindow.VDD = true;
+                //检查轮询是否还在运行，如不在运行则重新加载
+                if (!Controller.UpdateThread.IsAlive)
+                {
+                    Controller.UpdateThread.Start();
+                    Core.Update(Controller.VddHandle);
+                }
                 Console.WriteLine($"Added a virtual display with index {0}.", index);
                 YiKit.IniWrite("vdd0",true.ToString());
+                
+
+               
                 return index;
             }
             else

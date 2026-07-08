@@ -62,7 +62,6 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
         BjTimeTextBox.Text = bjsc / 1000 + "";
 
         if (pjGid == null)
-
             pjGid = "30000000940";
         JkTextBox.Text = pjGid;
         if (path != null)
@@ -220,9 +219,13 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
             {
                 try
                 {
+                    ids.Clear();
+                    var count = 0;
+                    var count_all = 0;
                     foreach (string line in File.ReadLines(filep))
                     {
-                        if (spx == ';')
+                        count_all++;
+                        /*if (spx == ';')
                         {
                             if (line.Contains('\t')) spx = '\t';
                             if (line.Contains(' ')) spx = ' ';
@@ -232,15 +235,20 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                             else if (line.Contains('-')) spx = '-';
                             else if (line.Contains(';')) spx = ';';
                             else if (line.Contains('；')) spx = '；';
+                        }*/
+
+                        var _ls = line.Split(spx);
+                        if (_ls.Length > 1)
+                        {
+                            ids[_ls[0]] = _ls[1];
+                            count++;
                         }
 
-                        var l_s = line.Split(spx);
-                        if(l_s.Length>1)
-                            ids[line.Split(spx)[0]] = line.Split(spx)[1];
+                        
                         // ids.Add(line.Split(spx)[0], line.Split(spx)[1]);
                         // Console.WriteLine(line);
                     }
-                    YiKit.ShowToast($"{filep}加载完成");
+                    YiKit.ShowToast($"{filep}读取{count_all}条，加载{count}条，失败{count_all-count}条");
                 }
                 catch (Exception e)
                 {

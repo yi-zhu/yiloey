@@ -81,10 +81,12 @@ namespace holey.WebView
             int indexTab = TabControl.Items.Count + 1;
             var tab = new TabItem
             {
-                Header = "新标签页",
+                Header = "标签页",
                 Content = container,
                 Tag = indexTab.ToString(),
                 BorderThickness = new Thickness(0),
+                Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush,
+                Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush,
             };
             tab.MouseWheel += (e, r) =>
             {
@@ -104,21 +106,35 @@ namespace holey.WebView
             // 创建上下文菜单
             var contextMenu = new ContextMenu();
             contextMenu.Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush;
-            var closeItem = new MenuItem { Header = "关闭标签页" };
+            contextMenu.Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush;
+            var closeItem = new MenuItem { Header = "关闭标签页", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
             closeItem.Click += (s, ev) =>
             {
                 if (TabControl.Items.Contains(tab))
+                {
                     TabControl.Items.Remove(tab);
+                    
+                }
+                (tab.Content  as WebViewContainer)?.WebView?.Dispose();
             };
 
-            var refreshItem = new MenuItem { Header = "刷新页面" };
+            var refreshItem = new MenuItem { Header = "刷新页面", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
             refreshItem.Click += (s, ev) =>
             {
-                if (tab.Content is WebViewContainer wc)
-                    wc.WebView.Reload();
+                try
+                {
+                    if (tab.Content is WebViewContainer wc && wc.WebView.CoreWebView2 != null)
+                    {
+                        wc.WebView.CoreWebView2.Reload();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    YiKit.Print($"刷新失败: {ex.Message}");
+                }
             };
 
-            var renameItem = new MenuItem { Header = "重命名标签" };
+            var renameItem = new MenuItem { Header = "重命名标签", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
             renameItem.Click += (s, ev) =>
             {
                 // var input = Microsoft.VisualBasic.Interaction.InputBox("输入新标签名：", "重命名", tab.Header.ToString());
@@ -132,8 +148,8 @@ namespace holey.WebView
                 }
             };
 
-            var setUrlItem = new MenuItem { Header = "设置初始 URL" };
-            var resetItem = new MenuItem { Header = "重制计数" };
+            var setUrlItem = new MenuItem { Header = "设置初始 URL", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
+            var resetItem = new MenuItem { Header = "重制计数", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
             resetItem.Click += (s, ev) => { (tab.Content as WebViewContainer )?.wupins.Clear(); };
             setUrlItem.Click += (s, ev) =>
             {
@@ -367,23 +383,8 @@ namespace holey.WebView
             
             Unloaded += ((sender, args) =>
             {
-                YiKit.RunOnUIThread(() =>
-                {
-                    try
-                    {
-                        WebView?.Dispose(); // 安全释放
-                    }
-                    catch (Exception ex)
-                    {
-                        // 可选：记录日志，但不要抛出异常
-                        System.Diagnostics.Debug.WriteLine($"WebView2 Dispose error: {ex}");
-                    }
-                    finally
-                    {
-                        WebView = null;
-                    }
-                });
-
+                // 不在Unloaded事件中释放WebView，避免切换标签页时页面消失
+                // WebView会在窗口关闭时通过其他方式释放
             });
         }
 
@@ -421,6 +422,10 @@ namespace holey.WebView
             WebView.CoreWebView2.WebMessageReceived += WebMessageReceived;
             WebView.CoreWebView2.ContentLoading += async (s, e) =>
             {
+                // 检查 WebViewContainer 是否已被释放
+                if (WebView == null || WebView.CoreWebView2 == null)
+                    return;
+                
                 // 此时可以执行 JS 获取当前已加载的 HTML
                 string html = await WebView.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML");
                 // 返回的是 JSON 字符串，去掉首尾引号
@@ -912,6 +917,7 @@ public string UpdateWebViewDisplay()
                     {
                         await action.Execute(WebView, Variables);
                         totalClicks++;
+                        // await Task.Delay(action.DelayAfterMs);
                     }
                     catch (Exception ex)
                     {
@@ -1137,6 +1143,8 @@ public string UpdateWebViewDisplay()
 
             var escapedText = targetText.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\"", "\\\"");
 
+          
+
             var ret = await webView.CoreWebView2.ExecuteScriptAsync($@"
 
                 function click(){{
@@ -1157,22 +1165,27 @@ public string UpdateWebViewDisplay()
                         }}
                     }}
                     if (!found) return -1;
+                    return found ? 1 : -1;
 
                 }}
                 (function() {{
                    
                     if (document.body.innerText.indexOf('您的点击频度过快，请稍候再继续...')>-1){{
-                    setTimeout(() => {{click()}},5000)
+                      return -2;
+                    setTimeout(() => {{click()}},1000);
                     }}else{{return click()}}
                     
                 }})();
             ");
 
-            if (ret != null && ret == "-1")
+            if (ret == "1")
             {
-            }
-            else
                 await Task.Delay(DelayAfterMs);
+            }
+            else if (ret == "-2")
+            {
+                await Task.Delay(1000+DelayAfterMs);
+            }
         }
     }
 
@@ -1511,7 +1524,7 @@ public string UpdateWebViewDisplay()
             var repBox = new TextBox { Text = "0", Width = 60, VerticalAlignment = VerticalAlignment.Center };
             var delayBox = new TextBox { Text = $"{WebViewContainer.delay}", Width = 60, ToolTip = "默认延迟（毫秒）" };
 
-            var headlessCb = new CheckBox { Content = "无头模式", Margin = new Thickness(0, 0, 0, 0), Foreground = fcolor };
+            var headlessCb = new CheckBox { Content = "隐藏页面", Margin = new Thickness(0, 0, 0, 0), Foreground = fcolor };
             headlessCb.Checked += (s, e) => _container.IsHeadless = true;
             headlessCb.Unchecked += (s, e) => _container.IsHeadless = false;
 

@@ -1,0 +1,189 @@
+﻿<Window x:Class="holey.KitWin.MouseAndKeyboard"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="自动化脚本编辑器" Height="600" Width="900"
+        Loaded="Window_Loaded" Closing="Window_Closing">
+
+
+    <!-- 👇 新增：Resources -->
+    <Window.Resources>
+        <ContextMenu x:Key="InstructionContextMenu" KeyDown="ContextMenu_KeyDown">
+            <MenuItem Header="上移到顶部(T)" Click="MoveToTop_Click" InputGestureText="T" />
+            <MenuItem Header="下移到底部(B)" Click="MoveToBottom_Click" InputGestureText="B" />
+            <Separator />
+            <MenuItem Header="上移 1 行(U)" Click="MoveUpOne_Click" InputGestureText="U" />
+            <MenuItem Header="下移 1 行(N)" Click="MoveDownOne_Click" InputGestureText="N" />
+            <Separator />
+            <MenuItem Header="上移...行" Click="MoveUpN_Click" />
+            <MenuItem Header="下移...行" Click="MoveDownN_Click" />
+            <Separator />
+            <MenuItem Header="删除当前(D)" Click="DeleteCurrent_Click" InputGestureText="D" />
+        </ContextMenu>
+    </Window.Resources>
+    <Grid Margin="5,0">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <!-- 控制栏 -->
+        <StackPanel Orientation="Horizontal" Grid.Row="0" Margin="0,0,0,0" VerticalAlignment="Center">
+            <StackPanel Orientation="Vertical" HorizontalAlignment="Stretch">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                    <Button Style="{StaticResource NoChromeButton}" Content="左点" Click="AddMouseClick_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="右点" Click="AddMouseRightClick_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="左按" Click="AddMouseDown_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="左弹" Click="AddMouseUp_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="右按" Click="AddMouseRightDown_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="右弹" Click="AddMouseRightUp_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="滚轮" Click="AddMouseWheel_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="循环开始" Click="AddLoopStart_Click" Background="CornflowerBlue" />
+                    
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
+                    <Button Style="{StaticResource NoChromeButton}" Content="按键" Click="AddKeyPress_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="按键按下" Click="AddKeyDown_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="按键弹起" Click="AddKeyUp_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="变量" Click="AddSetVar_Click" Margin="3,0,0,0" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="条件" Click="AddIfCondition_Click" Margin="0,0,5,0" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="循环结束" Click="AddLoopEnd_Click" Background="Coral" />
+                </StackPanel>
+
+
+            </StackPanel>
+
+
+            <Button Content="录制" Style="{StaticResource AppButtonStyleBase}" Click="ToggleRecord_Click" Margin="1,1"
+                    Foreground="AliceBlue" Background="PaleVioletRed" />
+            <Button Content="执行" Style="{StaticResource AppButtonStyleBase}" Click="Execute_Click" Margin="0,1"
+                    Foreground="BlanchedAlmond" Background="MediumSlateBlue" />
+
+            <!-- 热键设置 -->
+            <Border BorderThickness="1" BorderBrush="Gray" Background="Bisque">
+                <StackPanel Orientation="Vertical" Margin="1,0"  >
+                    <TextBlock Text="延迟 (ms)" HorizontalAlignment="Center"   Margin="0,0" />
+                    <TextBox Width="60" ToolTip="延迟 (ms)" LostKeyboardFocus="UIElement_OnLostKeyboardFocus"
+                             Text="{Binding GlobalDelayMs, UpdateSourceTrigger=PropertyChanged}" Margin="0,0,0,0" />
+                </StackPanel>
+            </Border>
+            <Border BorderThickness="1" BorderBrush="Gray" Background="LightSalmon">
+            <StackPanel Orientation="Vertical" Margin="1,0" >
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock FontSize="9" Text="热键:" Margin="0,0,5,0" VerticalAlignment="Center" />
+                    <Button FontSize="9" Style="{StaticResource NoChromeButton}" Padding="10,0" Height="16" Content="应用热键" Click="ApplyHotKey_Click"  />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Height="19">
+                    <ComboBox   FontSize="12" x:Name="HotKeyModifierComboBox" Width="60" ItemsSource="{Binding HotKeyModifiers}"
+                                SelectedItem="{Binding SelectedHotKeyModifier, UpdateSourceTrigger=PropertyChanged}"/>
+                    <ComboBox  FontSize="12"  x:Name="HotKeyComboBox" Width="30" ItemsSource="{Binding HotKeys}"
+                               SelectedItem="{Binding SelectedHotKey, UpdateSourceTrigger=PropertyChanged}"  />
+                </StackPanel>
+                
+            </StackPanel>
+            </Border>
+            <StackPanel Orientation="Vertical" Background="OrangeRed" >
+
+                <StackPanel Orientation="Horizontal" >
+                    <Button Style="{StaticResource NoChromeButton}"  ToolTip="删除当前选中行" Content="删除"
+                            Click="DeleteSelected_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" ToolTip="清空当前脚本" Content="清空"
+                            Click="ClearList_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" ToolTip="删除当前脚本文件" Content="删文件"
+                            Click="DeleteCurrentFile_Click" />
+
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+
+                    <Button Style="{StaticResource NoChromeButton}" Content="加载" Click="Load_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="保存" Click="Save_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="另存为" Click="SaveAs_Click" />
+                </StackPanel>
+            </StackPanel>
+
+
+        </StackPanel>
+
+        <!-- 指令列表 -->
+        <!-- 替换原来的 <ListView ...> 为以下内容 -->
+        <!--PreviewMouseMove="ListView_PreviewMouseMove"
+                  PreviewMouseLeftButtonDown="ListView_PreviewMouseLeftButtonDown"
+                  DragOver="ListView_DragOver"
+                  Drop="ListView_Drop"-->
+        <ListView x:Name="InstructionList"
+                  Grid.Row="1"
+                  ItemsSource="{Binding Instructions}"
+                  AllowDrop="True"
+                 
+                  SelectionMode="Extended">
+            <!-- 使用资源引用 ContextMenu -->
+            <ListView.ItemContainerStyle>
+                <Style TargetType="ListViewItem">
+                    <Setter Property="ContextMenu" Value="{StaticResource InstructionContextMenu}" />
+                </Style>
+            </ListView.ItemContainerStyle>
+
+            <!-- 原有的 GridView 定义保持不变 -->
+            <ListView.View>
+                <GridView>
+                    <GridViewColumn Header="类型" Width="100" DisplayMemberBinding="{Binding Type}" />
+                    <GridViewColumn Header="目标/值" Width="120">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}" Width="110" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="变量名" Width="90">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}" Width="80" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="操作符" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ConditionOperator, UpdateSourceTrigger=PropertyChanged}"
+                                         Width="50" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="延迟(ms)" Width="80">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding DelayMs, UpdateSourceTrigger=PropertyChanged}" Width="70" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="修饰符" Width="80">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding Modifiers, UpdateSourceTrigger=PropertyChanged}" Width="70" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                    <GridViewColumn Header="启用" Width="60">
+                        <GridViewColumn.CellTemplate>
+                            <DataTemplate>
+                                <CheckBox IsChecked="{Binding IsEnabled}" HorizontalAlignment="Center" />
+                            </DataTemplate>
+                        </GridViewColumn.CellTemplate>
+                    </GridViewColumn>
+                </GridView>
+            </ListView.View>
+        </ListView>
+
+        <!-- 状态栏 -->
+        <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10" HorizontalAlignment="Stretch">
+            <TextBlock Text="{Binding StatusMessage}" Foreground="Blue" VerticalAlignment="Center" />
+            <TextBlock Text=" | " Margin="10,0" VerticalAlignment="Center" />
+            <TextBlock x:Name="MousePositionText" Text="鼠标坐标: (0, 0)" Cursor="Hand"
+                       MouseLeftButtonDown="MousePositionText_MouseLeftButtonDown" VerticalAlignment="Center"
+                       FontWeight="Bold" Foreground="Green" />
+        </StackPanel>
+    </Grid>
+</Window>

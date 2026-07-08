@@ -1,4 +1,4 @@
-﻿using System;
+﻿﻿﻿﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
@@ -361,6 +361,13 @@ public partial class RowAndCol : Window
     {
         cboColumn.Items.Clear();
 
+        // 添加常用动态索引提示
+        cboColumn.Items.Add("-1"); // 最前面
+        cboColumn.Items.Add("+1"); // 第一个空值
+        cboColumn.Items.Add("++1"); // 跳过第一段空值
+        cboColumn.Items.Add("+++1"); // 跳过前两段空值
+        cboColumn.Items.Add("----"); // 分隔符
+
         for (int i = 0; i < displayTable.Columns.Count; i++)
         {
             cboColumn.Items.Add(displayTable.Columns[i].ColumnName);
@@ -370,6 +377,13 @@ public partial class RowAndCol : Window
             cboColumn.SelectedIndex = 0;
         cboColumnif.Items.Clear();
 
+        // 添加常用动态索引提示
+        cboColumnif.Items.Add("-1"); // 最前面
+        cboColumnif.Items.Add("+1"); // 第一个空值
+        cboColumnif.Items.Add("++1"); // 跳过第一段空值
+        cboColumnif.Items.Add("+++1"); // 跳过前两段空值
+        cboColumnif.Items.Add("----"); // 分隔符
+
         for (int i = 0; i < displayTable.Columns.Count; i++)
         {
             cboColumnif.Items.Add(displayTable.Columns[i].ColumnName);
@@ -377,6 +391,132 @@ public partial class RowAndCol : Window
 
         if (cboColumnif.Items.Count > 0)
             cboColumnif.SelectedIndex = 0;
+    }
+
+    // 获取实际列索引（支持动态索引）
+    private int GetActualColumnIndex(object selectedItem, DataRow row = null)
+    {
+        string selected = selectedItem?.ToString();
+        if (string.IsNullOrEmpty(selected))
+            return 0;
+
+        // 处理动态索引 -1 (最前面)
+        if (selected == "-1")
+            return 0;
+
+        // 跳过分隔符
+        if (selected == "----")
+            return 0;
+
+        // 处理动态索引 +1, ++1, +++1, +2, ++2 等
+        // +号数量表示跳过的空值段数，后面的数字表示该空值段中的第几个空值
+        if (selected.StartsWith("+"))
+        {
+            // 提取+号数量和数字
+            int plusCount = 0;
+            int targetEmptyIndex = 1; // 默认第一个空值
+            
+            foreach (char c in selected)
+            {
+                if (c == '+')
+                    plusCount++;
+                else if (char.IsDigit(c))
+                {
+                    targetEmptyIndex = int.Parse(selected.Substring(plusCount));
+                    break;
+                }
+            }
+            
+            // plusCount = +号数量 = 要找的空值段序号（从1开始）
+            // targetEmptyIndex = 该空值段中的第几个空值（从1开始）
+            return FindEmptyColumn(row, plusCount - 1, targetEmptyIndex - 1);
+        }
+
+        // 尝试解析数字索引
+        if (int.TryParse(selected, out int index))
+        {
+            return index;
+        }
+
+        // 尝试查找列名
+        for (int i = 0; i < displayTable.Columns.Count; i++)
+        {
+            if (displayTable.Columns[i].ColumnName == selected)
+                return i;
+        }
+
+        return 0;
+    }
+
+    // 查找空列
+    // skipEmptySegments: 跳过的空值段数，0=找第一个空值段，1=跳过第一段找第二段，以此类推
+    // emptyIndexInSegment: 该空值段中的第几个空值（从0开始）
+    private int FindEmptyColumn(DataRow row, int skipEmptySegments = 0, int emptyIndexInSegment = 0)
+    {
+        if (row == null)
+            return displayTable.Columns.Count;
+
+        int currentEmptySegment = -1;
+        bool inEmptySegment = false;
+        int emptyCountInCurrentSegment = 0;
+
+        // 遍历所有现有列
+        for (int i = 0; i < row.ItemArray.Length; i++)
+        {
+            bool isEmpty = IsEmpty(row[i]);
+
+            if (isEmpty && !inEmptySegment)
+            {
+                // 进入新的空值段
+                currentEmptySegment++;
+                inEmptySegment = true;
+                emptyCountInCurrentSegment = 0;
+
+                // 如果找到了目标空值段，检查是否是目标空值
+                if (currentEmptySegment == skipEmptySegments)
+                {
+                    if (emptyCountInCurrentSegment == emptyIndexInSegment)
+                    {
+                        return i;
+                    }
+                    emptyCountInCurrentSegment++;
+                }
+            }
+            else if (isEmpty && inEmptySegment)
+            {
+                // 在空值段内继续
+                if (currentEmptySegment == skipEmptySegments)
+                {
+                    if (emptyCountInCurrentSegment == emptyIndexInSegment)
+                    {
+                        return i;
+                    }
+                    emptyCountInCurrentSegment++;
+                }
+            }
+            else if (!isEmpty && inEmptySegment)
+            {
+                // 离开空值段
+                inEmptySegment = false;
+            }
+        }
+
+        // 如果没有找到目标空值，返回最后一个非空值的下一列
+        int lastNonEmptyIndex = -1;
+        for (int i = 0; i < row.ItemArray.Length; i++)
+        {
+            if (!IsEmpty(row[i]))
+                lastNonEmptyIndex = i;
+        }
+
+        // 返回最后一个非空值的下一列
+        return lastNonEmptyIndex + 1;
+    }
+
+    // 判断单元格是否为空
+    private bool IsEmpty(object value)
+    {
+        return value == null || string.IsNullOrWhiteSpace(value.ToString());
     }
 
     // ========== 修复 2：提取数字并保留非数字部分 ==========
@@ -399,9 +539,7 @@ public partial class RowAndCol : Window
         bool is_ifck = cboCKif.IsChecked == true;
         bool is_ifconck = cboCKifCon.IsChecked == true;
         bool is_selctcol = cboCKifcol.IsChecked == true;
-        int colIfIndex = cboColumnif.SelectedIndex;
         string conStr = txtCon.Text;
-        int colIndex = cboColumn.SelectedIndex;
         string expressionStr = txtValue.Text.Trim();
         // double result = YiMathKit.EvaluateAdvanced("if(x > 0 || x == -1, sqrt(x), 0)", 25);
         int count = 0;
@@ -422,24 +560,30 @@ public partial class RowAndCol : Window
                 if (!is_mouse_rows.Contains(row))
                     continue;
 
+            // 针对每行获取动态列索引
+            int colIfIndex = GetActualColumnIndex(cboColumnif.SelectedItem, row);
+            int colIndex = GetActualColumnIndex(cboColumn.SelectedItem, row);
+
             if (is_ifck)
             {
+                // 判断是否使用精确匹配（=开头）
+                bool isExactMatch = conStr.StartsWith("=");
+                string checkStr = isExactMatch ? conStr.Substring(1) : conStr;
+
+                bool conditionMatched = false;
+
                 if (is_selctcol)
+                {
+                    // 只判断固定列
                     if (row.ItemArray.Length > colIfIndex)
                     {
-                        if (is_ifconck)
+                        conditionMatched = isExactMatch
+                            ? row.ItemArray[colIfIndex].ToString() == checkStr
+                            : row.ItemArray[colIfIndex].ToString().Contains(checkStr);
+
+                        if (is_ifconck ? !conditionMatched : conditionMatched)
                         {
-                            if (!row.ItemArray[colIfIndex].ToString().Contains(conStr))
-                            {
-                                continue;
-                            }
-                        }
-                        else
-                        {
-                            if (row.ItemArray[colIfIndex].ToString().Contains(conStr))
-                            {
-                                continue;
-                            }
+                            continue;
                         }
                     }
                     else
@@ -447,59 +591,94 @@ public partial class RowAndCol : Window
                         if (is_ifconck)
                             continue;
                     }
-
+                }
+                else
                 {
+                    // 判断所有列
+                    for (int i = 0; i < row.ItemArray.Length; i++)
+                    {
+                        conditionMatched = isExactMatch
+                            ? row.ItemArray[i].ToString() == checkStr
+                            : row.ItemArray[i].ToString().Contains(checkStr);
+
+                        if (conditionMatched)
+                            break;
+                    }
+
+                    if (is_ifconck ? !conditionMatched : conditionMatched)
+                    {
+                        continue;
+                    }
                 }
             }
 
             if (is_cboCK)
             {
-                string original = row[colIndex]?.ToString() ?? "";
-
-                if (string.IsNullOrEmpty(original)) continue;
-                if (is_ifck)
-                    if (is_selctcol == false)
-                        if (is_ifconck != original.Contains(conStr))
-                            continue;
-                long? dateNum=null;
-                dateNum = YiKit.getDateLong(original);
-                Match match = null;;
-                // 提取第一个数字
-                if (dateNum == null)
-                {
-                    match = System.Text.RegularExpressions.Regex.Match(original, @"-?\d+\.?\d*");
+                // 解析多列表达式（使用|分隔）
+                string[] expressions = expressionStr.Split('|');
                 
-                    if (!match.Success) continue;
-
-                    if (double.TryParse(match.Value, out double num))
+                for (int exprIdx = 0; exprIdx < expressions.Length; exprIdx++)
+                {
+                    string currentExpr = expressions[exprIdx].Trim();
+                    
+                    // 空表达式则跳过该列
+                    if (string.IsNullOrEmpty(currentExpr))
+                        continue;
+                    
+                    int targetColIndex = colIndex + exprIdx;
+                    
+                    // 确保列存在
+                    while (targetColIndex >= displayTable.Columns.Count)
                     {
-                        try
-                        {
-                            double resultValue = YiMathKit.EvaluateAdvanced(expressionStr, num);
+                        string newColName = MakeUniqueColumnName(displayTable, "新列");
+                        displayTable.Columns.Add(newColName, typeof(string));
+                    }
 
-                            string replaced = original.Substring(0, match.Index) +
-                                              resultValue.ToString() +
-                                              original.Substring(match.Index + match.Length);
-                            count++;
-                            row[colIndex] = replaced;
-                        }
-                        catch (Exception ex)
+                    string original = row[targetColIndex]?.ToString() ?? "";
+
+                    if (string.IsNullOrEmpty(original)) original="0";
+                    if (is_ifck)
+                        if (is_selctcol == false)
+                            if (is_ifconck != original.Contains(conStr))
+                                continue;
+                    long? dateNum=null;
+                    dateNum = YiKit.getDateLong(original);
+                    Match match = null;;
+                    // 提取第一个数字
+                    if (dateNum == null)
+                    {
+                        match = System.Text.RegularExpressions.Regex.Match(original, @"-?\d+\.?\d*");
+                    
+                        if (!match.Success) continue;
+
+                        if (double.TryParse(match.Value, out double num))
                         {
-                            MessageBox.Show($"表达式错误: {ex.Message}\n表达式: {expressionStr}",
-                                "公式错误", MessageBoxButton.OK, MessageBoxImage.Error);
-                            return;
+                            try
+                            {
+                                double resultValue = YiMathKit.EvaluateAdvanced(currentExpr, num);
+
+                                string replaced = original.Substring(0, match.Index) +
+                                                  resultValue.ToString() +
+                                                  original.Substring(match.Index + match.Length);
+                                count++;
+                                row[targetColIndex] = replaced;
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show($"表达式错误: {ex.Message}\n表达式: {currentExpr}",
+                                    "公式错误", MessageBoxButton.OK, MessageBoxImage.Error);
+                                return;
+                            }
                         }
                     }
+                    else
+                    {
+                        double resultValue = YiMathKit.EvaluateAdvanced(currentExpr, double.Parse(dateNum+""));
+                        string replaced = resultValue.ToString() ;
+                        count++;
+                        row[targetColIndex] = replaced;
+                    }
                 }
-                else
-                {
-                    double resultValue = YiMathKit.EvaluateAdvanced(expressionStr, double.Parse(dateNum+""));
-                    string replaced = resultValue.ToString() ;
-                    count++;
-                    row[colIndex] = replaced;
-                }
-
-
             }
             else
             {
@@ -562,9 +741,7 @@ public partial class RowAndCol : Window
         bool is_ifck = cboCKif.IsChecked == true;
         bool is_ifconck = cboCKifCon.IsChecked == true;
         bool is_selctcol = cboCKifcol.IsChecked == true;
-        int colIfIndex = cboColumnif.SelectedIndex;
         string conStr = txtCon.Text;
-        int colIndex = cboColumn.SelectedIndex;
         string find = txtFind.Text;
         string replace = txtReplace.Text ?? "";
 
@@ -600,24 +777,30 @@ public partial class RowAndCol : Window
                 if (is_mouse)
                     if (!is_mouse_rows.Contains(row))
                         continue;
+
+                // 针对每行获取动态列索引
+                int colIfIndex = GetActualColumnIndex(cboColumnif.SelectedItem, row);
+                int colIndex = GetActualColumnIndex(cboColumn.SelectedItem, row);
                 if (is_ifck)
                 {
+                    // 判断是否使用精确匹配（=开头）
+                    bool isExactMatch = conStr.StartsWith("=");
+                    string checkStr = isExactMatch ? conStr.Substring(1) : conStr;
+
+                    bool conditionMatched = false;
+
                     if (is_selctcol)
+                    {
+                        // 只判断固定列
                         if (row.ItemArray.Length > colIfIndex)
                         {
-                            if (is_ifconck)
+                            conditionMatched = isExactMatch
+                                ? row.ItemArray[colIfIndex].ToString() == checkStr
+                                : row.ItemArray[colIfIndex].ToString().Contains(checkStr);
+
+                            if (is_ifconck ? !conditionMatched : conditionMatched)
                             {
-                                if (!row.ItemArray[colIfIndex].ToString().Contains(conStr))
-                                {
-                                    continue;
-                                }
-                            }
-                            else
-                            {
-                                if (row.ItemArray[colIfIndex].ToString().Contains(conStr))
-                                {
-                                    continue;
-                                }
+                                continue;
                             }
                         }
                         else
@@ -625,6 +808,25 @@ public partial class RowAndCol : Window
                             if (is_ifconck)
                                 continue;
                         }
+                    }
+                    else
+                    {
+                        // 判断所有列
+                        for (int i = 0; i < row.ItemArray.Length; i++)
+                        {
+                            conditionMatched = isExactMatch
+                                ? row.ItemArray[i].ToString() == checkStr
+                                : row.ItemArray[i].ToString().Contains(checkStr);
+
+                            if (conditionMatched)
+                                break;
+                        }
+
+                        if (is_ifconck ? !conditionMatched : conditionMatched)
+                        {
+                            continue;
+                        }
+                    }
                 }
 
                 if (is_selctck)

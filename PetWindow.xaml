@@ -360,7 +360,7 @@
                         <MenuItem Name="WallPaperMenuItem" Header="动态桌面" PreviewMouseLeftButtonUp="WallPaperItem_OnClick"
                                   PreviewMouseRightButtonUp="UIElement_OnPreviewMouseRightButtonUp">
                         </MenuItem>
-                        <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick"></MenuItem>
+                        <MenuItem Name="ClipboardMenuItem" Header="共享剪切板" Click="ClipboardItemOnClick" PreviewMouseRightButtonDown="ClipboardItemOnRightClick"></MenuItem>
                         <MenuItem Name="TranslateMenuItem" Header="开启翻译" Click="TranslateItemOnClick"></MenuItem>
                         <MenuItem Header="窗口">
                             <MenuItem Name="ChangeSizeMenuItem" Header="变更窗口大小"
@@ -384,6 +384,7 @@
                             <MenuItem Header="x4翻译" Click="X4TranItem_OnClick"></MenuItem>
                             <MenuItem Header="检查端口" Click="PortCheck_OnClick"></MenuItem>
                             <MenuItem Header="获取system" Click="GetSys_OnClick"></MenuItem>
+                            <MenuItem Header="鼠标键盘" Click="MouKbo_OnClick"></MenuItem>
                         </MenuItem>
                         <MenuItem Header="fps">
                             <MenuItem Header="中心放大" Name="CentZoom" PreviewMouseDown="CentZomm_OnItemClick"></MenuItem>
@@ -394,6 +395,8 @@
                             <MenuItem Header="Gif转联系表" Click="OgvItem_OnClick"></MenuItem>
                             <MenuItem Header="Fla转联系表" Click="FlaItem_OnClick"></MenuItem>
                             <MenuItem Header="影片转联系表" Click="OgvItem_OnClick"></MenuItem>
+                            <MenuItem Header="图片合并联系表" Click="PicItem_OnClick"></MenuItem>
+                            <MenuItem Header="联系表拆分图片" Click="SplitContactSheet_OnClick"></MenuItem>
                         </MenuItem>
                         <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
                         <MenuItem Header="虚拟显卡" Name="VddItem" Click="VddItem_OnClick" PreviewMouseRightButtonDown="VddItem_OnRClick"></MenuItem>
@@ -403,6 +406,18 @@
                         </MenuItem>
                         <MenuItem Header="浏览器" Click="WebViewItem_OnClick"></MenuItem>
                         
+                        <!-- 进程监控 -->
+                        <MenuItem Header="进程">
+                            <MenuItem Header="杀死进程" Click="KillProcess_OnClick"></MenuItem>
+                            <MenuItem Header="添加监控进程" Click="AddMonitoredProcess_OnClick"></MenuItem>
+                            <MenuItem Header="显示监控进程" Click="ShowMonitoredProcess_OnClick"></MenuItem>
+                            <MenuItem Header="开启选中进程监控" Click="StartMonitoredProcess_OnClick"></MenuItem>
+                            <MenuItem Header="关闭选中进程监控" Click="StopMonitoredProcess_OnClick"></MenuItem>
+                            <MenuItem Header="删除选中进程" Click="RemoveMonitoredProcess_OnClick"></MenuItem>
+                            <MenuItem Header="清空所有进程" Click="ClearMonitoredProcesses_OnClick"></MenuItem>
+                        </MenuItem>
+                        <MenuItem Header="释放端口" Click="RealsePort_OnClick"></MenuItem>
+
                         <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
                         <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
                         <MenuItem Header="关闭" Click="CloseItem_OnClick"></MenuItem>

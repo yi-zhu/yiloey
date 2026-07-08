@@ -19,11 +19,13 @@ namespace holey.Vdd
         public static int StartVdd(string[] args,bool issingle=false)
         {
             var diss= Core.GetDisplays();
+            if (diss.Count<1)
+                isStartup = false;
             if (issingle)
             {
                
-               if (diss.Count<1)
-                   isStartup = false;
+               // if (diss.Count<1)
+               //     isStartup = false;
                /*foreach (var display in diss)
                {
                    if (display.Adapter.Contains(Core.ADAPTER)) return -1;

@@ -18,21 +18,42 @@
         <!-- 控件区 1：加载参数 -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10">
             <Button Content="加载文件" Click="LoadFile_Click" Width="100" Margin="0,0,10,0" />
-            <TextBlock Text="分隔符:" Margin="0,0,5,0" VerticalAlignment="Center" />
-            <TextBox x:Name="txtSeparator" Text="," Width="50" Margin="0,0,10,0"  ToolTip="所有字符为单个分隔符" />
-            <TextBox x:Name="txtSeparator1" Text="," Width="30" Margin="0,0,10,0" ToolTip="可输入多个分隔符以||进行分割" />
-            <TextBlock Text="换行符:" Margin="0,0,5,0" VerticalAlignment="Center" />
-            <TextBox x:Name="txtNewLine" Text="\r\n" Width="60" Margin="0,0,10,0" />
+            <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="分隔符:" Margin="0,0,5,0" VerticalAlignment="Center" />
+                    <TextBox x:Name="txtSeparator" Text="," Width="40" Margin="0,0,10,0" ToolTip="所有字符为单个分隔符，tab为\t" />
+                    <TextBox x:Name="txtSeparator1" Text="," Width="50" Margin="0,0,10,0" ToolTip="可输入多个分隔符以|进行分割" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="换行符:" Margin="0,0,5,0" VerticalAlignment="Center" />
+                    <TextBox x:Name="txtNewLine" Text="\r\n" Width="40" Margin="0,0,10,0" ToolTip="所有字符为单个分隔符" />
+                    <TextBox x:Name="txtNewLine1" Text="\n" Width="50" Margin="0,0,10,0" ToolTip="可输入多个分隔符以|进行分割" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="最大行数:" Margin="0,0,5,0" VerticalAlignment="Center" />
+                    <TextBox x:Name="txtMaxRows" Text="10000" Width="60" Margin="0,0,10,0" />
+                    <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal">
+                    <TextBlock Text="最大列数:" Margin="0,0,5,0" VerticalAlignment="Center" />
+                    <TextBox x:Name="txtMaxClos" Text="200" Width="60" Margin="0,0,10,0" />
+                    <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+            <StackPanel Orientation="Vertical">
+            <StackPanel Orientation="Horizontal">
             <CheckBox x:Name="chkHasHeader" Content="首行为表头" Margin="0,0,10,0" Foreground="Black" />
-            <TextBlock Text="最大行数:" Margin="0,0,5,0" VerticalAlignment="Center" />
-            <TextBox x:Name="txtMaxRows" Text="10000" Width="60" Margin="0,0,10,0" />
-            <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center" />
-            <TextBlock Text="最大列数:" Margin="0,0,5,0" VerticalAlignment="Center" />
-            <TextBox x:Name="txtMaxClos" Text="200" Width="60" Margin="0,0,10,0" />
-            <TextBlock Text="（0=全部）" Foreground="Gray" VerticalAlignment="Center" />
-            <Button Content="加载符合的内容" Click="LoadFitleTxtFile_Click" Width="100" Margin="0,0,10,0" />
+            <Button Content="重载文件"  Style="{DynamicResource NoChromeButton}" ToolTip="重新加载文件" Click="RefreshPreview_Click" Width="100" />
+            </StackPanel>
+                <StackPanel Orientation="Horizontal">
+            <Button Content="加载符合的内容"  Style="{DynamicResource NoChromeButton}" Click="LoadFitleTxtFile_Click" Width="100" Margin="0,0,10,0" />
             <TextBox x:Name="fitleTxtStart" Text="200" Width="60" Margin="0,0,10,0" />
             <TextBox x:Name="fitleTxtEnd" Text="200" Width="60" Margin="0,0,10,0" />
+        </StackPanel>
+        </StackPanel>
+        <!-- 动态插入列0是最前，-1是最后面 -->
         </StackPanel>
 
 
@@ -62,7 +83,7 @@
             </GroupBox>
 
             <GroupBox Header="目标列">
-                <ComboBox x:Name="cboColumn" Width="80" Margin="0,0,5,0" />
+                <ComboBox IsEditable="True" x:Name="cboColumn" Width="40" Margin="0,0,5,0" />
             </GroupBox>
             <GroupBox Header="批量数值运算自动获取单元格内数字设为x，可填写公式">
                 <StackPanel Orientation="Horizontal">
@@ -78,7 +99,7 @@
                     <!--     <ComboBoxItem>×</ComboBoxItem> -->
                     <!--     <ComboBoxItem>÷</ComboBoxItem> -->
                     <!-- </ComboBox> -->
-                    <TextBox x:Name="txtValue" MinWidth="160" Margin="0,0,5,0" ToolTip="if (x > 0,log(x),x)"> </TextBox>
+                    <TextBox x:Name="txtValue" MinWidth="130" Margin="0,0,5,0" ToolTip="if (x > 0,log(x),x)"> </TextBox>
                     <Button Content="应用" Click="ApplyMathOperation_Click" Width="50" />
                 </StackPanel>
             </GroupBox>
@@ -130,7 +151,6 @@
         <StackPanel Grid.Row="3" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button Content="保存原格式" ToolTip="程序内排序不影响原保存顺序，保存时还是按照读取时原顺序进行保存" Click="SaveOriginalFormat_Click"
                     Width="120" Margin="0,0,10,0" />
-            <Button Content="重载文件" ToolTip="重新加载文件" Click="RefreshPreview_Click" Width="100" />
         </StackPanel>
     </Grid>
 </Window>
