@@ -879,12 +879,14 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                 }
                 List<string> list =
                     new List<string>(log.Split(new[] { "\r\n", "\n", "\r" }, StringSplitOptions.None));
-                foreach (string s in list)
+                foreach (string str in list)
                 {
                     line = "";
                     try
                     {
-                        if (s.Contains("qConnectCB start gid"))
+                        string s = str.ToLower();
+                        
+                        if (s.Contains("qConnectCB start gid".ToLower()))
                         {
                             //开始，截取组ID和Cid，和起呼ID
                             gid = YiKit.SubStr(s, "gid:", " ");
@@ -909,15 +911,15 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                 showTxt(gcLogLine[cid]);
                             }
                         }
-                        else if (s.Contains("SendFloorAlert, alertType: 1"))
+                        else if (s.Contains("SendFloorAlert, alertType: 1".ToLower()))
                         {
                             //讲话
-                            cid = YiKit.SubStr(s, "channleid: ", " ");
-                            sm = YiKit.SubStr(s, "speekNum: ", " ");
+                            cid = YiKit.SubStr(s, "channleid: ".ToLower(), " ");
+                            sm = YiKit.SubStr(s, "speekNum: ".ToLower(), " ");
 
                             sn = ids.ContainsKey(sm)
                                 ? ids[sm]
-                                : (s.Contains("speakName:") ? YiKit.SubStr(s, "speakName:") : "");
+                                : (s.Contains("speakName:".ToLower()) ? YiKit.SubStr(s, "speakName:".ToLower()) : "");
 
                             if (gcLogLine.ContainsKey(cid))
                                 gcLogLine[cid] += "🔊" + sn + "(" + sm + "):" + YiKit.NowT();
@@ -935,10 +937,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                                 showTxt(gcLogLine[cid]);
                             }
                         }
-                        else if (s.Contains("SendFloorAlert, alertType: 0"))
+                        else if (s.Contains("SendFloorAlert, alertType: 0".ToLower()))
                         {
                             //释放
-                            cid = YiKit.SubStr(s, "channleid: ", " ");
+                            cid = YiKit.SubStr(s, "channleid: ".ToLower(), " ");
                             if (gcLogLine.ContainsKey(cid))
                                 gcLogLine[cid] += "-" + YiKit.NowT();
                             else gcLogLine.Add(cid, "-" + YiKit.NowT());
@@ -949,10 +951,10 @@ public partial class YAudioPage : System.Windows.Controls.Page, INotifyPropertyC
                             }
                         }
                         // else if (s.Contains("Change the call channelid:[" ))
-                        else if (s.Contains("to be released"))
+                        else if (s.Contains("to be released".ToLower()))
                         {
                             //结束
-                            cid = YiKit.SubStr(s, "channelid: ", " ");
+                            cid = YiKit.SubStr(s, "channelid: ".ToLower(), " ");
                             if (gcLogLine.ContainsKey(cid))
                                 gcLogLine[cid] += " 释放" + YiKit.NowT();
                             else gcLogLine.Add(cid, " 释放" + YiKit.NowT());

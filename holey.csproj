@@ -1,4 +1,4 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
     <PropertyGroup>
         <CETCompat>false</CETCompat><!-- 禁用CET，win10 不支持CET，只有win11支持-->
@@ -7,7 +7,7 @@
         <UseWPF>true</UseWPF>
         <ApplicationIcon>ico.ico</ApplicationIcon>
         <GenerateDocumentationFile>false</GenerateDocumentationFile>
-        <DebugType>None</DebugType>
+<!--        <DebugType>None</DebugType>-->
         <Copyright>yi</Copyright>
         <LangVersion>latest</LangVersion>
         <TargetFramework>net462</TargetFramework>
@@ -125,6 +125,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
         </PackageReference>
         <PackageReference Include="System.Text.Json" Version="10.0.0-rc.1.25451.107" />
+        <PackageReference Include="Tesseract" Version="5.2.0" />
     </ItemGroup>
 
     <ItemGroup>

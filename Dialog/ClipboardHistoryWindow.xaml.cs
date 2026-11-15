@@ -331,7 +331,7 @@ namespace holey.Dialog
             var filtered = _originalHistory.Where(item =>
             {
                 bool matchesFilter = string.IsNullOrEmpty(filterText) ||
-                                     item.Content.Contains(filterText, StringComparison.OrdinalIgnoreCase);
+                                     item.Content.IndexOf(filterText, StringComparison.OrdinalIgnoreCase) >= 0;
                 bool matchesLength = item.Content.Length >= minLength;
                 return matchesFilter && matchesLength;
             }).ToList();

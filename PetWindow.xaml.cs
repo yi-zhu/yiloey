@@ -27,7 +27,9 @@ using System.Windows.Input;
 using System.Windows.Interop;
 using System.Windows.Media;
 using System.Windows.Threading;
+using System.Xml.Xsl;
 using holey.Dialog;
+using holey.Kits;
 using holey.KitWin;
 using holey.Page;
 using holey.Vdd;
@@ -40,10 +42,10 @@ using Color = System.Drawing.Color;
 using Control = System.Windows.Forms.Control;
 using Image = System.Drawing.Image;
 using InputDialog = YiKits.Dialog.InputDialog;
-using Label = System.Windows.Forms.Label;
 using MenuItem = System.Windows.Controls.MenuItem;
 using MessageBox = System.Windows.MessageBox;
 using MouseEventArgs = System.Windows.Input.MouseEventArgs;
+using OpenFileDialog = Microsoft.Win32.OpenFileDialog;
 using Point = System.Windows.Point;
 using ProgressBar = System.Windows.Controls.ProgressBar;
 using Size = System.Drawing.Size;
@@ -108,7 +110,7 @@ public partial class PetWindow : Window
     {
         InitializeComponent();
         Me = this;
-        _zoom = YiKit.IniGetDouble("zoompet", 1);
+        _zoom = YiKit.IniGetDouble("zoompet", 1.5);
         if (Width != w * _zoom)
         {
             this.Width = w * _zoom;
@@ -281,11 +283,16 @@ public partial class PetWindow : Window
         if (VDD) ProgramVdd.StartVdd(["-a"], true);
 
         AutoStartMenuItem.IsChecked = YiKit.IniGetBool("autostart", false);
-        
+
+        RestoreUcAutoWatch();
+
         // 从配置文件加载被监控进程
         LoadMonitoredProcesses();
+
+        // 三方菜单：加载用户自定义项
+        LoadThirdPartyCustomMenus();
     }
-    
+
     // 检查被监控进程
     private void CheckMonitoredProcesses()
     {
@@ -302,7 +309,7 @@ public partial class PetWindow : Window
             }
         }
     }
-    
+
     // 检查进程是否运行
     private bool IsProcessRunning(string processName)
     {
@@ -314,7 +321,7 @@ public partial class PetWindow : Window
             {
                 processNameWithoutExe = processNameWithoutExe.Substring(0, processNameWithoutExe.Length - 4);
             }
-            
+
             Process[] processes = Process.GetProcessesByName(processNameWithoutExe);
             return processes.Length > 0;
         }
@@ -324,7 +331,7 @@ public partial class PetWindow : Window
             return false;
         }
     }
-    
+
     // 重启进程
     private void RestartProcess(MonitoredProcess monitoredProcess)
     {
@@ -339,7 +346,8 @@ public partial class PetWindow : Window
                 };
                 Process.Start(startInfo);
                 YiKit.Print("已重启进程: " + monitoredProcess.ProcessName);
-                YiKit.ShowToast("已重启进程: " + monitoredProcess.ProcessName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
+                YiKit.ShowToast("已重启进程: " + monitoredProcess.ProcessName, l: (int)(Left + Width / 2),
+                    t: (int)(Top + 30));
             }
             else
             {
@@ -351,27 +359,28 @@ public partial class PetWindow : Window
             YiKit.Print("重启进程失败: " + ex.Message);
         }
     }
-   
-    
+
+
     // 添加被监控进程
     private void AddMonitoredProcess()
     {
         try
         {
             // 打开文件选择对话框，让用户选择要监控的进程
-            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            var openFileDialog = new OpenFileDialog
             {
                 Filter = "可执行文件 (*.exe)|*.exe|所有文件 (*.*)|*.*",
                 Title = "选择要监控的进程"
             };
-            
+
             if (openFileDialog.ShowDialog() == true)
             {
                 string processPath = openFileDialog.FileName;
                 string processName = Path.GetFileName(processPath);
-                
+
                 // 检查是否已经在监控列表中
-                if (!_monitoredProcesses.Any(p => p.ProcessPath.Equals(processPath, StringComparison.OrdinalIgnoreCase)))
+                if (!_monitoredProcesses.Any(p =>
+                        p.ProcessPath.Equals(processPath, StringComparison.OrdinalIgnoreCase)))
                 {
                     var monitoredProcess = new MonitoredProcess
                     {
@@ -379,11 +388,11 @@ public partial class PetWindow : Window
                         ProcessPath = processPath,
                         IsMonitoring = true
                     };
-                    
+
                     _monitoredProcesses.Add(monitoredProcess);
                     YiKit.Print("已添加被监控进程: " + processName);
                     YiKit.ShowToast("已添加被监控进程: " + processName, l: (int)(Left + Width / 2), t: (int)(Top + 30));
-                    
+
                     // 保存到配置文件
                     SaveMonitoredProcesses();
                 }
@@ -398,7 +407,7 @@ public partial class PetWindow : Window
             YiKit.Print("添加被监控进程失败: " + ex.Message);
         }
     }
-    
+
     // 显示被监控进程列表
     private void ShowMonitoredProcesses()
     {
@@ -409,49 +418,48 @@ public partial class PetWindow : Window
                 YiKit.ShowToast("当前没有被监控的进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
                 return;
             }
-            
+
             string message = "被监控进程列表:\n";
             foreach (var process in _monitoredProcesses)
             {
                 message += $"{process.ProcessName} - {(process.IsMonitoring ? "监控中" : "已暂停")}\n";
             }
-            
-            YiKit.ShowToast(message, 0,5,l: (int)(Left + Width / 2), t: (int)(Top + 30));
+
+            YiKit.ShowToast(message, 0, 5, l: (int)(Left + Width / 2), t: (int)(Top + 30));
         }
         catch (Exception ex)
         {
             YiKit.Print("显示被监控进程失败: " + ex.Message);
         }
     }
-    
+
     // 杀死进程
     private void KillProcess_OnClick(object sender, RoutedEventArgs e)
     {
         var ret = YiKit.ShowInputDialog("杀死匹配的进程", "进程名:");
 
-        
+
         if (ret == null)
         {
             return;
         }
-        
-       string num= YiKit.ProgressEnd(ret[0]);
-       YiKit.ShowToast("杀死了"+num+"个"+ret[0]+"进程");  
-       
-  
+
+        string num = YiKit.ProgressEnd(ret[0]);
+        YiKit.ShowToast("杀死了" + num + "个" + ret[0] + "进程");
     }
+
     // 添加监控进程菜单项点击事件
     private void AddMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
     {
         AddMonitoredProcess();
     }
-    
+
     // 显示监控进程菜单项点击事件
     private void ShowMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
     {
         ShowMonitoredProcesses();
     }
-    
+
     // 保存被监控进程到配置文件
     private void SaveMonitoredProcesses()
     {
@@ -459,7 +467,7 @@ public partial class PetWindow : Window
         {
             // 清空旧配置
             YiKit.IniWrite("monitored_processes_count", "0", "process_monitor");
-            
+
             // 保存进程列表
             for (int i = 0; i < _monitoredProcesses.Count; i++)
             {
@@ -468,7 +476,7 @@ public partial class PetWindow : Window
                 YiKit.IniWrite($"process_{i}_path", process.ProcessPath, "process_monitor");
                 YiKit.IniWrite($"process_{i}_monitoring", process.IsMonitoring.ToString(), "process_monitor");
             }
-            
+
             // 保存进程数量
             YiKit.IniWrite("monitored_processes_count", _monitoredProcesses.Count.ToString(), "process_monitor");
         }
@@ -477,24 +485,24 @@ public partial class PetWindow : Window
             YiKit.Print("保存被监控进程失败: " + ex.Message);
         }
     }
-    
+
     // 加载被监控进程从配置文件
     private void LoadMonitoredProcesses()
     {
         try
         {
             _monitoredProcesses.Clear();
-            
+
             // 读取进程数量
             int count = YiKit.IniGetInt("monitored_processes_count", 0, "process_monitor");
-            
+
             // 读取进程列表
             for (int i = 0; i < count; i++)
             {
                 string name = YiKit.IniGet($"process_{i}_name", "", "process_monitor");
                 string path = YiKit.IniGet($"process_{i}_path", "", "process_monitor");
                 bool isMonitoring = YiKit.IniGetBool($"process_{i}_monitoring", true, "process_monitor");
-                
+
                 if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(path))
                 {
                     _monitoredProcesses.Add(new MonitoredProcess
@@ -511,7 +519,7 @@ public partial class PetWindow : Window
             YiKit.Print("加载被监控进程失败: " + ex.Message);
         }
     }
-    
+
     // 开启选中进程监控菜单项点击事件
     private void StartMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
     {
@@ -523,7 +531,7 @@ public partial class PetWindow : Window
             SaveMonitoredProcesses();
         });
     }
-    
+
     // 关闭选中进程监控菜单项点击事件
     private void StopMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
     {
@@ -535,7 +543,7 @@ public partial class PetWindow : Window
             SaveMonitoredProcesses();
         });
     }
-    
+
     // 删除选中进程菜单项点击事件
     private void RemoveMonitoredProcess_OnClick(object sender, RoutedEventArgs e)
     {
@@ -547,7 +555,7 @@ public partial class PetWindow : Window
             SaveMonitoredProcesses();
         });
     }
-    
+
     // 清空所有进程菜单项点击事件
     private void ClearMonitoredProcesses_OnClick(object sender, RoutedEventArgs e)
     {
@@ -556,8 +564,9 @@ public partial class PetWindow : Window
             YiKit.ShowToast("当前没有被监控的进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
             return;
         }
-        
-        if (MessageBox.Show("确定要清空所有被监控的进程吗？", "确认操作", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+
+        if (MessageBox.Show("确定要清空所有被监控的进程吗？", "确认操作", MessageBoxButton.YesNo, MessageBoxImage.Question) ==
+            MessageBoxResult.Yes)
         {
             _monitoredProcesses.Clear();
             YiKit.Print("已清空所有被监控进程");
@@ -565,7 +574,7 @@ public partial class PetWindow : Window
             SaveMonitoredProcesses();
         }
     }
-    
+
     // 选择并操作进程的通用方法
     private void SelectAndOperateProcess(string title, Action<MonitoredProcess> operation)
     {
@@ -574,15 +583,16 @@ public partial class PetWindow : Window
             YiKit.ShowToast("当前没有被监控的进程", l: (int)(Left + Width / 2), t: (int)(Top + 30));
             return;
         }
-        
+
         // 构建进程选择列表
-        List<string> processNames = _monitoredProcesses.Select(p => $"{p.ProcessName} {(p.IsMonitoring ? "(监控中)" : "(已暂停)")} 是否").ToList();
-        
+        List<string> processNames = _monitoredProcesses
+            .Select(p => $"{p.ProcessName} {(p.IsMonitoring ? "(监控中)" : "(已暂停)")} 是否").ToList();
+
         List<string> selected = ShowInputDialog(title, processNames.ToArray());
         List<string> result = new List<string>();
         while (selected.Count < processNames.Count)
         {
-            selected.Insert(0,"");
+            selected.Insert(0, "");
         }
 
         for (int i = 0; i < selected.Count; i++)
@@ -598,7 +608,7 @@ public partial class PetWindow : Window
             string selectedName = result[0];
             // 提取进程名称（去掉状态后缀）
             string processName = selectedName.Split(new[] { " (" }, StringSplitOptions.None)[0];
-            
+
             // 查找对应的进程
             MonitoredProcess process = _monitoredProcesses.FirstOrDefault(p => p.ProcessName == processName);
             if (process != null)
@@ -659,7 +669,7 @@ public partial class PetWindow : Window
 
     private bool IsAlive { get; set; } = true;
     private NetworkInterface? tap;
-    
+
     // 进程监听相关
     private List<MonitoredProcess> _monitoredProcesses = new List<MonitoredProcess>();
 
@@ -677,6 +687,7 @@ public partial class PetWindow : Window
             long lastDown = 0;
             bool isnowork = false;
             string tapas = "";
+            string tapaw = "";
             string tapasU = "";
             string tapasD = "";
             tap = YiKit.GetInterface(ip: YiKit.IniGet("showip", def: null));
@@ -738,8 +749,9 @@ public partial class PetWindow : Window
                         {
                             // if (isnowork) break;
                             // tapas = "时间:"+YiKit.NowT();
-                            tapas = string.Format("{0:0}", currentDateTime.Hour) + ":" + YiKit.NowD() + "." +
-                                    YiKit.NowW();
+                            tapaw = YiKit.NowW();
+                            tapas = string.Format("{0:0}", currentDateTime.Hour) + ":" + YiKit.NowD();
+                                   
                             tapasU = string.Format("{0:00}", currentDateTime.Minute) + "" +
                                      (nowUp == lastUp ? "：" : "↑: ") + YiKit.SumByte(nowUp) + "";
                             tapasD = string.Format("{0:00}", currentDateTime.Second) + "" +
@@ -765,12 +777,17 @@ public partial class PetWindow : Window
                         // tapas += "MAC:"+tap.GetPhysicalAddress() + "\n";
                         YiKit.RunOnUIThread(() =>
                         {
+                            tapas += YiKit.NowW();
                             if (!tapas.Equals(MainStrN.Text))
                             {
                                 MainStrN.Text = tapas;
                                 lastDown = nowDown;
                                 lastUp = nowUp;
                             }
+                            // if (!tapaw.Equals(MainStrW.Text))
+                            // {
+                            //     MainStrW.Text = tapaw;
+                            // }
 
                             if (!ipaddr.Address.Equals(StatStrRect.ToolTip))
                             {
@@ -798,7 +815,7 @@ public partial class PetWindow : Window
                 {
                     CheckMonitoredProcesses();
                 }
-                
+
                 Thread.Sleep(_sleep);
             }
         });
@@ -814,6 +831,9 @@ public partial class PetWindow : Window
             double gpumemmbU = 0d;
             double gpumemmbT = 0d;
             string disktx = "";
+            string csd = "";
+            string sd = "";
+            
 
             while (IsAlive)
             {
@@ -861,13 +881,16 @@ public partial class PetWindow : Window
                 gpumemmbU = YiKit.GpuMem();
                 gpumemmbT = YiKit.GpuMemTol();
                 gpumem = (int)YiKit.GpuMemuse();
-
+                csd = YiKit.NowCSD();
+                sd = YiKit.NowSD();
                 YiKit.RunOnUIThread(() =>
                 {
                     //cpu
                     CpuRect.Width = cpuse;
-                    if (!YiKit.NowSD().Equals(CpuStrR.Text))
-                        CpuStrR.Text = YiKit.NowSD();
+                    if (!sd.Equals(CpuStrR.Text))
+                        CpuStrR.Text = sd;
+                    if (!csd.Equals(StrCsd.Text))
+                        StrCsd.Text = csd;
                     //gpumem
                     if (!GpuMemStr.Text.Equals(gpumem + ""))
                     {
@@ -897,36 +920,16 @@ public partial class PetWindow : Window
                 });
 
 
-                YiKit.CpuTem((b) =>
-                {
-                    if (null == b)
-                    {
-                        return;
-                    }
-
-                    if (b.ToString() == "0")
-                    {
-                        return;
-                    }
-
-                    YiKit.RunOnUIThread(() =>
-                    {
-                        if (!ReferenceEquals(b + "℃", CpuStr.Text))
-                        {
-                            CpuStr.Text = b + "℃";
-                            if (b is float bf)
-                            {
-                                if (CpuStr.Foreground is LinearGradientBrush brush)
-                                {
-                                    brush.StartPoint =
-                                        new Point(0, (125 - bf) / 2);
-                                }
-                            }
-                        }
-                    });
-                });
+                YiKit.CpuTem((b) => ApplyTempToUi(CpuTempStr, b, "处理器温度"));
+                YiKit.DiskTem((b) => ApplyTempToUi(DiskTempStr, b, "磁盘温度"));
+                YiKit.MemTem((b) => ApplyTempToUi(MemTempStr, b, "内存温度"));
                 YiKit.GpuTem((b) =>
                 {
+                    if (b == null)
+                    {
+                        return;
+                    }
+
                     if (b.ToString() == "0")
                     {
                         return;
@@ -944,59 +947,63 @@ public partial class PetWindow : Window
                                     brush.EndPoint = new Point(bf/2.5, 0);
                                 }
                             }*/
-                            if ((float)b > 90)
+                            if (b is float gpuTemp)
                             {
-                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                if (gpuTemp > 90)
                                 {
-                                    linearGradientBrush.GradientStops[0].Color = Colors.Red;
-                                    linearGradientBrush.GradientStops[1].Color = Colors.Red;
+                                    if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                    {
+                                        linearGradientBrush.GradientStops[0].Color = Colors.Red;
+                                        linearGradientBrush.GradientStops[1].Color = Colors.Red;
+                                    }
                                 }
-                            }
-                            else if ((float)b > 80)
-                            {
-                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                else if (gpuTemp > 80)
                                 {
-                                    linearGradientBrush.GradientStops[0].Color = Colors.Firebrick;
-                                    linearGradientBrush.GradientStops[1].Color = Colors.Red;
+                                    if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                    {
+                                        linearGradientBrush.GradientStops[0].Color = Colors.Firebrick;
+                                        linearGradientBrush.GradientStops[1].Color = Colors.Red;
+                                    }
                                 }
-                            }
-                            else if ((float)b > 70)
-                            {
-                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                else if (gpuTemp > 70)
                                 {
-                                    linearGradientBrush.GradientStops[0].Color = Colors.Fuchsia;
-                                    linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
+                                    if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                    {
+                                        linearGradientBrush.GradientStops[0].Color = Colors.Fuchsia;
+                                        linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
+                                    }
                                 }
-                            }
-                            else if ((float)b > 60)
-                            {
-                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                else if (gpuTemp > 60)
                                 {
-                                    linearGradientBrush.GradientStops[0].Color = Colors.BlueViolet;
-                                    linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
+                                    if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                    {
+                                        linearGradientBrush.GradientStops[0].Color = Colors.BlueViolet;
+                                        linearGradientBrush.GradientStops[1].Color = Colors.Firebrick;
+                                    }
                                 }
-                            }
-                            else if ((float)b > 50)
-                            {
-                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                else if (gpuTemp > 50)
                                 {
-                                    linearGradientBrush.GradientStops[0].Color = Colors.Blue;
-                                    linearGradientBrush.GradientStops[1].Color = Colors.Fuchsia;
+                                    if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                    {
+                                        linearGradientBrush.GradientStops[0].Color = Colors.Blue;
+                                        linearGradientBrush.GradientStops[1].Color = Colors.Fuchsia;
+                                    }
                                 }
-                            }
-                            else
-                            {
-                                if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                else
                                 {
-                                    linearGradientBrush.GradientStops[0].Color = Colors.Blue;
-                                    linearGradientBrush.GradientStops[1].Color = Colors.MediumBlue;
+                                    if (StatStrRect.Fill is LinearGradientBrush linearGradientBrush)
+                                    {
+                                        linearGradientBrush.GradientStops[0].Color = Colors.Blue;
+                                        linearGradientBrush.GradientStops[1].Color = Colors.MediumBlue;
+                                    }
                                 }
-                            }
 
-                            StatStr.Text = b + "";
+                                StatStr.Text = b + "";
+                            }
                         }
                     });
                 });
+
                 // YiKit.Print(YiKit.MemUse());
 
                 #endregion
@@ -1005,6 +1012,8 @@ public partial class PetWindow : Window
             }
         });
     }
+
+
     //调用英伟达的显卡
 
 
@@ -1039,7 +1048,7 @@ public partial class PetWindow : Window
             MemBtn.Opacity = 0.1;
         }
 
-        var helper = new System.Windows.Interop.WindowInteropHelper(this);
+        var helper = new WindowInteropHelper(this);
         IntPtr hwnd = helper.Handle;
 
         const int GWL_EXSTYLE = -20;
@@ -1484,7 +1493,8 @@ public partial class PetWindow : Window
         {
             _clipboard = 1;
             clbname =
-                YiKit.ShowInputDialog("同步剪贴板", "请输入相同的匹配码或者相同的名称,系统会自动记忆:"+YiKit.IniGet("clbname", "ini", def: ""))?[0]+"";
+                YiKit.ShowInputDialog("同步剪贴板",
+                    "请输入相同的匹配码或者相同的名称,系统会自动记忆:" + YiKit.IniGet("clbname", "ini", def: ""))?[0] + "";
             if (string.IsNullOrEmpty(clbname)) //如果没有输入或者输入为空
             {
                 return;
@@ -1502,14 +1512,51 @@ public partial class PetWindow : Window
 
         YiKit.IniWrite("clipboard", value: _clipboard + "", area: "ini");
     }
+
     // 新建一个剪切板窗口，窗口实时读取剪切板并记录不同历史记录，并具有自动写入到文件的选项
     private void ClipboardItemOnRightClick(object sender, MouseButtonEventArgs e)
     {
         e.Handled = true; // 防止触发左键点击事件
-        var clipboardWindow = new holey.Dialog.ClipboardHistoryWindow();
+        var clipboardWindow = new ClipboardHistoryWindow();
         clipboardWindow.Show();
     }
-    //读取cpu温度
+    /// <summary>把温度写到对应 TextBlock（磁盘/内存/处理器）。</summary>
+    private void ApplyTempToUi(System.Windows.Controls.TextBlock target, object b, string tip)
+    {
+        if (target == null || b == null) return;
+        if (b.ToString() == "0") return;
+
+        YiKit.RunOnUIThread(() =>
+        {
+            string tempText;
+            double? num = null;
+            try
+            {
+                num = Convert.ToDouble(b);
+                tempText = Math.Round(num.Value) + "℃";
+            }
+            catch
+            {
+                tempText = b.ToString().Split(',')[0];
+            }
+
+            if (tempText == target.Text) return;
+            target.Text = tempText;
+            string src = YiKit.LastTempSource;
+            target.ToolTip = string.IsNullOrEmpty(src)
+                ? tip + ": " + tempText
+                : tip + ": " + tempText + "（" + src + "）";
+            if (num.HasValue)
+            {
+                if (num.Value > 80)
+                    target.Foreground = new SolidColorBrush(Colors.Red);
+                else if (num.Value > 60)
+                    target.Foreground = new SolidColorBrush(Colors.Yellow);
+                else
+                    target.Foreground = new SolidColorBrush(Colors.White);
+            }
+        });
+    }
 
     private static string lastClipboardText = "";
 
@@ -1795,7 +1842,10 @@ public partial class PetWindow : Window
 
     private void SleepItem_OnClick(object sender, RoutedEventArgs e)
     {
-        string? s = YiKit.ShowInputDialogDefValue("监控刷新时间(秒)", YiKit.IniGet("sleep", "ini", def: "1"))?[0];
+        var ret = YiKit.ShowInputDialog($"监控刷新时间",
+            "监控刷新时间:" + (YiKit.IniGet("sleep", "ini", def: "1")));
+        if (ret == null) return;
+        string? s = ret?[0];
         if (string.IsNullOrEmpty(s))
         {
             return;
@@ -1823,7 +1873,11 @@ public partial class PetWindow : Window
 
     private void ZoomItem_OnClick(object sender, RoutedEventArgs e)
     {
-        string? s = YiKit.ShowInputDialogDefValue("设置放大或缩小倍数", YiKit.IniGet("zoompet", "ini", def: "1"))?[0];
+        var ret = YiKit.ShowInputDialog($"设置放大或缩小倍数",
+            "设置放大或缩小倍数:" + YiKit.IniGet("zoompet", "ini", def: "1"));
+        if (ret == null) return;
+        string? s = ret?[0];
+        
         if (string.IsNullOrEmpty(s))
         {
             return;
@@ -2900,10 +2954,10 @@ public partial class PetWindow : Window
                     neww = original.Width;
                 }
 
-                if (newh>thumbHeight)
-                thumbHeight = newh; // 所有缩略图统一高度（也可动态处理）
-                if (neww>thumbWidth)
-                thumbWidth = neww; // 所有缩略图统一高度（也可动态处理）
+                if (newh > thumbHeight)
+                    thumbHeight = newh; // 所有缩略图统一高度（也可动态处理）
+                if (neww > thumbWidth)
+                    thumbWidth = neww; // 所有缩略图统一高度（也可动态处理）
 
                 var resized = new Bitmap(original, new Size(neww, newh));
                 images.Add(resized); // 添加到列表中
@@ -3112,7 +3166,7 @@ public partial class PetWindow : Window
         // 0：打开显示器
         // 1：低功耗模式
         // 2：完全关闭显示器
-        System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ =>
+        Task.Delay(1000).ContinueWith(_ =>
         {
             // 1. 先声明：我们正在使用显示器（防止系统干扰）
             YiKit.SetThreadExecutionState(YiKit.EXECUTION_STATE.ES_DISPLAY_REQUIRED |
@@ -3174,7 +3228,7 @@ public partial class PetWindow : Window
 
                 // 主输出：组级统计
                 string summaryFile = Path.Combine(dirPath, $"{YiKit.NowD()}.csv");
-                using (var writer = new StreamWriter(summaryFile, false, System.Text.Encoding.UTF8))
+                using (var writer = new StreamWriter(summaryFile, false, Encoding.UTF8))
                 {
                     writer.WriteLine($"组号{delimiter}组名{delimiter}次数{delimiter}总计秒");
                     foreach (var kvp in resultExtended.OrderBy(r => r.Key))
@@ -3188,7 +3242,7 @@ public partial class PetWindow : Window
                 var num = 0;
                 // 详细输出：每个 CALLER 的数据 ✅ 现在能访问 CallerCount 和 CallerDuration
                 string detailFile = Path.Combine(dirPath, $"{YiKit.NowD()}_detail.csv");
-                using (var writer = new StreamWriter(detailFile, false, System.Text.Encoding.UTF8))
+                using (var writer = new StreamWriter(detailFile, false, Encoding.UTF8))
                 {
                     writer.WriteLine($"组号{delimiter}组名{delimiter}CALLER{delimiter}呼叫次数{delimiter}累计时长(秒)");
                     foreach (var kvp in resultExtended.OrderBy(r => r.Key))
@@ -3207,7 +3261,7 @@ public partial class PetWindow : Window
 
                 // 详细输出：每个 CALLER 的数据 ✅ 现在能访问 CallerCount 和 CallerDuration
                 string detailSumFile = Path.Combine(dirPath, $"{YiKit.NowD()}_sum_detail.csv");
-                using (var writer = new StreamWriter(detailSumFile, false, System.Text.Encoding.UTF8))
+                using (var writer = new StreamWriter(detailSumFile, false, Encoding.UTF8))
                 {
                     Dictionary<string, CallDurationResult> res = new Dictionary<string, CallDurationResult>();
                     writer.WriteLine($"号码{delimiter}呼叫次数{delimiter}累计时长(秒)");
@@ -3304,7 +3358,7 @@ public partial class PetWindow : Window
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"处理文件失败: {file} - {ex.Message}");
+                Debug.WriteLine($"处理文件失败: {file} - {ex.Message}");
             }
         }
 
@@ -3415,7 +3469,7 @@ public partial class PetWindow : Window
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"处理文件失败: {file} - {ex.Message}");
+                Debug.WriteLine($"处理文件失败: {file} - {ex.Message}");
             }
         }
 
@@ -3759,7 +3813,7 @@ public partial class PetWindow : Window
                         // === 第三步：预构建替换对（使用传统类或数组）===
 
 
-                        var replacements = new System.Collections.Generic.List<ReplaceItem>();
+                        var replacements = new List<ReplaceItem>();
 
                         foreach (var kv in sorted)
                         {
@@ -3777,7 +3831,7 @@ public partial class PetWindow : Window
 
                         // === 第四步：使用 StringBuilder 批量处理 ===
                         // 预分配容量，减少内存重分配
-                        var sb = new System.Text.StringBuilder(content, content.Length + content.Length / 10);
+                        var sb = new StringBuilder(content, content.Length + content.Length / 10);
 
                         foreach (var item in replacements)
                         {
@@ -3795,18 +3849,18 @@ public partial class PetWindow : Window
                         modifiedContent = modifiedContent.Replace("\n", originalNewLine);
 
                         // === 第六步：写回文件（保留原始编码）===
-                        System.IO.File.WriteAllText(tempFile, modifiedContent, detectedEncoding);
+                        File.WriteAllText(tempFile, modifiedContent, detectedEncoding);
 
                         // === 第七步：原子替换 ===
-                        System.IO.File.Delete(file);
-                        System.IO.File.Move(tempFile, file);
+                        File.Delete(file);
+                        File.Move(tempFile, file);
 
                         num--;
                         YiKit.ShowToast($"{file}处理完成,剩余{num}个文件");
                     }
-                    catch (System.Exception ex)
+                    catch (Exception ex)
                     {
-                        if (System.IO.File.Exists(tempFile)) System.IO.File.Delete(tempFile);
+                        if (File.Exists(tempFile)) File.Delete(tempFile);
                         YiKit.ShowToastError($"{file} 错误信息：{ex.Message}");
                     }
                 });
@@ -3835,32 +3889,27 @@ public partial class PetWindow : Window
 
     private void PortCheck_OnClick(object sender, RoutedEventArgs e)
     {
-        List<string> strs =
-            YiKit.ShowInputDialog("端口检查", "ip或域名:127.0.0.1,192.168.0.1/24", "端口:80,81,82-83", "最大线程:100");
-        if (strs.Count == 0) return;
-        if (strs.Count == 3)
-        {
-            string ipstr = strs[0];
-            string portstr = strs[1];
-            int maxthreadcount = 100;
-            int.TryParse(strs[2], out maxthreadcount);
-            var ipstrs = ipstr.Split(',');
-            var portstrs = portstr.Split(',');
-            List<string> ips = new List<string>();
+        OpenPortTools(occupyTab: false);
+    }
 
-            for (int i = 0; i < ipstrs.Length; i++)
-            {
-                var ip = ipstrs[i];
-                if (ip.Contains("_"))
-                    ip = ip.Replace("_", "-");
-                if (ip.Contains("--"))
-                    ip = ip.Replace("--", "-");
-                if (ip.Contains("-"))
-                {
-                    ips.Add(ip);
-                }
-            }
+    private void OpenPortTools(bool occupyTab, string? port = null)
+    {
+        if (PortCheckDialog.Me == null)
+        {
+            var dlg = new PortCheckDialog { Owner = this };
+            dlg.Show();
         }
+        else
+        {
+            if (!PortCheckDialog.Me.IsVisible)
+                PortCheckDialog.Me.Show();
+            PortCheckDialog.Me.Activate();
+        }
+
+        if (occupyTab)
+            PortCheckDialog.Me?.ShowOccupyTab(port);
+        else
+            PortCheckDialog.Me?.ShowScanTab();
     }
 
     private void AutoStart_OnClickItemOnClick(object sender, RoutedEventArgs e)
@@ -3909,8 +3958,8 @@ public partial class PetWindow : Window
             "原文件宽度缩放为(保持不变填0):0",
             "原文件高度缩放为(保持不变填0):0",
             "删除黑色背景强度:0x000000:0.005",
-        "是否删除缓存文件:true"
-            );
+            "是否删除缓存文件:true"
+        );
         if (strs == null || strs.Count < 1)
         {
             YiKit.ShowToastError("参数错误");
@@ -3924,7 +3973,7 @@ public partial class PetWindow : Window
         int targetWidth = int.TryParse(strs[5], out var width) ? width : 0;
         int targetHight = int.TryParse(strs[6], out var h) ? h : 0;
         string color = "black";
-        var isDel = bool.TryParse(strs[8], out var  del) ? del : false;
+        var isDel = bool.TryParse(strs[8], out var del) ? del : false;
 
         double delDark = 0.005;
         if (strs[7].Contains(":"))
@@ -3992,20 +4041,21 @@ public partial class PetWindow : Window
                     return;
                 }
 
-                string outputDir=null;
+                string outputDir = null;
                 string contactSheetPath = null;
-                
+
                 foreach (var path in files)
                 {
                     string fileDir = Path.GetDirectoryName(path);
-                    if (outputDir==null)
-                     outputDir = Path.Combine(
-                        fileDir,
-                        "sheet"+YiKit.NowTicks()
-                    );
+                    if (outputDir == null)
+                        outputDir = Path.Combine(
+                            fileDir,
+                            "sheet" + YiKit.NowTicks()
+                        );
                     var fileName = Path.GetFileNameWithoutExtension(path);
-                    if (contactSheetPath==null)
-                     contactSheetPath = Path.Combine(fileDir, Path.GetFileName(fileDir)+"_"+Path.GetRandomFileName() + ".png");
+                    if (contactSheetPath == null)
+                        contactSheetPath = Path.Combine(fileDir,
+                            Path.GetFileName(fileDir) + "_" + Path.GetRandomFileName() + ".png");
                     Directory.CreateDirectory(outputDir);
                     // 创建输出目录
                     // if (Directory.Exists(framesDir)) Directory.Delete(framesDir, true);
@@ -4017,7 +4067,7 @@ public partial class PetWindow : Window
 
 
                     ffmpegArgs =
-                        $"-i \"{path}\" -vf \"scale={targetWidth}:{targetHight},format=rgba,colorkey={color}:{delDark}:0.1\"  \"{Path.Combine(outputDir, fileName+".png")}\"";
+                        $"-i \"{path}\" -vf \"scale={targetWidth}:{targetHight},format=rgba,colorkey={color}:{delDark}:0.1\"  \"{Path.Combine(outputDir, fileName + ".png")}\"";
 
 
                     if (ffmpegArgs == null)
@@ -4030,8 +4080,6 @@ public partial class PetWindow : Window
                         YiKit.ShowToastError($"{Path.GetFileName(path)} 导出帧失败");
                         continue;
                     }
-
-       
                 }
                 // 计算列数（如果用户设置为0则自动计算）
 
@@ -4054,201 +4102,970 @@ public partial class PetWindow : Window
             }
         });
     }
-   private void SplitContactSheet_OnClick(object sender, RoutedEventArgs e)
-{
-    List<string> inputs = YiKit.ShowInputDialog(
-        "拆分联系表",
-        "联系表文件位置（.png）:",
-        "【可选】输出文件夹位置（留空则自动创建子文件夹）:",
-        "列数（横向数量）:0",
-        "行数（纵向数量，可填0自动计算）:0",
-        "【可选】子图宽度（留空则自动计算）:",
-        "【可选】子图高度（留空则自动计算）:"
-    );
 
-    if (inputs == null || inputs.Count < 4)
+    private void SplitContactSheet_OnClick(object sender, RoutedEventArgs e)
     {
-        YiKit.ShowToastError("参数不足");
-        return;
-    }
+        List<string> inputs = YiKit.ShowInputDialog(
+            "拆分联系表",
+            "联系表文件位置（.png）:",
+            "【可选】输出文件夹位置（留空则自动创建子文件夹）:",
+            "列数（横向数量）:0",
+            "行数（纵向数量，可填0自动计算）:0",
+            "【可选】子图宽度（留空则自动计算）:",
+            "【可选】子图高度（留空则自动计算）:"
+        );
 
-    string sheetPath = inputs[0].Trim();
-    string customOutputFolder = inputs[1].Trim();
-    int columns = int.TryParse(inputs[2], out var col) ? col : 0;
-    int rows = int.TryParse(inputs[3], out var row) ? row : 0;
-    bool hasWidth = int.TryParse(inputs[4].Trim(), out int tileWidth);
-    bool hasHeight = int.TryParse(inputs[5].Trim(), out int tileHeight);
-
-    if (string.IsNullOrEmpty(sheetPath) || !File.Exists(sheetPath))
-    {
-        YiKit.ShowToastError("联系表文件不存在");
-        return;
-    }
-
-    if (columns <= 0)
-    {
-        YiKit.ShowToastError("列数必须大于0");
-        return;
-    }
-
-    // 获取联系表基本信息
-    string sheetDir = Path.GetDirectoryName(sheetPath);
-    string sheetBaseName = Path.GetFileNameWithoutExtension(sheetPath); // 如 "my_sheet"
-
-    // 确定输出文件夹
-    string outputFolder;
-    if (!string.IsNullOrWhiteSpace(customOutputFolder))
-    {
-        outputFolder = customOutputFolder;
-        if (!Directory.Exists(outputFolder))
-            Directory.CreateDirectory(outputFolder);
-    }
-    else
-    {
-        // 默认：在联系表同目录下创建以文件名命名的文件夹
-        outputFolder = Path.Combine(sheetDir, sheetBaseName);
-        Directory.CreateDirectory(outputFolder); // 如果存在则无操作
-    }
-
-    // 加载图像获取尺寸
-    using var fullImage = new Bitmap(sheetPath);
-    int imageWidth = fullImage.Width;
-    int imageHeight = fullImage.Height;
-
-    // === 自动推导 tileWidth / tileHeight / rows ===
-    if (!hasWidth && !hasHeight)
-    {
-        if (imageWidth % columns != 0)
+        if (inputs == null || inputs.Count < 4)
         {
-            YiKit.ShowToastError($"图像宽度 {imageWidth} 无法被列数 {columns} 整除！");
-            return;
-        }
-        tileWidth = imageWidth / columns;
-
-        if (rows <= 0)
-        {
-            YiKit.ShowToastError("请提供行数或子图高度，否则无法确定垂直分割。");
+            YiKit.ShowToastError("参数不足");
             return;
         }
 
-        if (imageHeight % rows != 0)
+        string sheetPath = inputs[0].Trim();
+        string customOutputFolder = inputs[1].Trim();
+        int columns = int.TryParse(inputs[2], out var col) ? col : 0;
+        int rows = int.TryParse(inputs[3], out var row) ? row : 0;
+        bool hasWidth = int.TryParse(inputs[4].Trim(), out int tileWidth);
+        bool hasHeight = int.TryParse(inputs[5].Trim(), out int tileHeight);
+
+        if (string.IsNullOrEmpty(sheetPath) || !File.Exists(sheetPath))
         {
-            YiKit.ShowToastError($"图像高度 {imageHeight} 无法被行数 {rows} 整除！");
+            YiKit.ShowToastError("联系表文件不存在");
             return;
         }
-        tileHeight = imageHeight / rows;
-    }
-    else if (!hasWidth)
-    {
-        if (rows <= 0)
+
+        if (columns <= 0)
         {
-            if (imageHeight % tileHeight != 0)
-            {
-                YiKit.ShowToastError($"图像高度 {imageHeight} 无法被子图高度 {tileHeight} 整除！");
-                return;
-            }
-            rows = imageHeight / tileHeight;
+            YiKit.ShowToastError("列数必须大于0");
+            return;
+        }
+
+        // 获取联系表基本信息
+        string sheetDir = Path.GetDirectoryName(sheetPath);
+        string sheetBaseName = Path.GetFileNameWithoutExtension(sheetPath); // 如 "my_sheet"
+
+        // 确定输出文件夹
+        string outputFolder;
+        if (!string.IsNullOrWhiteSpace(customOutputFolder))
+        {
+            outputFolder = customOutputFolder;
+            if (!Directory.Exists(outputFolder))
+                Directory.CreateDirectory(outputFolder);
         }
         else
         {
-            if (imageHeight != rows * tileHeight)
+            // 默认：在联系表同目录下创建以文件名命名的文件夹
+            outputFolder = Path.Combine(sheetDir, sheetBaseName);
+            Directory.CreateDirectory(outputFolder); // 如果存在则无操作
+        }
+
+        // 加载图像获取尺寸
+        using var fullImage = new Bitmap(sheetPath);
+        int imageWidth = fullImage.Width;
+        int imageHeight = fullImage.Height;
+
+        // === 自动推导 tileWidth / tileHeight / rows ===
+        if (!hasWidth && !hasHeight)
+        {
+            if (imageWidth % columns != 0)
             {
-                YiKit.ShowToastError($"图像高度 {imageHeight} ≠ 行数×高度 ({rows}×{tileHeight})");
+                YiKit.ShowToastError($"图像宽度 {imageWidth} 无法被列数 {columns} 整除！");
+                return;
+            }
+
+            tileWidth = imageWidth / columns;
+
+            if (rows <= 0)
+            {
+                YiKit.ShowToastError("请提供行数或子图高度，否则无法确定垂直分割。");
+                return;
+            }
+
+            if (imageHeight % rows != 0)
+            {
+                YiKit.ShowToastError($"图像高度 {imageHeight} 无法被行数 {rows} 整除！");
+                return;
+            }
+
+            tileHeight = imageHeight / rows;
+        }
+        else if (!hasWidth)
+        {
+            if (rows <= 0)
+            {
+                if (imageHeight % tileHeight != 0)
+                {
+                    YiKit.ShowToastError($"图像高度 {imageHeight} 无法被子图高度 {tileHeight} 整除！");
+                    return;
+                }
+
+                rows = imageHeight / tileHeight;
+            }
+            else
+            {
+                if (imageHeight != rows * tileHeight)
+                {
+                    YiKit.ShowToastError($"图像高度 {imageHeight} ≠ 行数×高度 ({rows}×{tileHeight})");
+                    return;
+                }
+            }
+
+            if (imageWidth % columns != 0)
+            {
+                YiKit.ShowToastError($"图像宽度 {imageWidth} 无法被列数 {columns} 整除！");
+                return;
+            }
+
+            tileWidth = imageWidth / columns;
+        }
+        else if (!hasHeight)
+        {
+            if (imageWidth != columns * tileWidth)
+            {
+                YiKit.ShowToastError($"图像宽度 {imageWidth} ≠ 列数×宽度 ({columns}×{tileWidth})");
+                return;
+            }
+
+            if (rows <= 0)
+            {
+                YiKit.ShowToastError("请提供行数或子图高度，否则无法确定垂直分割。");
+                return;
+            }
+
+            if (imageHeight % rows != 0)
+            {
+                YiKit.ShowToastError($"图像高度 {imageHeight} 无法被行数 {rows} 整除！");
+                return;
+            }
+
+            tileHeight = imageHeight / rows;
+        }
+        else
+        {
+            if (imageWidth != columns * tileWidth || imageHeight != rows * tileHeight)
+            {
+                YiKit.ShowToastError(
+                    $"图像尺寸 ({imageWidth}x{imageHeight}) 与网格 ({columns}x{rows} @ {tileWidth}x{tileHeight}) 不匹配！");
                 return;
             }
         }
 
-        if (imageWidth % columns != 0)
-        {
-            YiKit.ShowToastError($"图像宽度 {imageWidth} 无法被列数 {columns} 整除！");
-            return;
-        }
-        tileWidth = imageWidth / columns;
-    }
-    else if (!hasHeight)
-    {
-        if (imageWidth != columns * tileWidth)
-        {
-            YiKit.ShowToastError($"图像宽度 {imageWidth} ≠ 列数×宽度 ({columns}×{tileWidth})");
-            return;
-        }
-
         if (rows <= 0)
         {
-            YiKit.ShowToastError("请提供行数或子图高度，否则无法确定垂直分割。");
+            YiKit.ShowToastError("无法确定有效行数。");
             return;
         }
 
-        if (imageHeight % rows != 0)
+        // === 执行拆分 ===
+        YiKit.RunThread(async _ =>
         {
-            YiKit.ShowToastError($"图像高度 {imageHeight} 无法被行数 {rows} 整除！");
-            return;
-        }
-        tileHeight = imageHeight / rows;
-    }
-    else
-    {
-        if (imageWidth != columns * tileWidth || imageHeight != rows * tileHeight)
-        {
-            YiKit.ShowToastError($"图像尺寸 ({imageWidth}x{imageHeight}) 与网格 ({columns}x{rows} @ {tileWidth}x{tileHeight}) 不匹配！");
-            return;
-        }
+            try
+            {
+                using var fullImage = new Bitmap(sheetPath);
+                int total = 0;
+
+                for (int r = 0; r < rows; r++)
+                {
+                    for (int c = 0; c < columns; c++)
+                    {
+                        Rectangle rect = new Rectangle(c * tileWidth, r * tileHeight, tileWidth, tileHeight);
+                        using var tile = fullImage.Clone(rect, fullImage.PixelFormat);
+
+                        // 文件名格式：my_sheet_0000.png
+                        string fileName = $"{sheetBaseName}_{total:D4}.png";
+                        string outputPath = Path.Combine(outputFolder, fileName);
+
+                        tile.Save(outputPath, ImageFormat.Png);
+                        total++;
+                    }
+                }
+
+                YiKit.ShowToast($"成功拆分为 {total} 张 PNG" + "保存至：{outputFolder}");
+            }
+            catch (Exception ex)
+            {
+                YiKit.ShowToastError("拆分失败：" + ex.Message);
+            }
+        });
     }
 
-    if (rows <= 0)
+
+    private void RealsePort_OnClick(object sender, RoutedEventArgs e)
     {
-        YiKit.ShowToastError("无法确定有效行数。");
-        return;
+        OpenPortTools(occupyTab: true);
     }
 
-    // === 执行拆分 ===
-    YiKit.RunThread(async _ =>
+    /// <summary>
+    /// 安装离线 OCR 语言包到 ocr/tessdata（安装时下载一次，识别全程离线）
+    /// </summary>
+    private async void OcrModule_OnClick(object sender, RoutedEventArgs e)
     {
         try
         {
-            using var fullImage = new Bitmap(sheetPath);
-            int total = 0;
-
-            for (int r = 0; r < rows; r++)
+            if (OcrHelper.IsReady())
             {
-                for (int c = 0; c < columns; c++)
-                {
-                    Rectangle rect = new Rectangle(c * tileWidth, r * tileHeight, tileWidth, tileHeight);
-                    using var tile = fullImage.Clone(rect, fullImage.PixelFormat);
-
-                    // 文件名格式：my_sheet_0000.png
-                    string fileName = $"{sheetBaseName}_{total:D4}.png";
-                    string outputPath = Path.Combine(outputFolder, fileName);
-
-                    tile.Save(outputPath, System.Drawing.Imaging.ImageFormat.Png);
-                    total++;
-                }
+                YiKit.ShowToast(OcrHelper.StatusText());
+                return;
             }
 
-            YiKit.ShowToast($"成功拆分为 {total} 张 PNG"+"保存至：{outputFolder}");
+            YiKit.ShowToastWaring("正在安装离线 OCR 语言包，请稍候...", time: 30);
+            await OcrHelper.EnsureInstalledAsync(msg => YiKit.ShowToast(msg));
+            YiKit.ShowToast(OcrHelper.IsReady()
+                ? "离线 OCR 安装完成，可在鼠标键盘脚本中使用"
+                : "OCR 安装未完成，请检查网络后重试");
         }
         catch (Exception ex)
         {
-            YiKit.ShowToastError("拆分失败：" + ex.Message);
+            YiKit.ShowToastError("OCR 安装失败: " + ex.Message);
+        }
+    }
+
+    /// <summary>
+    /// 其它三方应用，Tag下载链接 ，Header三方程序名称，
+    /// 先监测本地有没有如没有从TAG下载，下载时显示进度条
+    /// 下载后解压（解压时显示进度条）到当前目录的Header文件夹
+    /// 解压完成后，启动Header.exe三方程序
+    /// </summary>
+    private void OtherProgress_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!(sender is MenuItem menuItem)) return;
+
+        string appName = menuItem.Header?.ToString();
+        string downloadUrl = menuItem.Tag?.ToString();
+
+        if (string.IsNullOrEmpty(appName) || string.IsNullOrEmpty(downloadUrl))
+        {
+            YiKit.ShowToastError("菜单项配置错误：缺少程序名称或下载链接");
+            return;
+        }
+
+        string appDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, appName);
+        string exePath = Path.Combine(appDir, appName + ".exe");
+        // 读取已保存的启动参数
+        string savedArgs = YiKit.IniGet(appName + "_args", "ini", def: "");
+  
+        // 读取已保存的实际exe相对路径（处理压缩包内有根文件夹的情况）
+        string savedExeRelativePath = YiKit.IniGet(appName + "_exe", "ini", def: "");
+
+        // 优先使用已保存的exe路径
+        if (!string.IsNullOrWhiteSpace(savedExeRelativePath))
+        {
+            string savedFullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, savedExeRelativePath);
+            if (File.Exists(savedFullPath))
+            {
+                exePath = savedFullPath;
+            }
+        }
+
+        // 检查固定路径是否存在
+        if (!File.Exists(exePath))
+        {
+            // 目录存在时才递归查找
+            if (Directory.Exists(appDir))
+            {
+                // 递归查找整个appDir中的exe
+                string foundExe = FindExe(appDir, appName);
+                if (!string.IsNullOrWhiteSpace(foundExe))
+                {
+                    exePath = foundExe;
+                    // 保存相对路径，便于目录移动后仍能正常使用
+                    string relativePath = GetRelativePath(AppDomain.CurrentDomain.BaseDirectory, foundExe);
+                    YiKit.IniWrite(appName + "_exe", relativePath, "ini");
+                }
+            }
+        }
+
+        // 已存在则直接启动
+        if (File.Exists(exePath))
+        {
+            try
+            {
+                
+                if(savedArgs.Contains(appName+".exe")) savedArgs=savedArgs.Replace(appName + ".exe", exePath);
+                if (savedArgs.Contains("||"))
+                {
+                    string[] argList;
+                    argList = savedArgs.Split('|');
+                    foreach (var arg in argList)
+                    {
+                        var psi = new ProcessStartInfo(exePath) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exePath) };
+                       
+                        
+                        if (!string.IsNullOrWhiteSpace(arg))
+                        {
+                            psi.Arguments = arg.Replace(exePath, "");
+                            Process.Start(psi);
+                        }
+
+                    
+                    }
+                }
+                else
+                {
+                    var psi1 = new ProcessStartInfo(exePath) { UseShellExecute = true, WorkingDirectory = Path.GetDirectoryName(exePath) };
+                    if (!string.IsNullOrWhiteSpace(savedArgs))
+                        psi1.Arguments = savedArgs;
+                
+                    Process.Start(psi1);
+                    YiKit.ShowToast($"启动 {appName}" + (string.IsNullOrWhiteSpace(savedArgs) ? "" : " " + savedArgs));
+                }
+
+
+          
+            }
+            catch (Exception ex)
+            {
+                YiKit.ShowToastError($"启动失败: {ex.Message}");
+            }
+
+            return;
+        }
+
+        // 创建进度窗口
+        var progressWindow = new Window
+        {
+            Title = appName + " - 下载进度",
+            Width = 400,
+            Height = 120,
+            WindowStartupLocation = WindowStartupLocation.CenterScreen,
+            ResizeMode = ResizeMode.NoResize,
+            WindowStyle = WindowStyle.SingleBorderWindow
+        };
+
+        var panel = new StackPanel { Margin = new Thickness(15) };
+        var statusText = new TextBlock { Text = "准备下载...", Margin = new Thickness(0, 0, 0, 8) };
+        var progressBar = new ProgressBar { Height = 20, Minimum = 0, Maximum = 100, Value = 0 };
+        panel.Children.Add(statusText);
+        panel.Children.Add(progressBar);
+        progressWindow.Content = panel;
+
+        progressWindow.Loaded += async (s, args) =>
+        {
+            string zipPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, appName + ".zip");
+            try
+            {
+                // 下载
+                statusText.Text = $"下载 {appName} ...";
+                using (var client = new WebClient())
+                {
+                    client.Proxy = null;
+                    var progress = new Progress<(int percent, long received, long total)>(p =>
+                    {
+                        progressBar.Value = p.percent;
+                        if (p.total > 0)
+                            statusText.Text = $"下载中... {p.percent}% ({FormatSize(p.received)}/{FormatSize(p.total)})";
+                        else
+                            statusText.Text = $"下载中... {p.percent}%";
+                    });
+
+                    client.DownloadProgressChanged += (o, ev) =>
+                        ((IProgress<(int, long, long)>)progress).Report((ev.ProgressPercentage, ev.BytesReceived,
+                            ev.TotalBytesToReceive));
+
+                    await client.DownloadFileTaskAsync(downloadUrl, zipPath);
+                }
+
+                progressBar.Value = 100;
+                statusText.Text = "下载完成，正在解压...";
+                await Task.Delay(300);
+
+                // 解压
+                if (Directory.Exists(appDir))
+                    Directory.Delete(appDir, true);
+                Directory.CreateDirectory(appDir);
+
+                statusText.Text = "正在解压...";
+                await Task.Run(() =>
+                {
+                    using (var archive = ZipFile.OpenRead(zipPath))
+                    {
+                        int total = archive.Entries.Count;
+                        int done = 0;
+                        foreach (var entry in archive.Entries)
+                        {
+                            string fullPath = Path.Combine(appDir, entry.FullName);
+                            if (string.IsNullOrEmpty(entry.Name))
+                            {
+                                Directory.CreateDirectory(fullPath);
+                            }
+                            else
+                            {
+                                Directory.CreateDirectory(Path.GetDirectoryName(fullPath));
+                                entry.ExtractToFile(fullPath, true);
+                            }
+
+                            done++;
+                            int pct = (int)(done * 100.0 / total);
+                            Dispatcher.Invoke(() =>
+                            {
+                                progressBar.Value = pct;
+                                statusText.Text = $"解压中... {pct}% ({done}/{total})";
+                            });
+                        }
+                    }
+                });
+
+                // 删除zip
+                try
+                {
+                    File.Delete(zipPath);
+                }
+                catch
+                {
+                }
+
+                // 查找实际exe（解压后可能存在子目录或不同exe名）
+                string actualExe = FindExe(appDir, appName);
+                if (actualExe == null)
+                {
+                    statusText.Text = "解压完成，未找到可执行文件";
+                    YiKit.ShowToastError($"解压完成但未找到 {appName}.exe，请手动查看 {appDir}");
+                    return;
+                }
+
+                // 保存相对路径，下次启动时直接使用，便于目录移动后仍能正常使用
+                string relativePath = GetRelativePath(AppDomain.CurrentDomain.BaseDirectory, actualExe);
+                YiKit.IniWrite(appName + "_exe", relativePath, "ini");
+
+                statusText.Text = "解压完成，启动程序...";
+                await Task.Delay(300);
+
+                progressWindow.Close();
+
+                var psi = new ProcessStartInfo(actualExe)
+                {
+                    UseShellExecute = true,
+                    WorkingDirectory = Path.GetDirectoryName(actualExe)
+                };
+                if (!string.IsNullOrWhiteSpace(savedArgs))
+                    psi.Arguments = savedArgs;
+                Process.Start(psi);
+                YiKit.ShowToast($"已启动 {appName}" + (string.IsNullOrWhiteSpace(savedArgs) ? "" : " " + savedArgs));
+            }
+            catch (Exception ex)
+            {
+                statusText.Text = "失败: " + ex.Message;
+                YiKit.ShowToastError($"操作失败: {ex.Message}");
+            }
+        };
+
+        progressWindow.Show();
+    }
+
+// 格式化文件大小
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return bytes + " B";
+        if (bytes < 1024 * 1024) return (bytes / 1024.0).ToString("F1") + " KB";
+        if (bytes < 1024 * 1024 * 1024) return (bytes / (1024.0 * 1024)).ToString("F1") + " MB";
+        return (bytes / (1024.0 * 1024 * 1024)).ToString("F2") + " GB";
+    }
+
+// 递归查找可执行文件
+    private static string FindExe(string dir, string appName)
+    {
+        // 优先找与appName同名的exe
+        string target = appName + ".exe";
+        var files = Directory.GetFiles(dir, target, SearchOption.AllDirectories);
+        if (files.Length > 0) return files[0];
+
+        // 退而找任意exe
+        var allExes = Directory.GetFiles(dir, "*.exe", SearchOption.AllDirectories);
+        return allExes.Length > 0 ? allExes[0] : null;
+    }
+
+    // .NET Framework 4.6.2 不支持 Path.GetRelativePath，实现自定义版本
+    private static string GetRelativePath(string basePath, string targetPath)
+    {
+        if (string.IsNullOrWhiteSpace(basePath))
+            return targetPath;
+
+        basePath = Path.GetFullPath(basePath).TrimEnd(Path.DirectorySeparatorChar);
+        targetPath = Path.GetFullPath(targetPath);
+
+        // 如果已经以basePath开头，直接返回相对路径
+        if (targetPath.StartsWith(basePath, StringComparison.OrdinalIgnoreCase))
+        {
+            string relative = targetPath.Substring(basePath.Length);
+            if (relative.StartsWith(Path.DirectorySeparatorChar.ToString()))
+                relative = relative.Substring(1);
+            return relative;
+        }
+
+        // 查找公共父目录
+        string[] baseParts = basePath.Split(Path.DirectorySeparatorChar);
+        string[] targetParts = targetPath.Split(Path.DirectorySeparatorChar);
+
+        int commonParts = 0;
+        while (commonParts < baseParts.Length && commonParts < targetParts.Length &&
+               string.Equals(baseParts[commonParts], targetParts[commonParts], StringComparison.OrdinalIgnoreCase))
+        {
+            commonParts++;
+        }
+
+        // 构建相对路径
+        StringBuilder sb = new StringBuilder();
+        for (int i = commonParts; i < baseParts.Length; i++)
+        {
+            sb.Append("..").Append(Path.DirectorySeparatorChar);
+        }
+        for (int i = commonParts; i < targetParts.Length; i++)
+        {
+            if (i > commonParts)
+                sb.Append(Path.DirectorySeparatorChar);
+            sb.Append(targetParts[i]);
+        }
+
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 其它三方应用，右键添加启动参数，输入后自动保存，下次左键启动时自动添加启动参数。
+    /// 自定义项还可改下载链接，或填写「删」删除该项。
+    /// </summary>
+    private void OtherProgressRight_OnClick(object sender, MouseButtonEventArgs e)
+    {
+        e.Handled = true;
+        if (!(sender is MenuItem menuItem)) return;
+
+        string appName = menuItem.Header?.ToString();
+        if (string.IsNullOrEmpty(appName)) return;
+
+        bool isCustom = string.Equals(Convert.ToString(menuItem.Uid), "custom", StringComparison.OrdinalIgnoreCase);
+
+        string savedArgs = YiKit.IniGet(appName + "_args", "ini", def: "");
+        string savedUrl = menuItem.Tag?.ToString() ?? "";
+
+        if (isCustom)
+        {
+            var ret = YiKit.ShowInputDialog($"管理 {appName}",
+                $"{appName}启动参数:" + savedArgs,
+                "下载链接:" + savedUrl,
+                "删除此项(填删):");
+            if (ret == null) return;
+
+            string args = ret.Count > 0 ? (ret[0] ?? "") : "";
+            string url = ret.Count > 1 ? (ret[1] ?? "") : savedUrl;
+            string del = ret.Count > 2 ? (ret[2] ?? "").Trim() : "";
+
+            if (del == "删" || del.Equals("delete", StringComparison.OrdinalIgnoreCase) || del == "1")
+            {
+                RemoveThirdPartyCustom(appName);
+                YiKit.ShowToast($"已删除三方项: {appName}");
+                return;
+            }
+
+            YiKit.IniWrite(appName + "_args", args, "ini");
+            if (!string.IsNullOrWhiteSpace(url))
+            {
+                menuItem.Tag = url.Trim();
+                UpdateThirdPartyCustomUrl(appName, url.Trim());
+            }
+
+            YiKit.ShowToast($"{appName} 已保存");
+            return;
+        }
+
+        var retArgs = YiKit.ShowInputDialog($"设置 {appName} 启动参数",
+            $"{appName}启动参数:" + (string.IsNullOrEmpty(savedArgs) ? "" : savedArgs));
+        if (retArgs == null) return;
+
+        string onlyArgs = retArgs.Count > 0 ? (retArgs[0] ?? "") : "";
+        YiKit.IniWrite(appName + "_args", onlyArgs, "ini");
+        YiKit.ShowToast($"{appName} 启动参数已保存", l: (int)(Left + Width / 2), t: (int)(Top + 30));
+    }
+
+    private const string ThirdPartyIniArea = "third_party";
+
+    private void ThirdPartyMenu_OnRightClick(object sender, MouseButtonEventArgs e)
+    {
+        // 只在点到「三方」标题本身时添加，点子项不拦截
+        if (!ReferenceEquals(e.OriginalSource, sender) &&
+            !(e.OriginalSource is System.Windows.Controls.TextBlock tb &&
+              sender is MenuItem mi && tb.Text == Convert.ToString(mi.Header)))
+        {
+            // 子菜单项的右键交给各自处理
+            var src = e.OriginalSource as DependencyObject;
+            while (src != null && src is not MenuItem)
+                src = VisualTreeHelper.GetParent(src);
+            if (src is MenuItem clicked && !ReferenceEquals(clicked, ThirdPartyMenu))
+                return;
+        }
+
+        e.Handled = true;
+        AddThirdPartyCustomInteractive();
+    }
+
+    private void ThirdPartyAdd_OnClick(object sender, RoutedEventArgs e) =>
+        AddThirdPartyCustomInteractive();
+
+    private void AddThirdPartyCustomInteractive()
+    {
+        var ret = YiKit.ShowInputDialog("添加三方工具",
+            "名称(文件夹/程序名):",
+            "下载链接(zip):");
+        if (ret == null || ret.Count < 2) return;
+
+        string name = (ret[0] ?? "").Trim();
+        string url = (ret[1] ?? "").Trim();
+        if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+        {
+            YiKit.ShowToastError("名称和下载链接都不能为空");
+            return;
+        }
+
+        // 非法路径字符
+        foreach (char c in Path.GetInvalidFileNameChars())
+            name = name.Replace(c, '_');
+
+        if (IsBuiltinThirdPartyName(name) || FindThirdPartyCustomIndex(name) >= 0)
+        {
+            YiKit.ShowToastError("已存在同名三方项: " + name);
+            return;
+        }
+
+        AppendThirdPartyCustom(name, url);
+        EnsureThirdPartyCustomMenuItem(name, url);
+        YiKit.ShowToast($"已添加三方: {name}");
+    }
+
+    private static bool IsBuiltinThirdPartyName(string name)
+    {
+        string[] builtins = { "NMTC", "ocr", "scrcpy", "adb", "procexp", "添加…" };
+        return builtins.Any(b => string.Equals(b, name, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private void LoadThirdPartyCustomMenus()
+    {
+        if (ThirdPartyMenu == null) return;
+
+        // 清掉旧的自定义项（Uid=custom）
+        for (int i = ThirdPartyMenu.Items.Count - 1; i >= 0; i--)
+        {
+            if (ThirdPartyMenu.Items[i] is MenuItem mi &&
+                string.Equals(Convert.ToString(mi.Uid), "custom", StringComparison.OrdinalIgnoreCase))
+                ThirdPartyMenu.Items.RemoveAt(i);
+        }
+
+        int count = YiKit.IniGetInt("count", 0, ThirdPartyIniArea);
+        bool any = false;
+        for (int i = 0; i < count; i++)
+        {
+            string name = YiKit.IniGet($"item_{i}_name", ThirdPartyIniArea, def: "");
+            string url = YiKit.IniGet($"item_{i}_url", ThirdPartyIniArea, def: "");
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(url))
+                continue;
+            EnsureThirdPartyCustomMenuItem(name.Trim(), url.Trim());
+            any = true;
+        }
+
+        if (ThirdPartyCustomSep != null)
+            ThirdPartyCustomSep.Visibility = any ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void EnsureThirdPartyCustomMenuItem(string name, string url)
+    {
+        // 已存在则更新 Tag
+        foreach (var obj in ThirdPartyMenu.Items)
+        {
+            if (obj is MenuItem exist &&
+                string.Equals(Convert.ToString(exist.Header), name, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(Convert.ToString(exist.Uid), "custom", StringComparison.OrdinalIgnoreCase))
+            {
+                exist.Tag = url;
+                return;
+            }
+        }
+
+        var item = new MenuItem
+        {
+            Header = name,
+            Tag = url,
+            Uid = "custom",
+            ToolTip = "左键：下载/启动；右键：参数/链接/删除"
+        };
+        item.Click += OtherProgress_OnClick;
+        item.PreviewMouseRightButtonDown += OtherProgressRight_OnClick;
+
+        // 插在「添加…」之前、分隔符之后
+        int insertAt = ThirdPartyMenu.Items.Count;
+        for (int i = 0; i < ThirdPartyMenu.Items.Count; i++)
+        {
+            if (ThirdPartyMenu.Items[i] is MenuItem mi &&
+                string.Equals(Convert.ToString(mi.Header), "添加…", StringComparison.Ordinal))
+            {
+                insertAt = i;
+                break;
+            }
+        }
+
+        ThirdPartyMenu.Items.Insert(insertAt, item);
+        if (ThirdPartyCustomSep != null)
+            ThirdPartyCustomSep.Visibility = Visibility.Visible;
+    }
+
+    private void AppendThirdPartyCustom(string name, string url)
+    {
+        int count = YiKit.IniGetInt("count", 0, ThirdPartyIniArea);
+        YiKit.IniWrite($"item_{count}_name", name, ThirdPartyIniArea);
+        YiKit.IniWrite($"item_{count}_url", url, ThirdPartyIniArea);
+        YiKit.IniWrite("count", (count + 1).ToString(), ThirdPartyIniArea);
+    }
+
+    private int FindThirdPartyCustomIndex(string name)
+    {
+        int count = YiKit.IniGetInt("count", 0, ThirdPartyIniArea);
+        for (int i = 0; i < count; i++)
+        {
+            string n = YiKit.IniGet($"item_{i}_name", ThirdPartyIniArea, def: "");
+            if (string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
+                return i;
+        }
+
+        return -1;
+    }
+
+    private void UpdateThirdPartyCustomUrl(string name, string url)
+    {
+        int idx = FindThirdPartyCustomIndex(name);
+        if (idx < 0) return;
+        YiKit.IniWrite($"item_{idx}_url", url, ThirdPartyIniArea);
+    }
+
+    private void RemoveThirdPartyCustom(string name)
+    {
+        int count = YiKit.IniGetInt("count", 0, ThirdPartyIniArea);
+        var list = new List<(string name, string url)>();
+        for (int i = 0; i < count; i++)
+        {
+            string n = YiKit.IniGet($"item_{i}_name", ThirdPartyIniArea, def: "");
+            string u = YiKit.IniGet($"item_{i}_url", ThirdPartyIniArea, def: "");
+            if (string.IsNullOrWhiteSpace(n)) continue;
+            if (string.Equals(n, name, StringComparison.OrdinalIgnoreCase))
+                continue;
+            list.Add((n, u));
+        }
+
+        for (int i = 0; i < list.Count; i++)
+        {
+            YiKit.IniWrite($"item_{i}_name", list[i].name, ThirdPartyIniArea);
+            YiKit.IniWrite($"item_{i}_url", list[i].url, ThirdPartyIniArea);
+        }
+
+        // 清掉尾部旧键
+        for (int i = list.Count; i < count; i++)
+        {
+            YiKit.IniWrite($"item_{i}_name", "", ThirdPartyIniArea);
+            YiKit.IniWrite($"item_{i}_url", "", ThirdPartyIniArea);
+        }
+
+        YiKit.IniWrite("count", list.Count.ToString(), ThirdPartyIniArea);
+        YiKit.IniWrite(name + "_args", "", "ini");
+        YiKit.IniWrite(name + "_exe", "", "ini");
+        LoadThirdPartyCustomMenus();
+    }
+
+/// <summary>
+/// 批量合并MP3：选择tmp文件夹后，自动按文件名排序合并每个子文件夹内的mp3，输出到tmp/out
+/// </summary>
+private void MergeMp3Item_OnClick(object sender, RoutedEventArgs e)
+{
+    string type = "媒体文件";
+    List<string> strs = YiKit.ShowInputDialog(
+         "mp3合并",
+        "媒体类型:mp3",
+        "文件夹位置："
+      
+    );
+    if (strs == null || strs.Count < 1)
+    {
+        YiKit.ShowToastError("参数错误");
+        return;
+    }
+
+ 
+
+    string tmpDir = strs[1];
+    string pox = strs[0];
+    string outDir = Path.Combine(tmpDir, "out");
+
+    YiKit.RunThread(_ =>
+    {
+        try
+        {
+            if (!Directory.Exists(outDir))
+                Directory.CreateDirectory(outDir);
+
+            var subDirs = Directory.GetDirectories(tmpDir)
+                .Where(d => !d.Equals(outDir, StringComparison.OrdinalIgnoreCase))
+                .ToList();
+
+            if (subDirs.Count == 0)
+            {
+                YiKit.ShowToastWaring("未找到任何子文件夹");
+                return;
+            }
+
+            int successCount = 0;
+            int failCount = 0;
+
+            foreach (var dir in subDirs)
+            {
+                string folderName = Path.GetFileName(dir);
+                string outputFile = Path.Combine(outDir, folderName +"."+ pox);
+
+                // 按文件名自然排序获取所有 mp3
+                var mp3Files = Directory.GetFiles(dir, "*."+pox)
+                    .OrderBy(f => f, StringComparer.OrdinalIgnoreCase)
+                    .ToList();
+
+                if (mp3Files.Count == 0)
+                {
+                    YiKit.Print($"[SKIP] {folderName}: 无MP3文件");
+                    continue;
+                }
+
+                // 生成 ffmpeg concat 列表文件
+                string listFile = Path.Combine(Path.GetTempPath(), $"ffmpeg_concat_{Guid.NewGuid():N}.txt");
+                try
+                {
+                    var sb = new StringBuilder();
+                    foreach (var file in mp3Files)
+                    {
+                        // concat demuxer 要求单引号包裹路径，并转义内部单引号
+                        string escaped = file.Replace("'", "'\\''");
+                        sb.AppendLine($"file '{escaped}'");
+                    }
+                    var utf8NoBom = new UTF8Encoding(encoderShouldEmitUTF8Identifier: false);
+                    File.WriteAllText(listFile, sb.ToString(), utf8NoBom);
+
+                    // 调用 ffmpeg 无损合并（不使用 -safe 0 以兼容旧版本）
+                    string args = $"-y -f concat -safe 0  -i \"{listFile}\" -c copy \"{outputFile}\" -loglevel warning";
+                    YiKit.RunCmd($"ffmpeg.exe {args}");
+
+                    if (File.Exists(outputFile) && new FileInfo(outputFile).Length > 0)
+                    {
+                        successCount++;
+                        YiKit.ShowToast($"[OK] {folderName} ({mp3Files.Count}个文件)");
+                    }
+                    else
+                    {
+                        failCount++;
+                        YiKit.ShowToastError($"[FAIL] {folderName} 合并失败");
+                    }
+                }
+                finally
+                {
+                    // 清理临时列表文件
+                    try { File.Delete(listFile); } catch { }
+                }
+            }
+
+            YiKit.ShowToast($"全部完成！成功:{successCount} 失败:{failCount}\n输出: {outDir}");
+        }
+        catch (Exception ex)
+        {
+            YiKit.ShowToastError("MP3合并异常: " + ex.Message);
         }
     });
 }
 
-
-private void RealsePort_OnClick(object sender, RoutedEventArgs e)
+/// <summary>
+/// 批量命名：读取文件夹内媒体文件的ID3标签/文件名，按格式（默认 歌手-歌曲-流派.后缀）预览并重命名
+/// </summary>
+private void BatchRenameItem_OnClick(object sender, RoutedEventArgs e)
 {
-    var ret = YiKit.ShowInputDialog("结束占用端口的程序", "端口号:10010");
+    var dlg = new BatchRenameDialog { Owner = this };
+    dlg.Show();
+}
 
-    if (ret == null)
+/// <summary>
+/// uc转换：左键开关自动监听（新文件按上次窗口设置自动转换），右键打开设置窗口。
+/// 源文件夹为空时自动弹窗口让用户先配置。
+/// </summary>
+private bool ucWatchAfterConfig;
+
+private void UcConvertItem_OnClick(object sender, RoutedEventArgs e)
+{
+    if (UcAutoWatch.IsRunning)
     {
+        UcAutoWatch.Stop();
+        UcConvertItem.IsChecked = false;
+        YiKit.IniWrite("auto", "false", "uc");
+        YiKit.ShowToast("已关闭 uc 自动监听");
         return;
     }
 
-    var o = YiKit.RunCmd("for /f \"tokens=5\" %a in ('netstat -ano ^| findstr :"+ret[0]+"') do @taskkill /F /PID %a 2>nul");
-    if (o!=null)
-        if (0.ToString().Length <= 1)
-            o = "未找到占用"+ret[0]+"的程序，或者其已被结束";
-    YiKit.ShowToast(o);
+    var opt = UcOptions.Load();
+    if (!Directory.Exists(opt.SrcDir))
+    {
+        ucWatchAfterConfig = true;
+        OpenUcConvertDialog();
+        YiKit.ShowToastWaring("请先设置源文件夹，关闭窗口后自动开始监听");
+        return;
+    }
+    if (!UcAutoWatch.Start(opt))
+    {
+        YiKit.ShowToastError("uc自动监听启动失败: " + opt.SrcDir);
+        return;
+    }
+    UcConvertItem.IsChecked = true;
+    YiKit.IniWrite("auto", "true", "uc");
+    YiKit.ShowToast("已开启 uc 自动监听: " + opt.SrcDir + "（已有文件请右键打开窗口手动转换）");
+}
 
+private void UcConvertItem_OnRClick(object sender, MouseButtonEventArgs e)
+{
+    e.Handled = true;
+    OpenUcConvertDialog();
+}
+
+private void OpenUcConvertDialog()
+{
+    var dlg = new UcConvertDialog { Owner = this };
+    bool startAfter = ucWatchAfterConfig;
+    ucWatchAfterConfig = false;
+    dlg.Closed += (_, _) =>
+    {
+        // 窗口关闭时设置已保存：需要开始，或正在监听时按新设置重启
+        if (!startAfter && !UcAutoWatch.IsRunning) return;
+
+        var opt = UcOptions.Load();
+        if (Directory.Exists(opt.SrcDir) && UcAutoWatch.Start(opt))
+        {
+            UcConvertItem.IsChecked = true;
+            YiKit.IniWrite("auto", "true", "uc");
+            if (startAfter) YiKit.ShowToast("已开启 uc 自动监听: " + opt.SrcDir);
+        }
+        else if (startAfter)
+        {
+            YiKit.ShowToastWaring("没有有效的源文件夹，自动监听未开启");
+        }
+        else
+        {
+            UcAutoWatch.Stop();
+            UcConvertItem.IsChecked = false;
+            YiKit.IniWrite("auto", "false", "uc");
+            YiKit.ShowToastWaring("源文件夹已失效，uc自动监听已停止");
+        }
+    };
+    dlg.Show();
+}
+
+/// <summary>程序启动时恢复自动监听（与 ini 里的开关保持一致）</summary>
+private void RestoreUcAutoWatch()
+{
+    if (!YiKit.IniGetBool("auto", false, "uc")) return;
+    var opt = UcOptions.Load();
+    if (Directory.Exists(opt.SrcDir) && UcAutoWatch.Start(opt))
+        UcConvertItem.IsChecked = true;
+    else
+        YiKit.IniWrite("auto", "false", "uc");
+}
+
+/// <summary>兜底：下载（如缺失）并启动第三方 NMTC_V1.5 转换工具</summary>
+private void NmtcItem_OnClick(object sender, RoutedEventArgs e)
+{
+    YiKit.RunThread(_ => UcConverter.EnsureAndLaunchNmtc());
 }
 }

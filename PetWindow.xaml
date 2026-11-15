@@ -121,11 +121,20 @@
                                 IsHitTestVisible="False"
                                 Style="{StaticResource NoneButton}" Cursor="Hand">
                             <Button.Content>
-                                <StackPanel Orientation="Vertical" Margin="0,-3,0,0">
-                                    <TextBlock Name="MainStrN">power</TextBlock>
-                                    <TextBlock Name="MainStrU">by</TextBlock>
-                                    <TextBlock Name="MainStrD">yi</TextBlock>
-                                </StackPanel>
+                                    <StackPanel Orientation="Vertical" Margin="0,-3,0,0">
+                                        <TextBlock Name="MainStrN">power</TextBlock>
+                                        <DockPanel>
+                                            <TextBlock Name="MainStrU">by</TextBlock>
+                                            <!-- 加上 DockPanel.Dock="Right"，让它强制靠右 -->
+                                            <TextBlock DockPanel.Dock="Right" TextAlignment="Right" Name="MainStrW"></TextBlock>
+                                        </DockPanel>
+                                       
+                                        <TextBlock Name="MainStrD">yi</TextBlock>
+                                    </StackPanel>
+                                
+                                    
+                             
+                                
                             </Button.Content>
                             <!-- 内容 -->
                             <!--<media:TextShape x:Name="MainStr"
@@ -149,11 +158,25 @@
                     <!-- CPU -->
                     <Grid Margin="0,0,0,0" Width="100" Height="10" VerticalAlignment="Top" HorizontalAlignment="Left">
                         <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="0" />
                             <ColumnDefinition Width="80" />
                             <ColumnDefinition Width="20" />
 
                         </Grid.ColumnDefinitions>
-                        <Grid Grid.Column="0" Grid.ColumnSpan="2" VerticalAlignment="Top">
+                        <!-- cpu温度方块 -->
+                        <Grid Grid.Column="0" VerticalAlignment="Top">
+                            
+                            <!-- -->
+                            <!-- <TextBlock x:Name="CpuTempStr" FontSize="9" Margin="0,-3,0,0" -->
+                            <!--            Foreground="#ffff" HorizontalAlignment="Left" -->
+                            <!--            VerticalAlignment="Center" FontWeight="SemiBold"> -->
+                            <!--     <TextBlock.Effect> -->
+                            <!--         <DropShadowEffect BlurRadius="2" Color="#f000" ShadowDepth="1" Opacity="1" Direction="0" /> -->
+                            <!--     </TextBlock.Effect> -->
+                            <!-- </TextBlock> -->
+                        </Grid>
+                        <Grid Grid.Column="1" Grid.ColumnSpan="2" VerticalAlignment="Top">
+                         
                             <Rectangle Name="CpuRect" Stroke="Transparent" Height="10"
                                        Width="100" Cursor="Hand" ToolTip="speed" HorizontalAlignment="Left"
                                        VerticalAlignment="Top" StrokeThickness="2">
@@ -186,22 +209,20 @@
                             </Rectangle>
 
 
-                            <Viewbox Width="100">
-                                <Grid>
-                                    <Grid.ColumnDefinitions>
-                                        <ColumnDefinition Width="1*"></ColumnDefinition>
-                                        <ColumnDefinition Width="1*"></ColumnDefinition>
-                                    </Grid.ColumnDefinitions>
-                                    <TextBlock Grid.Column="1" x:Name="CpuStrR" FontSize="9" TextWrapping="Wrap"
-                                               VerticalAlignment="Top"
-                                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,-2,0,0">
-                                        日.期
-                                        <TextBlock.Effect>
-                                            <DropShadowEffect x:Name="CpuStrShadowR" Color="#f000" BlurRadius="2"
-                                                              ShadowDepth="1"
-                                                              Opacity="1" Direction="0" />
-                                        </TextBlock.Effect>
-                                    </TextBlock>
+                            <Viewbox Width="100" Height="10">
+                                <Grid Width="100" Height="10">
+                                        <TextBlock  x:Name="CpuStrR"  FontSize="9"  FontWeight="Bold"
+                                                    VerticalAlignment="Top" TextAlignment="Right" 
+                                                    Foreground="#ffff"  HorizontalAlignment="Right">
+                                            日.期
+                                            <TextBlock.Effect>
+                                                <DropShadowEffect x:Name="CpuStrShadowR" Color="#f000" BlurRadius="2"
+                                                                  ShadowDepth="1"
+                                                                  Opacity="1" Direction="0" />
+                                            </TextBlock.Effect>
+                                        </TextBlock>
+                                   
+                                 
                                     <TextBlock Grid.ColumnSpan="2" x:Name="CpuStr" FontSize="12" Margin="0,-3,0,0"
                                                Padding="0,0,0,0"
                                                Width="100" Cursor="Hand" ToolTip="cpu温度/cpu利用率"
@@ -233,58 +254,22 @@
                                 </Grid>
 
                             </Viewbox>
+                            <Viewbox HorizontalAlignment="Left">
+                                <TextBlock x:Name="CpuTempStr"
+                                           Foreground="#ffff" HorizontalAlignment="Left"
+                                           VerticalAlignment="Center" FontWeight="SemiBold">
+                                    --
+                                    <TextBlock.Effect>
+                                        <DropShadowEffect BlurRadius="2" Color="#f000" ShadowDepth="1" Opacity="1" Direction="0" />
+                                    </TextBlock.Effect>
+                                </TextBlock>
+                            </Viewbox>
+                       
                         </Grid>
 
 
                     </Grid>
-                    <!-- 标识,这个不要用处鼠标穿透 -->
-                    <!--
-                    <Button Name="tag" MouseDoubleClick="Control_OnMouseDoubleClick" Height="10" Width="20" Grid.Column="2"
-                            Background="Transparent" Foreground="Chocolate" FontWeight="Bold"
-                            Padding="0"
-                            Style="{StaticResource NoneButton}" Cursor="Hand" HorizontalAlignment="Right"
-                            VerticalAlignment="Top">
-                        <Grid>
-
-
-                            <Rectangle Name="StatStrRect" Stroke="Transparent" Width="20" Height="10"
-                                       Cursor="Hand"
-                                       ToolTip="speed" HorizontalAlignment="Stretch" VerticalAlignment="Stretch">
-                                <Rectangle.Fill>
-                                    <LinearGradientBrush MappingMode="Absolute" StartPoint="0,0" EndPoint="0,0"
-                                                         SpreadMethod="Pad"
-                                                         ColorInterpolationMode="ScRgbLinearInterpolation">
-                                        <GradientStop Color="#ff0000ff" Offset="1" />
-                                        <GradientStop Color="#ff0000ff" Offset="0.51" />
-
-
-                                        ~1~<GradientStop Color="#ffff0000" Offset="0.1" />
-                                    <GradientStop Color="#a0f00000" Offset="0.2" />
-                                    <GradientStop Color="#a0f00000" Offset="0.5" />
-                                    <GradientStop Color="#88ff0000" Offset="0.5" />
-                                    <GradientStop Color="#99ff0000" Offset="0.9" />@1@
-
-                                        <GradientStop Color="#ffff0000" Offset="0.49" />
-                                        <GradientStop Color="#ffff0000" Offset="0" />
-                                    </LinearGradientBrush>
-                                </Rectangle.Fill>
-
-                            </Rectangle>
-                            <Viewbox>
-                                <TextBlock x:Name="StatStr" FontSize="16"
-                                           Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    H
-                                    <TextBlock.Effect>
-                                        <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3"
-                                                          ShadowDepth="0" Opacity="0.8" Direction="0" />
-                                    </TextBlock.Effect>
-                                </TextBlock>
-                            </Viewbox>
-                        </Grid>
-                    </Button>
-                    -->
-
-
+                    
                     <!-- disk -->
                     <Button x:Name="DiskBtn" Width="100" Height="7"
                             HorizontalAlignment="Center" VerticalAlignment="Bottom" Grid.Column="2"
@@ -323,11 +308,26 @@
                         </Grid>
                     </Button>
 
-                    <TextBlock x:Name="DiskStrW" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
-                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,22,-2">
+                    <TextBlock x:Name="DiskTempStr" FontSize="9" VerticalAlignment="Bottom" HorizontalAlignment="Left"
+                               Foreground="#ffff" Margin="0,0,0,-2" ToolTip="磁盘温度">
+                        --
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="1" Direction="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock x:Name="DiskStrW" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom" HorizontalAlignment="Stretch"
+                               Foreground="#ffff"  TextAlignment="Center" Margin="0,0,26,-2">
                         disk
                         <TextBlock.Effect>
                             <DropShadowEffect x:Name="DiskStrShadowW" Color="#f000" BlurRadius="2" ShadowDepth="1"
+                                              Opacity="1" Direction="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
+                    <TextBlock x:Name="StrCsd" FontSize="9" TextWrapping="Wrap" VerticalAlignment="Bottom"
+                               Foreground="#ffff" HorizontalAlignment="Right" Margin="0,0,0,-2">
+                        农历
+                        <TextBlock.Effect>
+                            <DropShadowEffect  Color="#f000" BlurRadius="2" ShadowDepth="1"
                                               Opacity="1" Direction="0" />
                         </TextBlock.Effect>
                     </TextBlock>
@@ -382,7 +382,7 @@
                             <MenuItem Header="显示电源" Click="PowerItem_OnClick"></MenuItem>
                             <MenuItem Header="关闭显示器" Click="CloseMonItem_OnClick"></MenuItem>
                             <MenuItem Header="x4翻译" Click="X4TranItem_OnClick"></MenuItem>
-                            <MenuItem Header="检查端口" Click="PortCheck_OnClick"></MenuItem>
+                            <MenuItem Header="端口工具" Click="PortCheck_OnClick"></MenuItem>
                             <MenuItem Header="获取system" Click="GetSys_OnClick"></MenuItem>
                             <MenuItem Header="鼠标键盘" Click="MouKbo_OnClick"></MenuItem>
                         </MenuItem>
@@ -397,6 +397,12 @@
                             <MenuItem Header="影片转联系表" Click="OgvItem_OnClick"></MenuItem>
                             <MenuItem Header="图片合并联系表" Click="PicItem_OnClick"></MenuItem>
                             <MenuItem Header="联系表拆分图片" Click="SplitContactSheet_OnClick"></MenuItem>
+                        </MenuItem>
+                        <MenuItem Header="mp3">
+                            <MenuItem Header="mp3合并" Click="MergeMp3Item_OnClick"></MenuItem>
+                            <MenuItem Header="批量命名" Click="BatchRenameItem_OnClick"></MenuItem>
+                            <MenuItem Header="uc转换" Name="UcConvertItem" Click="UcConvertItem_OnClick" PreviewMouseRightButtonDown="UcConvertItem_OnRClick" ToolTip="左键：开启/关闭 自动监听源文件夹新增 .uc 并按窗口设置自动转换；右键：打开转换设置窗口"></MenuItem>
+                     
                         </MenuItem>
                         <MenuItem Header="adb安装" Click="AdbItem_OnClick"></MenuItem>
                         <MenuItem Header="虚拟显卡" Name="VddItem" Click="VddItem_OnClick" PreviewMouseRightButtonDown="VddItem_OnRClick"></MenuItem>
@@ -416,7 +422,21 @@
                             <MenuItem Header="删除选中进程" Click="RemoveMonitoredProcess_OnClick"></MenuItem>
                             <MenuItem Header="清空所有进程" Click="ClearMonitoredProcesses_OnClick"></MenuItem>
                         </MenuItem>
-                        <MenuItem Header="释放端口" Click="RealsePort_OnClick"></MenuItem>
+                        <MenuItem Header="端口占用" Click="RealsePort_OnClick" ToolTip="查询/结束占用端口的进程"></MenuItem>
+                        <!-- 进程监控 -->
+                        <MenuItem x:Name="ThirdPartyMenu" Header="三方"
+                                  ToolTip="右键本项或点「添加…」可自由添加三方工具"
+                                  PreviewMouseRightButtonDown="ThirdPartyMenu_OnRightClick">
+                            <MenuItem Header="NMTC" Click="NmtcItem_OnClick" ToolTip="内置uc转换失败时，下载并启动第三方 NMTC_V1.5 处理（转换后不含标签）"></MenuItem>
+                            <MenuItem Header="ocr" Click="OcrModule_OnClick"
+                                      ToolTip="安装离线 OCR 语言包(chi_sim+eng)。安装后识别不联网；鼠标键盘脚本可用 OCR 找字/点击"></MenuItem>
+                            <MenuItem Header="scrcpy" Tag="https://github.com/Genymobile/scrcpy/releases/download/v4.0/scrcpy-win32-v4.0.zip" Click="OtherProgress_OnClick"  PreviewMouseRightButtonDown="OtherProgressRight_OnClick"></MenuItem>
+                            <MenuItem Header="adb"  Tag="https://googledownloads.cn/android/repository/platform-tools-latest-windows.zip" Click="OtherProgress_OnClick"  PreviewMouseRightButtonDown="OtherProgressRight_OnClick"></MenuItem>
+                            <MenuItem Header="procexp"  Tag="https://download.sysinternals.com/files/ProcessExplorer.zip" Click="OtherProgress_OnClick"  PreviewMouseRightButtonDown="OtherProgressRight_OnClick"></MenuItem>
+                            <Separator x:Name="ThirdPartyCustomSep" Visibility="Collapsed" />
+                            <MenuItem Header="添加…" Click="ThirdPartyAdd_OnClick"
+                                      ToolTip="添加自定义三方：名称 + 下载链接（zip）。左键启动/下载，右键改参数或删除" />
+                        </MenuItem>
 
                         <!-- <MenuItem Header="吃素的小狮子" Click="RuxingItem_OnClick"></MenuItem> -->
                         <!-- <MenuItem Name="AutoSatrt" Header="自启" Click="AutoStartItem_OnClick" ></MenuItem> -->
@@ -461,7 +481,7 @@
                             <Viewbox>
                                 <TextBlock x:Name="StatStr" FontSize="16"
                                            Foreground="#ffff" HorizontalAlignment="Center" VerticalAlignment="Center">
-                                    H
+                                    GPU
                                     <TextBlock.Effect>
                                         <DropShadowEffect x:Name="StatStrShadow" Color="#ffff" BlurRadius="3"
                                                           ShadowDepth="0" Opacity="0.8" Direction="0" />
@@ -472,6 +492,14 @@
                     </Button>
 
                     <!-- mem -->
+                    <TextBlock x:Name="MemTempStr" FontSize="8" Grid.Column="2"
+                               HorizontalAlignment="Right" VerticalAlignment="Bottom"
+                               Foreground="#ffff" Margin="0,0,22,52" ToolTip="内存温度">
+                        --
+                        <TextBlock.Effect>
+                            <DropShadowEffect Color="#f000" BlurRadius="2" ShadowDepth="1" Opacity="1" Direction="0" />
+                        </TextBlock.Effect>
+                    </TextBlock>
                     <Button x:Name="MemBtn" Width="10" Height="50"
                             HorizontalAlignment="Right" VerticalAlignment="Bottom" Grid.Column="2"
                             Background="Transparent" Foreground="Chocolate" FontWeight="Bold"

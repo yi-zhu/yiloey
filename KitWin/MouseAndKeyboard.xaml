@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:holey.KitWin"
         mc:Ignorable="d"
         Title="自动化脚本编辑器" Height="600" Width="900"
         Loaded="Window_Loaded" Closing="Window_Closing">
@@ -19,6 +20,10 @@
             <Separator />
             <MenuItem Header="上移...行" Click="MoveUpN_Click" />
             <MenuItem Header="下移...行" Click="MoveDownN_Click" />
+            <Separator />
+            <MenuItem Header="复制(C)" Click="CopySelected_Click" InputGestureText="C" />
+            <MenuItem Header="启用(E)" Click="EnableSelected_Click" InputGestureText="E" />
+            <MenuItem Header="禁用(X)" Click="DisableSelected_Click" InputGestureText="X" />
             <Separator />
             <MenuItem Header="删除当前(D)" Click="DeleteCurrent_Click" InputGestureText="D" />
         </ContextMenu>
@@ -41,18 +46,33 @@
                     <Button Style="{StaticResource NoChromeButton}" Content="右按" Click="AddMouseRightDown_Click" />
                     <Button Style="{StaticResource NoChromeButton}" Content="右弹" Click="AddMouseRightUp_Click" />
                     <Button Style="{StaticResource NoChromeButton}" Content="滚轮" Click="AddMouseWheel_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="移动" Click="AddMouseMove_Click"
+                            ToolTip="鼠标移动到坐标（绝对或相对 +x,+y）" />
                     <Button Style="{StaticResource NoChromeButton}" Content="循环开始" Click="AddLoopStart_Click" Background="CornflowerBlue" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="循环结束" Click="AddLoopEnd_Click" Background="Coral" />
                     
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Stretch">
                     <Button Style="{StaticResource NoChromeButton}" Content="按键" Click="AddKeyPress_Click" />
-                    <Button Style="{StaticResource NoChromeButton}" Content="按键按下" Click="AddKeyDown_Click" />
-                    <Button Style="{StaticResource NoChromeButton}" Content="按键弹起" Click="AddKeyUp_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="按下" Click="AddKeyDown_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="弹" Click="AddKeyUp_Click" />
                     <Button Style="{StaticResource NoChromeButton}" Content="变量" Click="AddSetVar_Click" Margin="3,0,0,0" />
-                    <Button Style="{StaticResource NoChromeButton}" Content="条件" Click="AddIfCondition_Click" Margin="0,0,5,0" />
-                    <Button Style="{StaticResource NoChromeButton}" Content="循环结束" Click="AddLoopEnd_Click" Background="Coral" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="if" Click="AddIfCondition_Click"
+                            ToolTip="If：变量名 与 目标/值 用操作符比较（支持文字/数值/反向）" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="否则" Click="AddElse_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="endif" Click="AddEndIf_Click" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="标签" Click="AddLabel_Click" ToolTip="Label 跳转锚点" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="跳转" Click="AddGoto_Click" ToolTip="Goto 标签名" />
+                    <TextBlock Foreground="Black" VerticalAlignment="Center" Margin="4,0,2,0">OCR</TextBlock>
+                    <Button Style="{StaticResource NoChromeButton}" Content="等" Click="AddOcrWait_Click"
+                            ToolTip="OCR等待：识别文字写入「变量名」。目标=等待关键字(可空=等到有字)，修饰符=区域(full或x,y,w,h)，延迟=超时ms" Background="SteelBlue" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="点" Click="AddOcrClick_Click"
+                            ToolTip="OCR点击：目标=关键字，修饰符=区域，识别全文写入「变量名」后点击命中中心" Background="SteelBlue" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="读" Click="AddOcrCheck_Click"
+                            ToolTip="OCR读取：识别区域文字写入「变量名」，再用 If 判断。目标或修饰符=区域(full/x,y,w,h)" Background="SteelBlue" />
+                    <Button Style="{StaticResource NoChromeButton}" Content="取区" Click="PickOcrRegion_Click"
+                            ToolTip="拖拽框选 OCR 区域，写入剪贴板为 x,y,w,h" Background="CadetBlue" />
                 </StackPanel>
-
 
             </StackPanel>
 
@@ -104,78 +124,131 @@
                 </StackPanel>
             </StackPanel>
 
+            <!-- 录制/脚本列表管理 -->
+            <Border BorderThickness="1" BorderBrush="Gray" Background="LightSteelBlue" Margin="2,0,0,0">
+                <StackPanel Orientation="Vertical" Margin="2,0">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock FontSize="9" Text="脚本列表" VerticalAlignment="Center" Margin="0,0,4,0" />
+                        <Button FontSize="9" Style="{StaticResource NoChromeButton}" Content="新建" Padding="6,0" Height="16"
+                                Click="NewScript_Click" ToolTip="新建空白脚本" />
+                        <Button FontSize="9" Style="{StaticResource NoChromeButton}" Content="重命名" Padding="6,0" Height="16"
+                                Click="RenameScript_Click" ToolTip="重命名当前脚本" />
+                        <Button FontSize="9" Style="{StaticResource NoChromeButton}" Content="刷新" Padding="6,0" Height="16"
+                                Click="RefreshScriptList_Click" ToolTip="刷新脚本列表" />
+                    </StackPanel>
+                    <ComboBox x:Name="ScriptListCombo" FontSize="12" Width="160" Height="20"
+                              SelectionChanged="ScriptListCombo_OnSelectionChanged"
+                              ToolTip="选择已保存的录制/脚本" />
+                </StackPanel>
+            </Border>
 
         </StackPanel>
 
-        <!-- 指令列表 -->
-        <!-- 替换原来的 <ListView ...> 为以下内容 -->
-        <!--PreviewMouseMove="ListView_PreviewMouseMove"
-                  PreviewMouseLeftButtonDown="ListView_PreviewMouseLeftButtonDown"
-                  DragOver="ListView_DragOver"
-                  Drop="ListView_Drop"-->
-        <ListView x:Name="InstructionList"
-                  Grid.Row="1"
-                  ItemsSource="{Binding Instructions}"
-                  AllowDrop="True"
-                 
-                  SelectionMode="Extended">
-            <!-- 使用资源引用 ContextMenu -->
-            <ListView.ItemContainerStyle>
-                <Style TargetType="ListViewItem">
-                    <Setter Property="ContextMenu" Value="{StaticResource InstructionContextMenu}" />
-                </Style>
-            </ListView.ItemContainerStyle>
+        <!-- 指令列表：长按拖动 + 落点动画指示 -->
+        <Grid Grid.Row="1">
+            <ListView x:Name="InstructionList"
+                      ItemsSource="{Binding Instructions}"
+                      AllowDrop="True"
+                      SelectionMode="Extended"
+                      PreviewMouseLeftButtonDown="ListView_PreviewMouseLeftButtonDown"
+                      PreviewMouseLeftButtonUp="ListView_PreviewMouseLeftButtonUp"
+                      PreviewMouseMove="ListView_PreviewMouseMove"
+                      PreviewMouseRightButtonDown="ListView_PreviewMouseRightButtonDown"
+                      DragOver="ListView_DragOver"
+                      DragLeave="ListView_DragLeave"
+                      Drop="ListView_Drop"
+                      GiveFeedback="ListView_GiveFeedback"
+                      QueryContinueDrag="ListView_QueryContinueDrag">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem">
+                        <Setter Property="ContextMenu" Value="{StaticResource InstructionContextMenu}" />
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                        <Setter Property="Padding" Value="2,1" />
+                        <Setter Property="RenderTransformOrigin" Value="0.5,0.5" />
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="类型" Width="100" DisplayMemberBinding="{Binding Type}" />
+                        <GridViewColumn Header="目标/值" Width="120">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}" Width="110" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="变量名" Width="90">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}" Width="80" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="比较方式" Width="150">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <ComboBox Width="140"
+                                              IsEditable="False"
+                                              ToolTip="左=变量名，右=目标/值；「反/被」表示左右对调"
+                                              ItemsSource="{x:Static local:MouseAndKeyboard.ConditionOperatorOptions}"
+                                              DisplayMemberPath="Label"
+                                              SelectedValuePath="Code"
+                                              SelectedValue="{Binding ConditionOperator, UpdateSourceTrigger=PropertyChanged}" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="延迟(ms)" Width="80">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding DelayMs, UpdateSourceTrigger=PropertyChanged}" Width="70" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="修饰符" Width="80">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBox Text="{Binding Modifiers, UpdateSourceTrigger=PropertyChanged}" Width="70" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                        <GridViewColumn Header="启用" Width="60">
+                            <GridViewColumn.CellTemplate>
+                                <DataTemplate>
+                                    <CheckBox IsChecked="{Binding IsEnabled}" HorizontalAlignment="Center" />
+                                </DataTemplate>
+                            </GridViewColumn.CellTemplate>
+                        </GridViewColumn>
+                    </GridView>
+                </ListView.View>
+            </ListView>
 
-            <!-- 原有的 GridView 定义保持不变 -->
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="类型" Width="100" DisplayMemberBinding="{Binding Type}" />
-                    <GridViewColumn Header="目标/值" Width="120">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBox Text="{Binding Target, UpdateSourceTrigger=PropertyChanged}" Width="110" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="变量名" Width="90">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBox Text="{Binding VariableName, UpdateSourceTrigger=PropertyChanged}" Width="80" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="操作符" Width="60">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBox Text="{Binding ConditionOperator, UpdateSourceTrigger=PropertyChanged}"
-                                         Width="50" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="延迟(ms)" Width="80">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBox Text="{Binding DelayMs, UpdateSourceTrigger=PropertyChanged}" Width="70" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="修饰符" Width="80">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <TextBox Text="{Binding Modifiers, UpdateSourceTrigger=PropertyChanged}" Width="70" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                    <GridViewColumn Header="启用" Width="60">
-                        <GridViewColumn.CellTemplate>
-                            <DataTemplate>
-                                <CheckBox IsChecked="{Binding IsEnabled}" HorizontalAlignment="Center" />
-                            </DataTemplate>
-                        </GridViewColumn.CellTemplate>
-                    </GridViewColumn>
-                </GridView>
-            </ListView.View>
-        </ListView>
+            <!-- 拖动落点线 + 跟随预览（不拦截鼠标） -->
+            <Canvas x:Name="DragOverlay" IsHitTestVisible="False">
+                <Border x:Name="DropInsertLine"
+                        Height="4" Width="200"
+                        CornerRadius="2"
+                        Background="#FF1565C0"
+                        Visibility="Collapsed"
+                        Opacity="0">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="8" ShadowDepth="0" Color="#1565C0" Opacity="0.9" />
+                    </Border.Effect>
+                </Border>
+                <Border x:Name="DragGhost"
+                        Visibility="Collapsed"
+                        Background="#E0FFFFFF"
+                        BorderBrush="#FF0D47A1"
+                        BorderThickness="1.5"
+                        CornerRadius="4"
+                        Padding="8,4"
+                        Opacity="0.92">
+                    <Border.Effect>
+                        <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.35" />
+                    </Border.Effect>
+                    <TextBlock x:Name="DragGhostText" FontSize="12" Foreground="#0D47A1" />
+                </Border>
+            </Canvas>
+        </Grid>
 
         <!-- 状态栏 -->
         <StackPanel Orientation="Horizontal" Grid.Row="2" Margin="0,10" HorizontalAlignment="Stretch">
@@ -183,7 +256,7 @@
             <TextBlock Text=" | " Margin="10,0" VerticalAlignment="Center" />
             <TextBlock x:Name="MousePositionText" Text="鼠标坐标: (0, 0)" Cursor="Hand"
                        MouseLeftButtonDown="MousePositionText_MouseLeftButtonDown" VerticalAlignment="Center"
-                       FontWeight="Bold" Foreground="Green" />
+                       FontWeight="Bold" Foreground="#1565C0" />
         </StackPanel>
     </Grid>
 </Window>

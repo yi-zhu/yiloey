@@ -3,21 +3,21 @@ using System.Collections;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Design;
+using System.Configuration.Install;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Management;
 using System.Net.NetworkInformation;
 using System.Reflection;
+using System.ServiceProcess;
 using System.ServiceProcess;
 using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using holey.Page;
-using YiKits;
-using System.ServiceProcess;
-using System.Configuration.Install;
-using System.Management;
 using Microsoft.Win32;
+using YiKits;
 
 namespace holey
 {

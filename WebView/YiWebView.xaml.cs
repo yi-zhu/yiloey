@@ -13,6 +13,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Media;
@@ -27,24 +28,40 @@ namespace holey.WebView
     {
         public const string TAG = "yiwv";
         public static YiWebView? me;
-        public CoreWebView2Environment env1 = null;
+        private int _tabSeq;
+        private bool _pageThemeEnabled;
+
         public YiWebView()
         {
+            // 不使用 AllowsTransparency，才能运行时立刻切换有框/无框
             _isBorderless = YiKit.IniGetBool("uiw", area: TAG, def: false);
-            AllowsTransparency = !_isBorderless;
-            WindowStyle = !AllowsTransparency ? WindowStyle.SingleBorderWindow : WindowStyle.None;
-            ResizeMode = !AllowsTransparency ? ResizeMode.CanResizeWithGrip : ResizeMode.CanResize;
+            ApplyWindowChrome(_isBorderless);
             InitializeComponent();
             me = this;
 
             UiW.Content = _isBorderless ? "▯" : "▮";
-            BackgroundColorCombo.Text = YiKit.IniGet("bgc", "yiwv");
-            ForegroundColorCombo.Text = YiKit.IniGet("fgc", "yiwv");
+            string bg = NormalizeColor(YiKit.IniGet("bgc", TAG, def: "#FFFFFF"), "#FFFFFF");
+            string fg = NormalizeColor(YiKit.IniGet("fgc", TAG, def: "#000000"), "#000000");
+            BackgroundColorCombo.Text = bg;
+            ForegroundColorCombo.Text = fg;
+            BackgroundColorStr = bg;
+            ForegroundColorStr = fg;
+
+            // 默认开启页面着色（与原先行为一致）
+            _pageThemeEnabled = YiKit.IniGetBool("pageTheme", area: TAG, def: true);
+            PageThemeToggle.IsChecked = _pageThemeEnabled;
+
             loadSize();
         }
 
         protected override void OnClosing(CancelEventArgs e)
         {
+            foreach (TabItem item in TabControl.Items)
+            {
+                if (item.Content is WebViewContainer c)
+                    c.DisposeWebView();
+            }
+
             me = null;
             base.OnClosing(e);
         }
@@ -53,24 +70,40 @@ namespace holey.WebView
         {
             Left = YiKit.IniGetDouble("mainleft", 500, TAG);
             Top = YiKit.IniGetDouble("maintop", 300, TAG);
-            Width = YiKit.IniGetDouble("mainsizew", 750, TAG);
-            Height = YiKit.IniGetDouble("mainsizeh", 450, TAG);
-            LocationChanged += (s, e) =>
+            Width = YiKit.IniGetDouble("mainsizew", 960, TAG);
+            Height = YiKit.IniGetDouble("mainsizeh", 560, TAG);
+            LocationChanged += (_, _) =>
             {
                 YiKit.IniWrite("mainleft", Left < 1 ? "0" : Left.ToString(), TAG);
                 YiKit.IniWrite("maintop", Top < 1 ? "0" : Top.ToString(), TAG);
             };
-            SizeChanged += (s, e) =>
+            SizeChanged += (_, _) =>
             {
                 YiKit.IniWrite("mainsizew", Width.ToString(), TAG);
                 YiKit.IniWrite("mainsizeh", Height.ToString(), TAG);
             };
         }
 
-
         private void Window_Loaded(object sender, RoutedEventArgs e)
         {
             NewTab_Click(null!, null!);
+        }
+
+        public bool PageThemeEnabled => _pageThemeEnabled;
+
+        public void SetStatus(string text)
+        {
+            try
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    StatusText.Text = string.IsNullOrWhiteSpace(text) ? "就绪" : text;
+                });
+            }
+            catch
+            {
+                // window may be closing
+            }
         }
 
         private async void NewTab_Click(object sender, RoutedEventArgs e)
@@ -78,55 +111,113 @@ namespace holey.WebView
             var container = new WebViewContainer();
             container.Background = Brushes.Transparent;
             container.BorderThickness = new Thickness(0);
-            int indexTab = TabControl.Items.Count + 1;
+            container.OnStatusChanged += SetStatus;
+
+            int indexTab = ++_tabSeq;
+            var titleBlock = new TextBlock
+            {
+                Text = "新标签",
+                VerticalAlignment = VerticalAlignment.Center,
+                TextTrimming = TextTrimming.CharacterEllipsis,
+                MaxWidth = 140
+            };
+
+            var closeBtn = new Button
+            {
+                Content = "×",
+                Width = 22,
+                Height = 22,
+                Padding = new Thickness(0),
+                Margin = new Thickness(4, 0, 0, 0),
+                FontSize = 14,
+                Background = Brushes.Transparent,
+                BorderThickness = new Thickness(0),
+                Cursor = Cursors.Hand,
+                VerticalAlignment = VerticalAlignment.Center,
+                ToolTip = "关闭标签页"
+            };
+
+            var header = new DockPanel { LastChildFill = true };
+            DockPanel.SetDock(closeBtn, Dock.Right);
+            header.Children.Add(closeBtn);
+            header.Children.Add(titleBlock);
+
             var tab = new TabItem
             {
-                Header = "标签页",
+                Header = header,
                 Content = container,
                 Tag = indexTab.ToString(),
-                BorderThickness = new Thickness(0),
-                Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush,
-                Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush,
+                BorderThickness = new Thickness(0)
             };
-            tab.MouseWheel += (e, r) =>
+
+            closeBtn.Click += (_, _) => CloseTab(tab);
+
+            tab.MouseWheel += (_, r) =>
             {
                 if (tab.Content is not WebViewContainer wc) return;
-                var zoomFactor = wc.WebView.ZoomFactor; // 获取当前的缩放比例
+                var zoomFactor = wc.WebView.ZoomFactor;
                 wc.WebView.ZoomFactor = r.Delta switch
                 {
                     > 0 => Math.Min(100.0, zoomFactor * 1.1),
                     < 0 => Math.Max(0.001, zoomFactor * 0.9),
                     _ => wc.WebView.ZoomFactor
                 };
-                wc.IsHeadless = wc.WebView.ZoomFactor < 0.1 ? true : false;
-
-
+                wc.IsHeadless = wc.WebView.ZoomFactor < 0.1;
                 YiKit.IniWrite(tab.Tag + "zoom", wc.WebView.ZoomFactor.ToString(), TAG);
             };
-            // 创建上下文菜单
-            var contextMenu = new ContextMenu();
-            contextMenu.Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush;
-            contextMenu.Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush;
-            var closeItem = new MenuItem { Header = "关闭标签页", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
-            closeItem.Click += (s, ev) =>
+
+            var contextMenu = BuildTabContextMenu(tab, titleBlock);
+            tab.ContextMenu = contextMenu;
+            titleBlock.ContextMenu = contextMenu;
+
+            container.TitleChanged += title =>
             {
-                if (TabControl.Items.Contains(tab))
+                Dispatcher.Invoke(() =>
                 {
-                    TabControl.Items.Remove(tab);
-                    
-                }
-                (tab.Content  as WebViewContainer)?.WebView?.Dispose();
+                    if (!string.IsNullOrWhiteSpace(title))
+                        titleBlock.Text = title.Length > 24 ? title.Substring(0, 24) + "…" : title;
+                });
+            };
+            container.UrlChanged += url =>
+            {
+                Dispatcher.Invoke(() =>
+                {
+                    if (ReferenceEquals(TabControl.SelectedItem, tab))
+                        AddressBox.Text = url ?? "";
+                    UpdateNavButtons();
+                });
             };
 
-            var refreshItem = new MenuItem { Header = "刷新页面", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
-            refreshItem.Click += (s, ev) =>
+            TabControl.Items.Add(tab);
+            TabControl.SelectedItem = tab;
+
+            string zoom = YiKit.IniGet(tab.Tag + "zoom", TAG);
+            if (YiKit.IsNotNE(zoom) && double.TryParse(zoom, out double z))
+                container.WebView.ZoomFactor = z;
+
+            if (AddressBox.Text.Trim().Length > 0)
+                container.Navigate(AddressBox.Text.Trim());
+            else
+            {
+                string s = YiKit.IniGet("设置" + tab.Tag + " URL", "iDialog");
+                if (YiKit.IsNotNE(s))
+                    container.Navigate(s);
+            }
+
+            await Task.CompletedTask;
+            UpdateNavButtons();
+        }
+
+        private ContextMenu BuildTabContextMenu(TabItem tab, TextBlock titleBlock)
+        {
+            var contextMenu = new ContextMenu();
+            var refreshItem = new MenuItem { Header = "刷新页面" };
+            refreshItem.Click += (_, _) =>
             {
                 try
                 {
                     if (tab.Content is WebViewContainer wc && wc.WebView.CoreWebView2 != null)
-                    {
                         wc.WebView.CoreWebView2.Reload();
-                    }
                 }
                 catch (Exception ex)
                 {
@@ -134,42 +225,33 @@ namespace holey.WebView
                 }
             };
 
-            var renameItem = new MenuItem { Header = "重命名标签", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
-            renameItem.Click += (s, ev) =>
+            var renameItem = new MenuItem { Header = "重命名标签" };
+            renameItem.Click += (_, _) =>
             {
-                // var input = Microsoft.VisualBasic.Interaction.InputBox("输入新标签名：", "重命名", tab.Header.ToString());
                 var inputs = YiKit.ShowInputDialog("输入新标签名" + tab.Tag,
-                    "重命名" + tab.Tag + ":" + tab.Header.ToString() + "");
-                if (inputs != null && inputs.Count > 0)
-                {
-                    string input = inputs[0];
-                    if (!string.IsNullOrWhiteSpace(input))
-                        tab.Header = input;
-                }
+                    "重命名" + tab.Tag + ":" + titleBlock.Text);
+                if (inputs != null && inputs.Count > 0 && !string.IsNullOrWhiteSpace(inputs[0]))
+                    titleBlock.Text = inputs[0];
             };
 
-            var setUrlItem = new MenuItem { Header = "设置初始 URL", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
-            var resetItem = new MenuItem { Header = "重制计数", Background = new BrushConverter().ConvertFromString(BackgroundColorStr) as Brush, Foreground = new BrushConverter().ConvertFromString(ForegroundColorStr) as Brush };
-            resetItem.Click += (s, ev) => { (tab.Content as WebViewContainer )?.wupins.Clear(); };
-            setUrlItem.Click += (s, ev) =>
+            var resetItem = new MenuItem { Header = "重置计数" };
+            resetItem.Click += (_, _) =>
             {
-                // var input = Microsoft.VisualBasic.Interaction.InputBox("输入默认导航 URL：", "设定 URL", AddressBox.Text);
-                var inputs = YiKit.ShowInputDialog("设置初始" + tab.Tag + " URL", "设置" + tab.Tag + " URL");
-                string input = "";
-                if (inputs != null)
-                {
-                    if (inputs.Count > 0)
-                        input = inputs[0];
-                    if (!string.IsNullOrWhiteSpace(input))
-                    {
-                        if (tab.Content is WebViewContainer wc)
-                        {
-                            wc.Navigate(input);
-                            // AddressBox.Text = input;
-                        }
-                    }
-                }
+                (tab.Content as WebViewContainer)?.wupins.Clear();
+                (tab.Content as WebViewContainer)?.UpdateWebViewDisplay();
             };
+
+            var setUrlItem = new MenuItem { Header = "设置初始 URL" };
+            setUrlItem.Click += (_, _) =>
+            {
+                var inputs = YiKit.ShowInputDialog("设置初始" + tab.Tag + " URL", "设置" + tab.Tag + " URL");
+                if (inputs == null || inputs.Count == 0 || string.IsNullOrWhiteSpace(inputs[0])) return;
+                if (tab.Content is WebViewContainer wc)
+                    wc.Navigate(inputs[0]);
+            };
+
+            var closeItem = new MenuItem { Header = "关闭标签页" };
+            closeItem.Click += (_, _) => CloseTab(tab);
 
             contextMenu.Items.Add(refreshItem);
             contextMenu.Items.Add(renameItem);
@@ -177,23 +259,65 @@ namespace holey.WebView
             contextMenu.Items.Add(setUrlItem);
             contextMenu.Items.Add(new Separator());
             contextMenu.Items.Add(closeItem);
+            return contextMenu;
+        }
 
-            tab.ContextMenu = contextMenu;
+        private void CloseTab(TabItem tab)
+        {
+            if (tab.Content is WebViewContainer wc)
+            {
+                wc.OnStatusChanged -= SetStatus;
+                wc.DisposeWebView();
+            }
 
-            TabControl.Items.Add(tab);
-            TabControl.SelectedItem = tab;
-            // await container.WebView.EnsureCoreWebView2Async();
-            if (AddressBox.Text.Trim().Length > 0)
+            int idx = TabControl.Items.IndexOf(tab);
+            TabControl.Items.Remove(tab);
+
+            if (TabControl.Items.Count == 0)
             {
-                container.Navigate(AddressBox.Text.Trim());
+                NewTab_Click(null!, null!);
+                return;
             }
-            else
+
+            if (idx >= TabControl.Items.Count) idx = TabControl.Items.Count - 1;
+            if (idx >= 0) TabControl.SelectedIndex = idx;
+        }
+
+        private void TabControl_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (GetActiveContainer(out var container, true))
+                UpdateNavButtons();
+        }
+
+        private void Back_Click(object sender, RoutedEventArgs e)
+        {
+            if (GetActiveContainer(out var c, false) && c.WebView.CoreWebView2?.CanGoBack == true)
+                c.WebView.CoreWebView2.GoBack();
+        }
+
+        private void Forward_Click(object sender, RoutedEventArgs e)
+        {
+            if (GetActiveContainer(out var c, false) && c.WebView.CoreWebView2?.CanGoForward == true)
+                c.WebView.CoreWebView2.GoForward();
+        }
+
+        private void Reload_Click(object sender, RoutedEventArgs e)
+        {
+            if (GetActiveContainer(out var c, false) && c.WebView.CoreWebView2 != null)
+                c.WebView.CoreWebView2.Reload();
+        }
+
+        private void UpdateNavButtons()
+        {
+            bool canBack = false, canForward = false;
+            if (GetActiveContainer(out var c, false) && c.WebView.CoreWebView2 != null)
             {
-                string s = YiKit.IniGet("设置" + tab.Tag + " URL", "iDialog");
-                if (YiKit.IsNotNE(s)) (tab.Content as WebViewContainer)?.Navigate(s);
-                s = YiKit.IniGet(tab.Tag + "zoom", TAG);
-                if (YiKit.IsNotNE(s)) ((tab.Content as WebViewContainer)!).WebView.ZoomFactor = double.Parse(s);
+                canBack = c.WebView.CoreWebView2.CanGoBack;
+                canForward = c.WebView.CoreWebView2.CanGoForward;
             }
+
+            BackBtn.IsEnabled = canBack;
+            ForwardBtn.IsEnabled = canForward;
         }
 
         private void GoToAddress_Click(object sender, RoutedEventArgs e) => NavigateCurrentTab();
@@ -201,17 +325,18 @@ namespace holey.WebView
         private void AddressBox_KeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
+            {
                 NavigateCurrentTab();
+                e.Handled = true;
+            }
         }
 
         private void NavigateCurrentTab()
         {
-            if (GetActiveContainer(out var container, false))
-            {
-                string url = AddressBox.Text.Trim();
-                if (!url.StartsWith("http")) url = "http://" + url;
-                container.Navigate(url);
-            }
+            if (!GetActiveContainer(out var container, false)) return;
+            string url = AddressBox.Text.Trim();
+            if (string.IsNullOrEmpty(url)) return;
+            container.Navigate(url);
         }
 
         private async void DownloadWebpage_Click(object sender, RoutedEventArgs e)
@@ -226,15 +351,13 @@ namespace holey.WebView
             {
                 Title = "选择保存目录",
                 CheckPathExists = true,
-                FileName = "选择一个文件夹",
-                Filter = "文件夹|*.folder", // 伪装成文件选择文件夹
+                FileName = "webpage",
+                Filter = "文件夹|*.folder",
                 DefaultExt = ".folder"
             };
 
-            var result = dialog.ShowDialog();
-            if (result != true) return;
+            if (dialog.ShowDialog() != true) return;
 
-            // 获取用户选择的文件夹（从路径中去掉“文件名”）
             string folderPath = Path.GetDirectoryName(dialog.FileName);
             if (string.IsNullOrEmpty(folderPath) || !Directory.Exists(folderPath))
             {
@@ -242,15 +365,18 @@ namespace holey.WebView
                 return;
             }
 
+            string target = Path.Combine(folderPath, "webpage_" + DateTime.Now.ToString("yyyyMMdd_HHmmss"));
             try
             {
-                await container.DownloadFullPageAsync(folderPath);
-                MessageBox.Show($"网页已成功下载至：\n{folderPath}", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
+                SetStatus("正在下载网页...");
+                await container.DownloadFullPageAsync(target);
+                SetStatus("下载完成: " + target);
+                MessageBox.Show($"网页已成功下载至：\n{target}", "完成", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"下载失败：{ex.Message}\n{ex.StackTrace}", "错误", MessageBoxButton.OK,
-                    MessageBoxImage.Error);
+                SetStatus("下载失败");
+                MessageBox.Show($"下载失败：{ex.Message}", "错误", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
@@ -264,35 +390,67 @@ namespace holey.WebView
 
         private bool GetActiveContainer(out WebViewContainer container, bool showurl = true)
         {
-            container = null;
+            container = null!;
             if (TabControl.SelectedItem is TabItem item && item.Content is WebViewContainer c)
             {
                 container = c;
-                if (showurl) AddressBox.Text = c.CurrentUrl;
+                if (showurl && !string.IsNullOrEmpty(c.CurrentUrl))
+                    AddressBox.Text = c.CurrentUrl;
+                return true;
             }
 
-            return container != null;
+            return false;
         }
 
-        public string ForegroundColorStr = "#000000";
-        public string BackgroundColorStr = "#ffffff";
-
+        public string ForegroundColorStr = "#1A1A1A";
+        public string BackgroundColorStr = "#FFFFFF";
 
         private void BackgroundColorCombo_OnLostFocus(object sender, RoutedEventArgs e)
         {
-            BackgroundColorStr = chageCombo(BackgroundColorCombo);
-            YiKit.IniWrite("bgc", BackgroundColorStr, "yiwv");
+            BackgroundColorStr = NormalizeColor(chageCombo(BackgroundColorCombo), "#FFFFFF");
+            BackgroundColorCombo.Text = BackgroundColorStr;
+            YiKit.IniWrite("bgc", BackgroundColorStr, TAG);
+            // Window.Background 已绑定 Combo.Text；同步刷新所有页着色
+            RefreshAllPageThemes();
         }
 
         private void ForegroundColorCombo_OnLostFocus(object sender, RoutedEventArgs e)
         {
-            ForegroundColorStr = chageCombo(ForegroundColorCombo);
-            YiKit.IniWrite("fgc", ForegroundColorStr, "yiwv");
+            ForegroundColorStr = NormalizeColor(chageCombo(ForegroundColorCombo), "#000000");
+            ForegroundColorCombo.Text = ForegroundColorStr;
+            YiKit.IniWrite("fgc", ForegroundColorStr, TAG);
+            RefreshAllPageThemes();
+        }
+
+        private void PageThemeToggle_Changed(object sender, RoutedEventArgs e)
+        {
+            _pageThemeEnabled = PageThemeToggle.IsChecked == true;
+            YiKit.IniWrite("pageTheme", _pageThemeEnabled ? "true" : "false", TAG);
+            RefreshAllPageThemes();
+            SetStatus(_pageThemeEnabled ? "页面着色已开启" : "页面着色已关闭");
+        }
+
+        private void RefreshAllPageThemes()
+        {
+            foreach (TabItem item in TabControl.Items)
+            {
+                if (item.Content is WebViewContainer c)
+                    _ = c.ApplyPageThemeAsync();
+            }
+        }
+
+        private static string NormalizeColor(string? color, string fallback)
+        {
+            if (string.IsNullOrWhiteSpace(color)) return fallback;
+            color = color.Trim();
+            if (!color.StartsWith("#")) color = "#" + color;
+            if (color.Length != 4 && color.Length != 7 && color.Length != 9) return fallback;
+            return color;
         }
 
         private string chageCombo(ComboBox combo)
         {
-            var comboStr = combo.Text.Trim();
+            var comboStr = (combo.Text ?? "").Trim();
             if (comboStr.Contains("#"))
             {
                 var indexOf = comboStr.IndexOf("#", StringComparison.Ordinal);
@@ -301,47 +459,54 @@ namespace holey.WebView
 
             if (!comboStr.StartsWith("#")) combo.Text = "#" + comboStr;
             else combo.Text = comboStr;
-            return comboStr;
+            return combo.Text;
         }
 
         private void ToolBarTray_MouseLeftButtonDown(object sender, MouseButtonEventArgs e)
         {
+            if (e.OriginalSource is TextBox or ComboBox or ButtonBase)
+                return;
+
             if (e.ChangedButton == MouseButton.Left)
             {
                 if (e.ClickCount == 2)
                     WindowState = WindowState == WindowState.Maximized
                         ? WindowState.Normal
                         : WindowState.Maximized;
-                else DragMove();
+                else
+                {
+                    try { DragMove(); } catch { /* ignored */ }
+                }
             }
             else if (e is { ChangedButton: MouseButton.Right, ClickCount: 2 })
             {
                 var result = MessageBox.Show("是否关闭窗口？", "是否关闭窗口", MessageBoxButton.YesNo, MessageBoxImage.Question);
-                if (result == MessageBoxResult.Yes) Close(); // 只有点击“是”才关闭
+                if (result == MessageBoxResult.Yes) Close();
             }
         }
 
-        private bool _isBorderless = false;
+        private bool _isBorderless;
+
+        private void ApplyWindowChrome(bool borderless)
+        {
+            WindowStyle = borderless ? WindowStyle.None : WindowStyle.SingleBorderWindow;
+            ResizeMode = borderless ? ResizeMode.CanResize : ResizeMode.CanResizeWithGrip;
+        }
 
         private void ToggleBorder_Click(object sender, RoutedEventArgs e)
         {
             _isBorderless = !_isBorderless;
             YiKit.IniWrite("uiw", _isBorderless ? "true" : "false", TAG);
-            ((sender as Button)!).Content = _isBorderless ? "▯" : "▮";
+            ApplyWindowChrome(_isBorderless);
+            UiW.Content = _isBorderless ? "▯" : "▮";
+            SetStatus(_isBorderless ? "已切换为无边框" : "已切换为有边框");
         }
 
         private void TopItem_OnClick(object sender, RoutedEventArgs e)
         {
-            if (Topmost)
-            {
-                Topmost = false;
-                (sender as Button).Content = "📌";
-            }
-            else
-            {
-                Topmost = true;
-                (sender as Button).Content = "🔝";
-            }
+            Topmost = !Topmost;
+            PinBtn.Content = Topmost ? "🔝" : "📌";
+            SetStatus(Topmost ? "已置顶" : "已取消置顶");
         }
     }
 
@@ -352,177 +517,246 @@ namespace holey.WebView
         public WebView2 WebView { get; set; }
         public ObservableCollection<ScriptAction> Actions { get; } = new();
         public Dictionary<string, string> Variables { get; } = new();
-        public string CurrentUrl => WebView.Source?.ToString() ?? "";
+        public string CurrentUrl => WebView?.Source?.ToString() ?? _pendingUrl ?? "";
 
-        private bool _isRecording = false;
-        private bool _isPlaying = false;
-        private bool _isHeadless = false;
-        public Dictionary<string,long> wupins = new Dictionary<string, long>();
+        private bool _isRecording;
+        private bool _isPlaying;
+        private bool _isHeadless;
+        private string? _pendingUrl;
+        private bool _disposed;
+        public Dictionary<string, long> wupins = new();
         public string url = "";
-        
+
+        public event Action<string>? TitleChanged;
+        public event Action<string>? UrlChanged;
+
         public bool IsHeadless
         {
             get => _isHeadless;
             set
             {
                 _isHeadless = value;
-                WebView.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
+                if (WebView != null)
+                    WebView.Visibility = value ? Visibility.Collapsed : Visibility.Visible;
             }
         }
 
-        public event Action<string> OnStatusChanged;
+        public event Action<string>? OnStatusChanged;
 
         public WebViewContainer()
         {
             var grid = new Grid();
             Content = grid;
-            WebView = new WebView2();;
+            WebView = new WebView2();
             WebView.DefaultBackgroundColor = Color.Transparent;
             grid.Children.Add(WebView);
-            InitWebView();
-            
-            Unloaded += ((sender, args) =>
+            _ = InitWebView();
+        }
+
+        public void DisposeWebView()
+        {
+            if (_disposed) return;
+            _disposed = true;
+            try
             {
-                // 不在Unloaded事件中释放WebView，避免切换标签页时页面消失
-                // WebView会在窗口关闭时通过其他方式释放
-            });
+                WebView?.Dispose();
+            }
+            catch
+            {
+                // ignore
+            }
         }
 
         private async Task InitWebView()
         {
-
+            try
+            {
                 await WebView.EnsureCoreWebView2Async();
-            WebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;   
-            string css = $@"
-                    body, html, * {{
-                        background-color: {YiWebView.me.BackgroundColorStr} !important;
-                        color: {YiWebView.me.ForegroundColorStr} !important;
-                    }}
-                ";
-            // 注入点击监听用于录制
-            await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync($@"
-                document.addEventListener('click', e => {{
+                if (_disposed || WebView.CoreWebView2 == null) return;
+
+                WebView.CoreWebView2.Settings.AreDefaultScriptDialogsEnabled = false;
+                await WebView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(@"
+                document.addEventListener('click', e => {
                     const t = e.target;
+                    if (!t) return;
                     const text = (t.innerText || t.value || '').trim().substring(0, 30).replace(/\s+/g, ' ');
                     const id = t.id ? '#' + t.id : '';
-                    const cls = t.className ? '.' + t.className.split(' ')[0] : '';
+                    const cls = t.className && typeof t.className === 'string' ? '.' + t.className.split(' ')[0] : '';
                     const tag = t.tagName.toLowerCase();
-                    const index = Array.from(t.parentNode.children).indexOf(t) + 1;
+                    const index = t.parentNode ? (Array.from(t.parentNode.children).indexOf(t) + 1) : 1;
                     const nth = ':nth-child(' + index + ')';
                     const selector = id || (cls ? cls + nth : tag + nth);
-                    window.chrome.webview.postMessage(JSON.stringify({{
+                    window.chrome.webview.postMessage(JSON.stringify({
                         type: 'record_click',
-                        data: {{ text, selector }}
-                    }}));
-                }});
-                
-                
+                        data: { text, selector }
+                    }));
+                });
             ");
-            
-            WebView.CoreWebView2.WebMessageReceived += WebMessageReceived;
-            WebView.CoreWebView2.ContentLoading += async (s, e) =>
+
+                WebView.CoreWebView2.WebMessageReceived += WebMessageReceived;
+                WebView.CoreWebView2.DocumentTitleChanged += (_, _) =>
+                {
+                    try { TitleChanged?.Invoke(WebView.CoreWebView2.DocumentTitle); }
+                    catch { /* ignore */ }
+                };
+                WebView.CoreWebView2.SourceChanged += (_, _) =>
+                {
+                    try
+                    {
+                        string src = WebView.Source?.ToString() ?? "";
+                        UrlChanged?.Invoke(src);
+                    }
+                    catch { /* ignore */ }
+                };
+                WebView.CoreWebView2.NavigationCompleted += async (_, e) =>
+                {
+                    if (_disposed || WebView?.CoreWebView2 == null) return;
+                    try
+                    {
+                        if (e.IsSuccess)
+                        {
+                            string html = await WebView.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML");
+                            html = UnwrapJsString(html);
+                            progressHtml(html);
+                            await ApplyPageThemeAsync();
+                            UpdateWebViewDisplay();
+                            OnStatusChanged?.Invoke("已加载");
+                        }
+                        else
+                        {
+                            OnStatusChanged?.Invoke("加载失败");
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        OnStatusChanged?.Invoke("页面处理异常: " + ex.Message);
+                    }
+                };
+
+                if (!string.IsNullOrWhiteSpace(_pendingUrl))
+                    Navigate(_pendingUrl);
+                else if (!string.IsNullOrWhiteSpace(url))
+                    Navigate(url);
+            }
+            catch (Exception ex)
             {
-                // 检查 WebViewContainer 是否已被释放
-                if (WebView == null || WebView.CoreWebView2 == null)
-                    return;
-                
-                // 此时可以执行 JS 获取当前已加载的 HTML
-                string html = await WebView.CoreWebView2.ExecuteScriptAsync("document.documentElement.outerHTML");
-                // 返回的是 JSON 字符串，去掉首尾引号
-                html = html.Trim('"');
-                progressHtml(html);
-                // OnStatusChanged?.Invoke($"导航完成: {CurrentUrl}");
-                string css = $@"
+                OnStatusChanged?.Invoke("WebView 初始化失败: " + ex.Message);
+            }
+        }
+
+        public async Task ApplyPageThemeAsync()
+        {
+            if (_disposed || WebView?.CoreWebView2 == null) return;
+            var host = YiWebView.me;
+            if (host == null || !host.PageThemeEnabled)
+            {
+                try
+                {
+                    await WebView.CoreWebView2.ExecuteScriptAsync(@"
+(function(){
+  var s=document.getElementById('yikits-theme');
+  if(s) s.remove();
+})();");
+                }
+                catch { /* ignore */ }
+                return;
+            }
+
+            // 同步最新配色（绑定可能刚改 Combo.Text）
+            string bg = NormalizeThemeColor(host.BackgroundColorCombo?.Text, host.BackgroundColorStr);
+            string fg = NormalizeThemeColor(host.ForegroundColorCombo?.Text, host.ForegroundColorStr);
+            host.BackgroundColorStr = bg;
+            host.ForegroundColorStr = fg;
+
+            string css = $@"
 (function() {{
     const styleId = 'yikits-theme';
     let style = document.getElementById(styleId);
     if (style) style.remove();
-
-document.querySelectorAll('input').forEach(input => {{
-    input.maxLength = 1000; 
-input.setAttribute('maxlength', 1000);
-}});
+    document.querySelectorAll('input').forEach(input => {{
+        input.maxLength = 1000;
+        input.setAttribute('maxlength', 1000);
+    }});
     style = document.createElement('style');
     style.id = styleId;
     style.type = 'text/css';
     style.textContent = `
-
-    html::-webkit-scrollbar,
-    body::-webkit-scrollbar {{
-      display: none !important;
-    }}
+        html::-webkit-scrollbar, body::-webkit-scrollbar {{ display: none !important; }}
         *, *::before, *::after {{
-            background-color: {YiWebView.me.BackgroundColorStr} !important;
-            color: {YiWebView.me.ForegroundColorStr} !important;
-            border-color: {YiWebView.me.ForegroundColorStr} !important;
+            background-color: {bg} !important;
+            color: {fg} !important;
+            border-color: {fg} !important;
         }}
         a, a:link, a:visited, a:hover, a:active {{
-            color: {YiWebView.me.ForegroundColorStr} !important;
+            color: {fg} !important;
             text-decoration: underline !important;
         }}
         img, video, canvas, svg {{
             filter: brightness(90%) !important;
         }}
         body, html {{
-            background: {YiWebView.me.BackgroundColorStr} !important;
-            color: {YiWebView.me.ForegroundColorStr} !important;
-      overflow: auto;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-      margin: 0;
-      padding: 0;
+            background: {bg} !important;
+            color: {fg} !important;
+            overflow: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            margin: 0;
+            padding: 0;
         }}
     `;
-    document.head.appendChild(style);
-    if (document.body.innerText.indexOf(""wml"")>-1){{
-        document.body.innerHTML=document.body.innerText
-       }}
-}})();
-";
-                WebView.CoreWebView2.ExecuteScriptAsync(css);
-            };
-            
-            Navigate(url);
+    (document.head || document.documentElement).appendChild(style);
+    if (document.body && document.body.innerText.indexOf('wml') > -1) {{
+        document.body.innerHTML = document.body.innerText;
+    }}
+}})();";
+            try
+            {
+                await WebView.CoreWebView2.ExecuteScriptAsync(css);
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private static string NormalizeThemeColor(string? fromCombo, string fallback)
+        {
+            string c = (fromCombo ?? fallback ?? "#FFFFFF").Trim();
+            if (c.Length == 0) c = fallback;
+            if (!c.StartsWith("#")) c = "#" + c;
+            int hash = c.IndexOf('#');
+            if (hash > 0) c = c.Substring(hash);
+            return c.Length is 4 or 7 or 9 ? c : (fallback.StartsWith("#") ? fallback : "#FFFFFF");
         }
 
         public void progressHtml(string html)
         {
-            if (YiWebView.me == null)
-                return;
-
-            if (wupins == null)
-                wupins = new Dictionary<string, long>();
+            if (YiWebView.me == null) return;
+            wupins ??= new Dictionary<string, long>();
 
             Dictionary<string, long> rewards;
-
-            if (html.Contains("报时:")||html.Contains("请选择出口:")||html.Contains("[系统]"))
-            {
-                // 游戏主场景，无需解析
+            if (html.Contains("报时:") || html.Contains("请选择出口:") || html.Contains("[系统]"))
                 return;
-            }
-            else if (html.Contains("战斗已经结束!"))
+
+            if (html.Contains("战斗已经结束!"))
             {
-                // 战斗场景
                 rewards = ParseRewards(html,
                     triggerWords: new[] { "捡到", "打到" },
                     valueSeparators: new[] { 'x' });
             }
-            else  if (html.Contains("鱼饵-"))
+            else if (html.Contains("鱼饵-"))
             {
-                // 钓鱼或其他场景
                 rewards = ParseRewards(html,
-                    triggerWords: new[] { "脱掉了海马身上的装备", "掉出", "给出", "捡到", "获得", "吐出", },
-                    valueSeparators: new[] { 'x', '*', },true);
+                    triggerWords: new[] { "脱掉了海马身上的装备", "掉出", "给出", "捡到", "获得", "吐出" },
+                    valueSeparators: new[] { 'x', '*' }, true);
             }
             else
             {
-                // 钓鱼或其他场景
                 rewards = ParseRewards(html,
-                    triggerWords: new[] { "脱掉了海马身上的装备", "掉出", "给出", "捡到", "获得", "吐出", },
-                    valueSeparators: new[] { 'x', '*', });
+                    triggerWords: new[] { "脱掉了海马身上的装备", "掉出", "给出", "捡到", "获得", "吐出" },
+                    valueSeparators: new[] { 'x', '*' });
             }
 
-            // 累加到总物品
             foreach (var kvp in rewards)
             {
                 if (wupins.ContainsKey(kvp.Key))
@@ -530,197 +764,154 @@ input.setAttribute('maxlength', 1000);
                 else
                     wupins[kvp.Key] = kvp.Value;
             }
-            
-
 
             UpdateWebViewDisplay();
         }
 
-        /// <summary>
-        /// 从 HTML 文本中解析物品奖励
-        /// </summary>
-        /// <param name="html">原始 HTML 内容</param>
-        /// <param name="triggerWords">触发解析的关键词，如 "捡到"、"打到"、"获得"</param>
-        /// <param name="valueSeparators">数量分隔符，如 'x' 或 '*'</param>
-        /// <returns>物品名称 → 数量 的字典</returns>
-        public Dictionary<string, long> ParseRewards(string html, string[] triggerWords, char[] valueSeparators,bool has_zkh=false)
+        public Dictionary<string, long> ParseRewards(string html, string[] triggerWords, char[] valueSeparators,
+            bool has_zkh = false)
         {
-            // 预处理：将 <br> 标签替换为换行符
-            html = System.Text.RegularExpressions.Regex.Replace(html, @"<br\s*/?>", "\n",
-                System.Text.RegularExpressions.RegexOptions.IgnoreCase);
-            html = System.Text.RegularExpressions.Regex.Replace(html, @"<[^>]+>", "\n"); // 去标签
+            html = Regex.Replace(html, @"<br\s*/?>", "\n", RegexOptions.IgnoreCase);
+            html = Regex.Replace(html, @"<[^>]+>", "\n");
             html = html.Replace(@"\n", Environment.NewLine);
             html = html.Replace(@"<", Environment.NewLine);
             html = html.Replace(@"\u003C", Environment.NewLine);
             html = html.Replace(@">", Environment.NewLine);
 
             var rewards = new Dictionary<string, long>();
-
             if (string.IsNullOrWhiteSpace(html))
                 return rewards;
 
             try
             {
-                using (var reader = new StringReader(html))
+                using var reader = new StringReader(html);
+                string? line;
+                while ((line = reader.ReadLine()) != null)
                 {
-                    string line;
-                    while ((line = reader.ReadLine()) != null)
+                    line = line.Trim();
+                    if (line.Length == 0) continue;
+
+                    // 兜底：名称[+/-]数字，如 鱼饵-10 / 潜能+100
+                    var fallback = Regex.Match(line, @"^([\u4e00-\u9fa5A-Za-z0-9_（）()·\-]+?)\s*([+\-])\s*(\d+)\s*$");
+                    if (fallback.Success)
                     {
-                        line = line.Trim();
-
-                        // ✅ 1. 兜底规则：直接匹配 "名称[-+]数字"（如 鱼饵-10）
-                        bool lineProcessed = false;
-                        string cleanLine = line.Trim();
-
-                        if (!lineProcessed)
+                        string name = fallback.Groups[1].Value.Trim();
+                        string sign = fallback.Groups[2].Value;
+                        if (name.Length is > 0 and < 20 && long.TryParse(fallback.Groups[3].Value, out long count))
                         {
-                            var m = Regex.Match(cleanLine, @"-");
-                            if (m.Success)
+                            if (sign == "-") count = -count;
+                            if (rewards.ContainsKey(name)) rewards[name] += count;
+                            else rewards[name] = count;
+                            continue;
+                        }
+                    }
+
+                    bool hasTrigger = false;
+                    foreach (var word in triggerWords)
+                    {
+                        int idx = line.IndexOf(word, StringComparison.Ordinal);
+                        if (idx >= 0)
+                        {
+                            hasTrigger = true;
+                            line = line.Substring(idx + word.Length);
+                            break;
+                        }
+                    }
+
+                    if (!hasTrigger) continue;
+
+                    string cleanContent = line.Trim();
+                    if (has_zkh)
+                    {
+                        var bracketMatches = Regex.Matches(line, @"\[([^\[\]]+)\]");
+                        foreach (Match m in bracketMatches)
+                        {
+                            string inner = m.Groups[1].Value.Trim();
+                            if (inner.Contains("当前")) continue;
+                            bool parsed = false;
+                            foreach (char sep in valueSeparators)
                             {
-                                string name = m.Groups[1].Value.Trim();
-                                if (name.Length < 10 && long.TryParse(m.Groups[2].Value, out long count))
+                                int sepIdx = inner.LastIndexOf(sep);
+                                if (sepIdx > 0 && sepIdx < inner.Length - 1 &&
+                                    long.TryParse(inner.Substring(sepIdx + 1), out long count))
                                 {
-                                    if (rewards.ContainsKey(name))
-                                        rewards[name] += count;
-                                    else
-                                        rewards[name] = count;
-                                    lineProcessed = true;
+                                    string name = inner.Substring(0, sepIdx).Trim();
+                                    if (rewards.ContainsKey(name)) rewards[name] += count;
+                                    else rewards[name] = count;
+                                    parsed = true;
+                                    break;
                                 }
                             }
+
+                            if (parsed) continue;
+                            if (string.IsNullOrEmpty(inner)) continue;
+                            if (rewards.ContainsKey(inner)) rewards[inner] += 1;
+                            else rewards[inner] = 1;
                         }
 
-                        // ✅ 2. 检查是否有任意触发词（不 break，只标记可解析）
-                        bool hasTrigger = false;
+                        cleanContent = Regex.Replace(line, @"\[[^\]]*\]", "").Trim();
+                    }
+
+                    var items = cleanContent.Split(new[] { ',', '，', '、', ';', '；' },
+                        StringSplitOptions.RemoveEmptyEntries);
+
+                    foreach (var rawItem in items)
+                    {
+                        string item = rawItem.Trim();
+                        if (string.IsNullOrEmpty(item)) continue;
+
                         foreach (var word in triggerWords)
                         {
-                            if (line.IndexOf(word) >= 0)
+                            int widx = item.IndexOf(word, StringComparison.Ordinal);
+                            if (widx >= 0)
+                                item = item.Substring(widx + word.Length);
+                        }
+
+                        bool foundSeparator = false;
+                        foreach (char sep in valueSeparators)
+                        {
+                            int sepIndex = item.LastIndexOf(sep);
+                            if (sepIndex > 0 && sepIndex < item.Length - 1 &&
+                                long.TryParse(item.Substring(sepIndex + 1), out long count))
                             {
-                                hasTrigger = true;
-                                line = line.Substring(line.IndexOf(word)+word.Length);
+                                string name = item.Substring(0, sepIndex).Trim();
+                                if (rewards.ContainsKey(name)) rewards[name] += count;
+                                else rewards[name] = count;
+                                foundSeparator = true;
                                 break;
                             }
                         }
 
-                        if (!hasTrigger) continue;
-                        string cleanContent=line.Trim();
-                        if (has_zkh)
+                        if (foundSeparator) continue;
+
+                        for (int i = 0; i < item.Length; i++)
                         {
-                            // ✅ 3. 先提取所有 [xxx] 中的物品（无论触发词在哪）
-                            var bracketMatches = System.Text.RegularExpressions.Regex.Matches(line, @"\[([^\[\]]+)\]");
-                            foreach (Match m in bracketMatches)
+                            if (char.IsDigit(item[i]) ||
+                                (item[i] is '-' or '+' && i + 1 < item.Length && char.IsDigit(item[i + 1])))
                             {
-                                string inner = m.Groups[1].Value.Trim();
-                                if (inner.Contains("当前")) continue;
-                                // 尝试用 x/* 解析 [古玉兔(宠魂)x1]
-                                bool parsed = false;
-                                foreach (char sep in valueSeparators)
+                                string name = item.Substring(0, i).Trim();
+                                if (long.TryParse(item.Substring(i), out long count))
                                 {
-                                    int sepIdx = inner.LastIndexOf(sep);
-                                    if (sepIdx > 0 && sepIdx < inner.Length - 1)
-                                    {
-                                        string name = inner.Substring(0, sepIdx).Trim();
-                                        if (long.TryParse(inner.Substring(sepIdx + 1), out long count))
-                                        {
-                                            if (rewards.ContainsKey(name))
-                                                rewards[name] += count;
-                                            else
-                                                rewards[name] = count;
-                                            parsed = true;
-                                            break;
-                                        }
-                                    }
+                                    if (string.IsNullOrEmpty(name)) break;
+                                    if (rewards.ContainsKey(name)) rewards[name] += count;
+                                    else rewards[name] = count;
                                 }
 
-                                if (parsed) continue;
-
-                                // 否则视为数量为1
-                                if (!string.IsNullOrEmpty(inner))
-                                {
-                                    if (rewards.ContainsKey(inner))
-                                        rewards[inner] += 1;
-                                    else
-                                        rewards[inner] = 1;
-                                }
+                                break;
                             }
 
-                            // ✅ 4. 去除所有 [...] 部分，得到干净文本
-                             cleanContent = System.Text.RegularExpressions.Regex.Replace(line, @"\[[^\]]*\]", "")
-                                .Trim();
-                        }
-
-                        // ✅ 5. 分割物品（逗号、顿号等）
-                        var items = cleanContent.Split(new[] { ',', '，', '、', ';', '；' },
-                            StringSplitOptions.RemoveEmptyEntries);
-
-                        foreach (var rawItem in items)
-                        {
-                            string item = rawItem.Trim();
-                            if (string.IsNullOrEmpty(item)) continue;
-                            
-                            foreach (var word in triggerWords)
+                            if (i == item.Length - 1)
                             {
-                                if (item.IndexOf(word, StringComparison.Ordinal) >= 0)
-                                {
-                                    item = item.Substring(item.IndexOf(word, StringComparison.Ordinal)+word.Length);
-                                }
-                            }
-                            // 检查是否有分隔符 x/*
-                            bool foundSeparator = false;
-                            foreach (char sep in valueSeparators)
-                            {
-                                int sepIndex = item.LastIndexOf(sep);
-                                if (sepIndex > 0 && sepIndex < item.Length - 1)
-                                {
-                                    string name = item.Substring(0, sepIndex).Trim();
-                                    if (long.TryParse(item.Substring(sepIndex + 1), out long count))
-                                    {
-                                        if (rewards.ContainsKey(name))
-                                            rewards[name] += count;
-                                        else
-                                            rewards[name] = count;
-                                    }
-
-                                    foundSeparator = true;
-                                    break;
-                                }
-                            }
-
-                            if (foundSeparator) continue;
-
-                            // 尝试解析“名称+数字”格式（如 潜能469547 或 鱼饵-10）
-                            for (int i = 0; i < item.Length; i++)
-                            {
-                                if (char.IsDigit(item[i]) ||
-                                    (item[i] == '-' && i + 1 < item.Length && char.IsDigit(item[i + 1])) ||
-                                    (item[i] == '+' && i + 1 < item.Length && char.IsDigit(item[i + 1])))
-                                {
-                                    string name = item.Substring(0, i).Trim();
-                                    if (long.TryParse(item.Substring(i), out long count))
-                                    {
-                                        if (rewards.ContainsKey(name))
-                                            rewards[name] += count;
-                                        else
-                                            rewards[name] = count;
-                                    }
-
-                                    break;
-                                }
-                                else if(i==item.Length-1)
-                                {
-                                    if (rewards.ContainsKey(item))
-                                        rewards[item] += 1;
-                                    else
-                                        rewards[item] = 1;
-                                    break;
-                                }
+                                if (rewards.ContainsKey(item)) rewards[item] += 1;
+                                else rewards[item] = 1;
                             }
                         }
                     }
                 }
             }
-            catch (Exception ex)
+            catch
             {
-                // 可选日志
+                // ignore parse errors
             }
 
             return rewards;
@@ -728,20 +919,18 @@ input.setAttribute('maxlength', 1000);
 
         public string GetDisplayWupins()
         {
-            var wupinsorts=new SortedDictionary<string,long>(wupins);
-            // 更新显示
-            string? text = wupinsorts.Count == 0
+            var wupinsorts = new SortedDictionary<string, long>(wupins);
+            return wupinsorts.Count == 0
                 ? "获得物品"
                 : string.Join("\\n", wupinsorts.Select(kvp => $"{kvp.Key}:{kvp.Value}"));
-            text = text.Replace("'", "\\'");
-            return text;
         }
-public string UpdateWebViewDisplay()
-{
-    string text = GetDisplayWupins();
-    string escapedText = text.Replace("'", "\\'");
 
-    string script = $@"
+        public string UpdateWebViewDisplay()
+        {
+            string text = GetDisplayWupins();
+            string escapedText = text.Replace("\\", "\\\\").Replace("'", "\\'");
+
+            string script = $@"
 (function() {{
     var elem = document.getElementById('reward');
     if (!elem) {{
@@ -750,87 +939,72 @@ public string UpdateWebViewDisplay()
         elem.style.cssText = `
             position: fixed;
             bottom: 10px;
-            right: -3px;
-            background: rgba(0, 0, 0, 0.5) !important;
-            color: gold;
-            padding: 2px;
-            font-size: 14px;
+            right: 8px;
+            background: rgba(20, 20, 24, 0.78) !important;
+            color: #F5D76E;
+            padding: 8px 10px;
+            font-size: 13px;
             z-index: 9999;
-            border: 1px solid white;
-            font-family: monospace;
-            max-width: 80vw;
+            border: 1px solid rgba(255,255,255,0.25);
+            border-radius: 8px;
+            font-family: Consolas, monospace;
+            max-width: 40vw;
             box-sizing: border-box;
-
-            /* 核心：隐藏滚动条，但可滚动 */
             overflow-y: auto;
-            scrollbar-width: none; /* Firefox: 隐藏滚动条 */
-            -ms-overflow-style: none; /* IE/Edge 旧版 */
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+            white-space: pre-line;
+            pointer-events: none;
         `;
-        // WebKit 隐藏滚动条（Chrome/Edge/Chromium）
         elem.classList.add('no-scrollbar');
-
         document.body.appendChild(elem);
     }}
-
     elem.innerText = '{escapedText}';
-
-    // 异步检测高度并决定是否启用滚动行为
     setTimeout(function() {{
         var clientHeight = window.innerHeight || document.documentElement.clientHeight;
         var targetMaxHeight = clientHeight * 0.6;
-
         if (elem.scrollHeight > targetMaxHeight) {{
             elem.style.maxHeight = targetMaxHeight + 'px';
-            // 已通过 CSS 隐藏滚动条，这里只需确保 overflow-y = auto
         }} else {{
             elem.style.maxHeight = 'none';
             elem.style.overflowY = 'hidden';
         }}
     }}, 10);
-
-    // 动态注入 CSS 样式（隐藏所有 WebKit 滚动条）
     if (!document.head.querySelector('style#hidden-scroll-style')) {{
         var style = document.createElement('style');
         style.id = 'hidden-scroll-style';
         style.textContent = `
-            .no-scrollbar::-webkit-scrollbar {{
-                display: none !important;
-            }}
-            .no-scrollbar {{
-                -ms-overflow-style: none;
-                scrollbar-width: none;
-                overflow-y: auto;
-            }}
+            .no-scrollbar::-webkit-scrollbar {{ display: none !important; }}
+            .no-scrollbar {{ -ms-overflow-style: none; scrollbar-width: none; overflow-y: auto; }}
         `;
         document.head.appendChild(style);
     }}
-
 }})();
 ";
+            try
+            {
+                if (!_disposed && WebView?.CoreWebView2 != null)
+                    _ = WebView.CoreWebView2.ExecuteScriptAsync(script);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("WebView script error: " + ex.Message);
+            }
 
-    try
-    {
-        WebView.CoreWebView2.ExecuteScriptAsync(script);
-    }
-    catch (Exception ex)
-    {
-        System.Diagnostics.Debug.WriteLine("WebView script error: " + ex.Message);
-    }
+            return text;
+        }
 
-    return text;
-}
-  
-        private void WebMessageReceived(object sender, CoreWebView2WebMessageReceivedEventArgs e)
+        private void WebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs e)
         {
             try
             {
-                var msg = JsonSerializer.Deserialize<WebViewContainer.RecordMessage>(e.TryGetWebMessageAsString());
+                var msg = JsonSerializer.Deserialize<RecordMessage>(e.TryGetWebMessageAsString());
                 if (msg?.type == "record_click" && _isRecording)
                 {
                     var act = new ClickAction
                     {
-                        Name = $"点击 [{msg.data.text}]",
-                        Text = msg.data.text, // 使用 Text 字段
+                        Name = $"点击 [{msg.data?.text}]",
+                        Text = msg.data?.text ?? "",
                         DelayAfterMs = delay
                     };
                     Actions.Add(act);
@@ -843,52 +1017,55 @@ public string UpdateWebViewDisplay()
             }
         }
 
-        public void Navigate(string url)
+        public void Navigate(string rawUrl)
         {
-            if (YiKit.IsNullOrEmpty(url) || !url.Contains("."))
-                return;
-            this.url = url;
-            if (WebView.CoreWebView2 == null)
-                return;
-            if (!url.StartsWith("http")) url = "http://" + url;
-            // 启动带超时的导航
-            StartNavigationWithTimeout(url, TimeSpan.FromSeconds(1.5));
-        }
-
-        private async void StartNavigationWithTimeout(string url, TimeSpan timeout)
-        {
-            
-            var cts = new CancellationTokenSource(timeout);
-            bool success = false;
-
-            EventHandler<CoreWebView2NavigationCompletedEventArgs> handler = (s, e) =>
+            if (YiKit.IsNullOrEmpty(rawUrl)) return;
+            string navUrl = rawUrl.Trim();
+            if (!navUrl.StartsWith("http://", StringComparison.OrdinalIgnoreCase) &&
+                !navUrl.StartsWith("https://", StringComparison.OrdinalIgnoreCase) &&
+                !navUrl.StartsWith("file://", StringComparison.OrdinalIgnoreCase) &&
+                !navUrl.StartsWith("about:", StringComparison.OrdinalIgnoreCase))
             {
-                if (e.IsSuccess)
-                {
-                    success = true;
-                    cts.Cancel(); // 成功则取消重试
-                }
-            };
+                navUrl = "http://" + navUrl;
+            }
 
-            WebView.CoreWebView2.NavigationCompleted += handler;
+            // 允许 localhost / IP / 域名
+            if (!IsLikelyUrl(navUrl))
+            {
+                OnStatusChanged?.Invoke("无效地址");
+                return;
+            }
+
+            url = navUrl;
+            _pendingUrl = navUrl;
+            if (_disposed) return;
+            if (WebView.CoreWebView2 == null)
+            {
+                OnStatusChanged?.Invoke("正在初始化浏览器...");
+                return;
+            }
+
             try
             {
-                WebView.CoreWebView2.Navigate(url);
-                while (!success && !cts.IsCancellationRequested)
-                {
-                    await Task.Delay(100);
-                    if (!success)
-                    {
-                        OnStatusChanged?.Invoke($"重试导航: {url}");
-                        WebView.CoreWebView2.Navigate(url);
-                    }
-                }
+                OnStatusChanged?.Invoke("正在打开: " + navUrl);
+                WebView.CoreWebView2.Navigate(navUrl);
             }
-            finally
+            catch (Exception ex)
             {
-                WebView.CoreWebView2.NavigationCompleted -= handler;
-                cts.Dispose();
+                OnStatusChanged?.Invoke("导航失败: " + ex.Message);
             }
+        }
+
+        private static bool IsLikelyUrl(string url)
+        {
+            if (Uri.TryCreate(url, UriKind.Absolute, out var uri))
+            {
+                if (uri.Scheme is "http" or "https" or "file" or "about")
+                    return !string.IsNullOrWhiteSpace(uri.Host) || uri.Scheme == "about" || uri.Scheme == "file";
+            }
+
+            return url.Contains('.') ||
+                   url.IndexOf("localhost", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         public async Task<bool> PlayScriptsAsync(int repeatCount = 1)
@@ -896,20 +1073,16 @@ public string UpdateWebViewDisplay()
             if (_isPlaying || Actions.Count == 0) return false;
             _isPlaying = true;
 
-            // 统计变量
             int totalClicks = 0;
             long totalTimeMs = 0;
             List<long> roundTimes = new();
-            double avgDelay = Actions.Where(a => a != null).Average(a => a.DelayAfterMs);
+            double avgDelay = Actions.Where(a => a != null).DefaultIfEmpty().Average(a => a?.DelayAfterMs ?? delay);
 
             OnStatusChanged?.Invoke($"▶ 开始执行：共 {repeatCount} 轮，平均每步延迟 {avgDelay:F0}ms");
-            Stopwatch sw;
-            double roundTime;
             double roundCount;
             for (roundCount = 1; (roundCount <= repeatCount || repeatCount == 0) && _isPlaying; roundCount++)
             {
-                sw = Stopwatch.StartNew();
-
+                var sw = Stopwatch.StartNew();
                 foreach (var action in Actions)
                 {
                     if (!_isPlaying) break;
@@ -917,7 +1090,6 @@ public string UpdateWebViewDisplay()
                     {
                         await action.Execute(WebView, Variables);
                         totalClicks++;
-                        // await Task.Delay(action.DelayAfterMs);
                     }
                     catch (Exception ex)
                     {
@@ -931,63 +1103,35 @@ public string UpdateWebViewDisplay()
                 roundTimes.Add(sw.ElapsedMilliseconds);
                 long thisRound = sw.ElapsedMilliseconds;
                 totalTimeMs += thisRound;
-                roundTime = roundTimes.Any() ? roundTimes.Average() : 0;
-                OnStatusChanged?.Invoke($@"🔁 第 {roundCount} 轮完成 | 用时 {thisRound}ms
-🖱️  总点击次数: {totalClicks}
-⏱️  本轮耗时: {thisRound}
-⏱️  平均每轮耗时: {roundTime:F0}ms
-⏳ 总耗时: {YiKit.SumByteTime(totalTimeMs)}
-🔧 平均每步延迟: {avgDelay:F0}ms");
+                double roundTime = roundTimes.Average();
+                OnStatusChanged?.Invoke(
+                    $"🔁 第 {roundCount} 轮完成 | 用时 {thisRound}ms | 总点击 {totalClicks} | 平均 {roundTime:F0}ms");
                 if (thisRound < 10) _isPlaying = false;
             }
 
-            roundTime = roundTimes.Any() ? roundTimes.Average() : 0;
-            if (_isPlaying)
-            {
-                OnStatusChanged?.Invoke($@"🏁 执行完成！
-📊 总轮数: {roundCount}
-🖱️  总点击次数: {totalClicks}
-⏱️  平均每轮耗时: {roundTime:F0}ms
-⏳ 总耗时: {YiKit.SumByteTime(totalTimeMs)}
-🔧 平均每步延迟: {avgDelay:F0}ms"
-                    .Trim());
-            }
-            else
-            {
-                OnStatusChanged?.Invoke($@"⏹ 手动停止执行
-📊 总轮数: {roundCount}
-🖱️  总点击次数: {totalClicks}
-⏱️  平均每轮耗时: {roundTime:F0}ms
-⏳ 总耗时: {YiKit.SumByteTime(totalTimeMs)}
-🔧 平均每步延迟: {avgDelay:F0}ms"
-                );
-            }
+            double avgRound = roundTimes.Count > 0 ? roundTimes.Average() : 0;
+            OnStatusChanged?.Invoke(_isPlaying
+                ? $"🏁 完成 | 轮数 {roundCount} | 点击 {totalClicks} | 平均 {avgRound:F0}ms | 总耗时 {YiKit.SumByteTime(totalTimeMs)}"
+                : $"⏹ 已停止 | 轮数 {roundCount} | 点击 {totalClicks} | 总耗时 {YiKit.SumByteTime(totalTimeMs)}");
 
             _isPlaying = false;
             return true;
         }
 
-        public void StopPlayback()
-        {
-            _isPlaying = false;
-        }
+        public void StopPlayback() => _isPlaying = false;
 
         public void StartRecording()
         {
-            if (!_isRecording)
-            {
-                _isRecording = true;
-                OnStatusChanged?.Invoke("开始录制...");
-            }
+            if (_isRecording) return;
+            _isRecording = true;
+            OnStatusChanged?.Invoke("开始录制...");
         }
 
         public void StopRecording()
         {
-            if (_isRecording)
-            {
-                _isRecording = false;
-                OnStatusChanged?.Invoke("停止录制");
-            }
+            if (!_isRecording) return;
+            _isRecording = false;
+            OnStatusChanged?.Invoke("停止录制");
         }
 
         public bool IsRecording => _isRecording;
@@ -995,81 +1139,86 @@ public string UpdateWebViewDisplay()
 
         private class RecordMessage
         {
-            public string type { get; set; }
-            public Data data { get; set; }
+            public string? type { get; set; }
+            public Data? data { get; set; }
 
             public class Data
             {
-                public string text { get; set; }
-                public string selector { get; set; }
+                public string? text { get; set; }
+                public string? selector { get; set; }
             }
         }
 
         public class ResourceInfo
         {
-            public string Type { get; set; }
-            public string Url { get; set; }
-            public string SavePath { get; set; }
+            public string? Type { get; set; }
+            public string? Url { get; set; }
+            public string? SavePath { get; set; }
+        }
+
+        private static string UnwrapJsString(string? jsResult)
+        {
+            if (string.IsNullOrEmpty(jsResult) || jsResult == "null") return "";
+            try
+            {
+                return JsonSerializer.Deserialize<string>(jsResult) ?? "";
+            }
+            catch
+            {
+                return jsResult.Trim('"');
+            }
         }
 
         public async Task DownloadFullPageAsync(string saveDir)
         {
-            if (WebView == null)
+            if (WebView?.CoreWebView2 == null)
                 throw new InvalidOperationException("WebView2 未初始化。");
 
-            // 确保目录存在
             Directory.CreateDirectory(saveDir);
 
-            // 1. 获取完整 HTML
-            string html = await WebView.ExecuteScriptAsync(@"
-        (function() {
-            return JSON.stringify(document.documentElement.outerHTML);
-        })();");
-            html = JsonSerializer.Deserialize<string>(html);
-
+            string htmlRaw = await WebView.ExecuteScriptAsync(
+                "(function(){ return document.documentElement.outerHTML; })();");
+            string html = UnwrapJsString(htmlRaw);
             string indexPath = Path.Combine(saveDir, "index.html");
             File.WriteAllText(indexPath, html, Encoding.UTF8);
 
-            // 2. 提取资源 URL（CSS, JS, 图片）
             string urlsScript = @"
         (function() {
             const resources = [];
-            // CSS 文件
             document.querySelectorAll('link[rel=""stylesheet""]').forEach(el => {
                 const href = el.href;
-                if (href) resources.push({ type: 'css', url: href, savePath: 'css/' + (href.split('/').pop() || 'style.css') });
+                if (href) resources.push({ Type: 'css', Url: href, SavePath: 'css/' + (href.split('/').pop().split('?')[0] || 'style.css') });
             });
-            // JS 文件
             document.querySelectorAll('script[src]').forEach(el => {
                 const src = el.src;
-                if (src) resources.push({ type: 'js', url: src, savePath: 'js/' + (src.split('/').pop() || 'script.js') });
+                if (src) resources.push({ Type: 'js', Url: src, SavePath: 'js/' + (src.split('/').pop().split('?')[0] || 'script.js') });
             });
-            // 图片文件
             document.querySelectorAll('img[src]').forEach(el => {
                 const src = el.src;
-                if (src) resources.push({ type: 'img', url: src, savePath: 'img/' + (src.split('/').pop() || 'image.png') });
+                if (src) resources.push({ Type: 'img', Url: src, SavePath: 'img/' + (src.split('/').pop().split('?')[0] || 'image.png') });
             });
             return JSON.stringify(resources);
         })();
     ";
 
-            string jsonResources = await WebView.ExecuteScriptAsync(urlsScript);
-            var resourceList = JsonSerializer.Deserialize<List<ResourceInfo>>(jsonResources);
+            string jsonResources = UnwrapJsString(await WebView.ExecuteScriptAsync(urlsScript));
+            var resourceList = string.IsNullOrWhiteSpace(jsonResources)
+                ? new List<ResourceInfo>()
+                : JsonSerializer.Deserialize<List<ResourceInfo>>(jsonResources) ?? new List<ResourceInfo>();
 
-            // 去重并下载资源
             var downloaded = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             using var client = new HttpClient();
+            client.Timeout = TimeSpan.FromSeconds(20);
 
             foreach (var res in resourceList)
             {
-                if (string.IsNullOrEmpty(res.Url) || downloaded.Contains(res.Url))
+                if (string.IsNullOrEmpty(res.Url) || string.IsNullOrEmpty(res.SavePath) || !downloaded.Add(res.Url))
                     continue;
 
-                downloaded.Add(res.Url);
-
                 string fullPath = Path.Combine(saveDir, res.SavePath);
-                string dir = Path.GetDirectoryName(fullPath);
-                Directory.CreateDirectory(dir);
+                string? dir = Path.GetDirectoryName(fullPath);
+                if (!string.IsNullOrEmpty(dir))
+                    Directory.CreateDirectory(dir);
 
                 try
                 {
@@ -1082,42 +1231,34 @@ public string UpdateWebViewDisplay()
                 }
             }
 
-            // 3. 使用正则表达式重写 HTML 中的资源路径（替代 HtmlAgilityPack）
             string updatedHtml = html;
-
-            // 重写 <link rel="stylesheet" href="...">
-            updatedHtml = Regex.Replace(updatedHtml,
-                @"<link\s+[^>]*?rel\s*=\s*""stylesheet""[^>]*?href\s*=\s*""([^""]+)""",
-                match =>
-                {
-                    string url = match.Groups[1].Value;
-                    string fileName = Path.GetFileName(new Uri(url).LocalPath);
-                    return match.Value.Replace($"href=\"{url}\"", $"href=\"css/{fileName}\"");
-                },
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-            // 重写 <script src="...">
-            updatedHtml = Regex.Replace(updatedHtml, @"<script\s+[^>]*?src\s*=\s*""([^""]+)""",
-                match =>
-                {
-                    string url = match.Groups[1].Value;
-                    string fileName = Path.GetFileName(new Uri(url).LocalPath);
-                    return match.Value.Replace($"src=\"{url}\"", $"src=\"js/{fileName}\"");
-                },
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-            // 重写 <img src="...">
-            updatedHtml = Regex.Replace(updatedHtml, @"<img\s+[^>]*?src\s*=\s*""([^""]+)""",
-                match =>
-                {
-                    string url = match.Groups[1].Value;
-                    string fileName = Path.GetFileName(new Uri(url).LocalPath);
-                    return match.Value.Replace($"src=\"{url}\"", $"src=\"img/{fileName}\"");
-                },
-                RegexOptions.IgnoreCase | RegexOptions.Compiled);
-
-            // 4. 保存修改后的 HTML
+            updatedHtml = RewriteAttr(updatedHtml, "link", "href", "css/");
+            updatedHtml = RewriteAttr(updatedHtml, "script", "src", "js/");
+            updatedHtml = RewriteAttr(updatedHtml, "img", "src", "img/");
             File.WriteAllText(indexPath, updatedHtml, Encoding.UTF8);
+        }
+
+        private static string RewriteAttr(string html, string tag, string attr, string folder)
+        {
+            return Regex.Replace(html,
+                $@"<{tag}\s+[^>]*?{attr}\s*=\s*[""']([^""']+)[""'][^>]*>",
+                match =>
+                {
+                    string url = match.Groups[1].Value;
+                    try
+                    {
+                        string fileName = Path.GetFileName(new Uri(url, UriKind.RelativeOrAbsolute).IsAbsoluteUri
+                            ? new Uri(url).LocalPath
+                            : url.Split('?')[0]);
+                        if (string.IsNullOrEmpty(fileName)) return match.Value;
+                        return match.Value.Replace(url, folder + fileName);
+                    }
+                    catch
+                    {
+                        return match.Value;
+                    }
+                },
+                RegexOptions.IgnoreCase | RegexOptions.Compiled);
         }
     }
 
@@ -1134,57 +1275,55 @@ public string UpdateWebViewDisplay()
     public class ClickAction : ScriptAction
     {
         public override string Type => "click";
-        public string Text { get; set; } = ""; // 显示文本
+        public string Text { get; set; } = "";
 
         public override async Task Execute(WebView2 webView, Dictionary<string, string> variables)
         {
             var targetText = Text;
-            if (string.IsNullOrEmpty(targetText)) return;
+            if (string.IsNullOrEmpty(targetText) || webView.CoreWebView2 == null) return;
 
             var escapedText = targetText.Replace("\\", "\\\\").Replace("'", "\\'").Replace("\"", "\\\"");
-
-          
-
             var ret = await webView.CoreWebView2.ExecuteScriptAsync($@"
-
-                function click(){{
-                    const elements = document.querySelectorAll('*');
-                    let target = '{escapedText}'.trim();
-                    if (document.body.innerText.indexOf('您的点击频度过快，请稍候再继续...')>-1){{
-                        target='继续'
-                    }}
-                    let found = false;
-                    for (const el of elements) {{
-                        
-                        if (el.offsetParent === null || window.getComputedStyle(el).display === 'none') continue;
-                        if (el.textContent.trim() === target || el.getAttribute('aria-label') === target ||
-                            el.getAttribute('title') === target || el.getAttribute('placeholder') === target) {{
-                            el.click();
-                            found = true;
-                            break;
-                        }}
-                    }}
-                    if (!found) return -1;
-                    return found ? 1 : -1;
-
-                }}
                 (function() {{
-                   
-                    if (document.body.innerText.indexOf('您的点击频度过快，请稍候再继续...')>-1){{
-                      return -2;
-                    setTimeout(() => {{click()}},1000);
-                    }}else{{return click()}}
-                    
+                    function clickTarget(target) {{
+                        const elements = document.querySelectorAll('*');
+                        for (const el of elements) {{
+                            if (el.offsetParent === null || window.getComputedStyle(el).display === 'none') continue;
+                            if (el.textContent.trim() === target || el.getAttribute('aria-label') === target ||
+                                el.getAttribute('title') === target || el.getAttribute('placeholder') === target) {{
+                                el.click();
+                                return 1;
+                            }}
+                        }}
+                        return -1;
+                    }}
+                    if (document.body && document.body.innerText.indexOf('您的点击频度过快，请稍候再继续...') > -1) {{
+                        return -2;
+                    }}
+                    return clickTarget('{escapedText}'.trim());
                 }})();
             ");
 
+            // ExecuteScriptAsync 返回 JSON，数字为 "1" / "-2"
+            ret = (ret ?? "").Trim();
             if (ret == "1")
             {
                 await Task.Delay(DelayAfterMs);
             }
             else if (ret == "-2")
             {
-                await Task.Delay(1000+DelayAfterMs);
+                await Task.Delay(1000 + DelayAfterMs);
+                await webView.CoreWebView2.ExecuteScriptAsync($@"
+                    (function() {{
+                        const elements = document.querySelectorAll('*');
+                        let target = '继续';
+                        for (const el of elements) {{
+                            if (el.offsetParent === null || window.getComputedStyle(el).display === 'none') continue;
+                            if (el.textContent.trim() === target) {{ el.click(); return 1; }}
+                        }}
+                        return -1;
+                    }})();");
+                await Task.Delay(DelayAfterMs);
             }
         }
     }
@@ -1204,6 +1343,7 @@ public string UpdateWebViewDisplay()
 
         public override async Task Execute(WebView2 webView, Dictionary<string, string> variables)
         {
+            if (webView.CoreWebView2 == null) return;
             var text = Resolve(Text, variables);
             var sel = Selector?.Replace("'", "\\'") ?? "";
             var val = text?.Replace("'", "\\'") ?? "";
@@ -1224,7 +1364,7 @@ public string UpdateWebViewDisplay()
         public override string Type => "wait";
         public string UrlContains { get; set; } = "";
         public string ElementExists { get; set; } = "";
-        public string TextExists { get; set; } = ""; // 新增：等待文本出现
+        public string TextExists { get; set; } = "";
         public int TimeoutMs { get; set; } = 10000;
 
         public override async Task Execute(WebView2 webView, Dictionary<string, string> variables)
@@ -1232,52 +1372,45 @@ public string UpdateWebViewDisplay()
             if (!string.IsNullOrEmpty(UrlContains))
             {
                 var tcs = new TaskCompletionSource<bool>();
-                EventHandler<CoreWebView2NavigationCompletedEventArgs> handler = (s, ev) =>
+                void Handler(object? s, CoreWebView2NavigationCompletedEventArgs ev)
                 {
                     if (webView.Source?.ToString().Contains(UrlContains) == true)
                         tcs.TrySetResult(true);
-                };
-                webView.NavigationCompleted += handler;
+                }
+
+                webView.NavigationCompleted += Handler;
                 using (var cts = new CancellationTokenSource(TimeoutMs))
                 {
                     cts.Token.Register(() => tcs.TrySetResult(false));
                     await tcs.Task;
                 }
 
-                webView.NavigationCompleted -= handler;
+                webView.NavigationCompleted -= Handler;
             }
-            else if (!string.IsNullOrEmpty(ElementExists))
+            else if (!string.IsNullOrEmpty(ElementExists) && webView.CoreWebView2 != null)
             {
-                var script = $@"
-                    (function waitLoop() {{
-                        if (document.querySelector('{ElementExists?.Replace("'", "\\'") ?? ""}')) return true;
-                        else if ((window._waitElTimeout = (window._waitElTimeout || 0) + 1) > {TimeoutMs / 100}) return false;
-                        else setTimeout(waitLoop, 100);
-                    }})();
-                ";
+                var sel = ElementExists.Replace("'", "\\'");
                 for (int i = 0; i < TimeoutMs / 100; i++)
                 {
-                    var result = await webView.CoreWebView2.ExecuteScriptAsync(script);
+                    var result = await webView.CoreWebView2.ExecuteScriptAsync(
+                        $"!!document.querySelector('{sel}')");
                     if (result == "true") break;
                     await Task.Delay(100);
                 }
             }
-            else if (!string.IsNullOrEmpty(TextExists))
+            else if (!string.IsNullOrEmpty(TextExists) && webView.CoreWebView2 != null)
             {
                 var escaped = TextExists.Replace("\\", "\\\\").Replace("'", "\\'");
-                var script = $@"
-                    (function waitLoop() {{
-                        const text = '{escaped}';
-                        for (const el of document.querySelectorAll('*')) {{
-                            if (el.offsetParent && el.textContent.trim() === text) return true;
-                        }}
-                        if ((window._waitTextTimeout = (window._waitTextTimeout || 0) + 1) > {TimeoutMs / 100}) return false;
-                        setTimeout(waitLoop, 100);
-                    }})();
-                ";
                 for (int i = 0; i < TimeoutMs / 100; i++)
                 {
-                    var result = await webView.CoreWebView2.ExecuteScriptAsync(script);
+                    var result = await webView.CoreWebView2.ExecuteScriptAsync($@"
+                        (function() {{
+                            const text = '{escaped}';
+                            for (const el of document.querySelectorAll('*')) {{
+                                if (el.offsetParent && el.textContent.trim() === text) return true;
+                            }}
+                            return false;
+                        }})();");
                     if (result == "true") break;
                     await Task.Delay(100);
                 }
@@ -1307,10 +1440,11 @@ public string UpdateWebViewDisplay()
 
         public override async Task Execute(WebView2 webView, Dictionary<string, string> variables)
         {
-            var url = Url;
+            var nav = Url;
             foreach (var v in variables)
-                url = url.Replace($"${{{v.Key}}}", v.Value);
-            webView.CoreWebView2.Navigate(url);
+                nav = nav.Replace($"${{{v.Key}}}", v.Value);
+            if (webView.CoreWebView2 != null)
+                webView.CoreWebView2.Navigate(nav);
             await Task.Delay(DelayAfterMs);
         }
     }
@@ -1359,16 +1493,19 @@ public string UpdateWebViewDisplay()
 
         public static ObservableCollection<ScriptAction> Deserialize(string json)
         {
-            var list = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(json);
+            var list = JsonSerializer.Deserialize<List<Dictionary<string, object>>>(json)
+                       ?? new List<Dictionary<string, object>>();
             var actions = new ObservableCollection<ScriptAction>();
             int id = 1;
 
             foreach (var dict in list)
             {
-                ScriptAction action = dict["Type"].ToString() switch
+                string type = dict.TryGetValue("Type", out var t) ? t?.ToString() ?? "" : "";
+                ScriptAction action = type switch
                 {
                     "click" => new ClickAction { Text = GetString(dict, "Text") },
-                    "type" => new TypeAction { Selector = GetString(dict, "Selector"), Text = GetString(dict, "Text") },
+                    "type" => new TypeAction
+                        { Selector = GetString(dict, "Selector"), Text = GetString(dict, "Text") },
                     "wait" => new WaitAction
                     {
                         UrlContains = GetString(dict, "UrlContains"),
@@ -1376,15 +1513,16 @@ public string UpdateWebViewDisplay()
                         TextExists = GetString(dict, "TextExists"),
                         TimeoutMs = GetInt(dict, "TimeoutMs", 10000)
                     },
-                    "variable" => new VariableAction { Key = GetString(dict, "Key"), Value = GetString(dict, "Value") },
+                    "variable" => new VariableAction
+                        { Key = GetString(dict, "Key"), Value = GetString(dict, "Value") },
                     "navigate" => new NavigateAction { Url = GetString(dict, "Url") },
                     _ => new ClickAction()
                 };
 
                 action.Id = id++;
-                action.Name = GetString(dict, "Name") ?? $"动作 {id}";
+                action.Name = GetString(dict, "Name");
+                if (string.IsNullOrEmpty(action.Name)) action.Name = $"动作 {action.Id}";
                 action.DelayAfterMs = GetInt(dict, "DelayAfterMs", WebViewContainer.delay);
-
                 actions.Add(action);
             }
 
@@ -1403,96 +1541,114 @@ public string UpdateWebViewDisplay()
     {
         private readonly WebViewContainer _container;
         private readonly ObservableCollection<ScriptAction> _actions;
-        private string _scriptFilePath = null;
+        private string? _scriptFilePath;
+        private TextBlock StatusText = null!;
+        private ListView ActionList = null!;
 
         public ScriptManagerWindow(WebViewContainer container)
         {
             _container = container;
             _actions = container.Actions;
-
-            InitializeComponent();
-            LoadActions();
-
-            // 实时保存监听
-            _actions.CollectionChanged += (s, e) => SaveToLastPath();
-
+            BuildUi();
+            ActionList.ItemsSource = _actions;
+            _actions.CollectionChanged += (_, _) => SaveToLastPath();
             _container.OnStatusChanged += s => Dispatcher.Invoke(() => StatusText.Text = s);
         }
 
-        private void InitializeComponent()
+        private static Button MakeBtn(string content, Brush fg, Brush bg)
         {
-            var fcolor = (Brush)new BrushConverter().ConvertFromString(YiWebView.me.ForegroundColorStr);
-            var bcolor = (Brush)new BrushConverter().ConvertFromString(YiWebView.me.BackgroundColorStr);
+            return new Button
+            {
+                Content = content,
+                Width = 88,
+                Margin = new Thickness(0, 4, 0, 0),
+                Padding = new Thickness(8, 6, 8, 6),
+                Foreground = fg,
+                Background = bg,
+                BorderBrush = new SolidColorBrush(ColorFromHex("#D8DADF")),
+                BorderThickness = new Thickness(1),
+                Cursor = Cursors.Hand
+            };
+        }
+
+        private static System.Windows.Media.Color ColorFromHex(string hex)
+        {
+            return (System.Windows.Media.Color)ColorConverter.ConvertFromString(hex)!;
+        }
+
+        private void BuildUi()
+        {
+            var fcolor = TryBrush(YiWebView.me?.ForegroundColorStr, Brushes.Black);
+            var bcolor = TryBrush(YiWebView.me?.BackgroundColorStr, new SolidColorBrush(ColorFromHex("#F7F7F8")));
 
             Title = "脚本管理器";
             Width = 1000;
             Height = 650;
             WindowStartupLocation = WindowStartupLocation.CenterScreen;
             ResizeMode = ResizeMode.CanResizeWithGrip;
-            this.Background = bcolor;
-            this.Foreground = fcolor;
-            var grid = new Grid();
-            ColumnDefinition col1 = new() { Width = new GridLength(2, GridUnitType.Star) };
-            ColumnDefinition col2 = new() { Width = GridLength.Auto };
-            ColumnDefinition col3 = new() { Width = new GridLength(300) };
-            grid.ColumnDefinitions.Add(col1);
-            grid.ColumnDefinitions.Add(col2);
-            grid.ColumnDefinitions.Add(col3);
+            Background = bcolor;
+            Foreground = fcolor;
+            FontFamily = new FontFamily("Segoe UI Variable Text, Segoe UI, Microsoft YaHei UI");
 
-            // 左侧：脚本列表（支持双击编辑）
-            var lv = new ListView { Name = "ActionList", Margin = new Thickness(5) };
-            lv.Background = Background;
-            lv.Foreground = Foreground;
-            lv.SetBinding(ItemsControl.ItemsSourceProperty, new Binding(""));
-            lv.MouseDoubleClick += (s, e) =>
+            var grid = new Grid { Margin = new Thickness(10) };
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(2, GridUnitType.Star) });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = GridLength.Auto });
+            grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(280) });
+
+            ActionList = new ListView
             {
-                if (lv.SelectedItem is ScriptAction action)
+                Margin = new Thickness(0, 0, 8, 0),
+                Background = Brushes.White,
+                Foreground = fcolor,
+                BorderBrush = new SolidColorBrush(ColorFromHex("#D8DADF")),
+                BorderThickness = new Thickness(1)
+            };
+            ActionList.MouseDoubleClick += (_, _) =>
+            {
+                if (ActionList.SelectedItem is ScriptAction action)
                     EditAction(action);
             };
-
-            lv.View = new GridView
+            ActionList.View = new GridView
             {
                 Columns =
                 {
-                    new GridViewColumn { Header = "ID", DisplayMemberBinding = new Binding("Id"), Width = 40, },
-                    new GridViewColumn { Header = "名称", DisplayMemberBinding = new Binding("Name"), Width = 150 },
+                    new GridViewColumn { Header = "ID", DisplayMemberBinding = new Binding("Id"), Width = 40 },
+                    new GridViewColumn { Header = "名称", DisplayMemberBinding = new Binding("Name"), Width = 160 },
                     new GridViewColumn { Header = "类型", DisplayMemberBinding = new Binding("Type"), Width = 80 },
                     new GridViewColumn
-                    {
-                        Header = "延迟(ms)", DisplayMemberBinding = new Binding("DelayAfterMs"),
-                        Width = 80
-                    }
-                },
+                        { Header = "延迟(ms)", DisplayMemberBinding = new Binding("DelayAfterMs"), Width = 80 }
+                }
             };
-            Grid.SetColumn(lv, 0);
-            // 中间按钮
+            Grid.SetColumn(ActionList, 0);
+
             var btnStack = new StackPanel
-                { Margin = new Thickness(5), HorizontalAlignment = HorizontalAlignment.Center, Background = bcolor };
-            var addBtn = new Button
-                { Content = "添加", Width = 80, Margin = new Thickness(0, 2, 0, 0), Foreground = fcolor };
-            addBtn.Click += (s, e) => AddAction();
-            var delBtn = new Button
-                { Content = "删除", Width = 80, Margin = new Thickness(0, 2, 0, 0), Foreground = fcolor };
-            delBtn.Click += (s, e) =>
             {
-                if (lv.SelectedItem is ScriptAction a)
+                Margin = new Thickness(4, 0, 8, 0),
+                VerticalAlignment = VerticalAlignment.Top
+            };
+            var addBtn = MakeBtn("添加", fcolor, Brushes.White);
+            addBtn.Click += (_, _) => EditAction(null);
+            var delBtn = MakeBtn("删除", fcolor, Brushes.White);
+            delBtn.Click += (_, _) =>
+            {
+                if (ActionList.SelectedItem is ScriptAction a)
                     _actions.Remove(a);
             };
-            var upBtn = new Button { Content = "上移", Width = 80, Margin = new Thickness(0, 2, 0, 0) };
-            upBtn.Click += (s, e) =>
+            var upBtn = MakeBtn("上移", fcolor, Brushes.White);
+            upBtn.Click += (_, _) =>
             {
-                var i = lv.SelectedIndex;
+                var i = ActionList.SelectedIndex;
                 if (i <= 0) return;
                 _actions.Move(i, i - 1);
-                lv.SelectedIndex = i - 1;
+                ActionList.SelectedIndex = i - 1;
             };
-            var downBtn = new Button { Content = "下移", Width = 80, Margin = new Thickness(0, 2, 0, 0) };
-            downBtn.Click += (s, e) =>
+            var downBtn = MakeBtn("下移", fcolor, Brushes.White);
+            downBtn.Click += (_, _) =>
             {
-                int i = lv.SelectedIndex;
-                if (i >= _actions.Count - 1 || i < 0) return;
+                int i = ActionList.SelectedIndex;
+                if (i < 0 || i >= _actions.Count - 1) return;
                 _actions.Move(i, i + 1);
-                lv.SelectedIndex = i + 1;
+                ActionList.SelectedIndex = i + 1;
             };
             btnStack.Children.Add(addBtn);
             btnStack.Children.Add(upBtn);
@@ -1500,13 +1656,14 @@ public string UpdateWebViewDisplay()
             btnStack.Children.Add(delBtn);
             Grid.SetColumn(btnStack, 1);
 
-            // 右侧面板
-            var rightStack = new StackPanel { Margin = new Thickness(5) };
+            var rightStack = new StackPanel { Margin = new Thickness(4, 0, 0, 0) };
             rightStack.Children.Add(new TextBlock
-                { Text = "控制", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 10) });
+            {
+                Text = "控制", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8), FontSize = 14
+            });
 
-            var recordBtn = new Button { Content = "开始录制", Margin = new Thickness(0, 0, 0, 5) };
-            recordBtn.Click += (s, e) =>
+            var recordBtn = MakeBtn("开始录制", fcolor, Brushes.White);
+            recordBtn.Click += (_, _) =>
             {
                 if (!_container.IsRecording)
                 {
@@ -1520,21 +1677,33 @@ public string UpdateWebViewDisplay()
                 }
             };
 
-            var playBtn = new Button { Content = "播放脚本", Margin = new Thickness(0, 0, 0, 5) };
-            var repBox = new TextBox { Text = "0", Width = 60, VerticalAlignment = VerticalAlignment.Center };
-            var delayBox = new TextBox { Text = $"{WebViewContainer.delay}", Width = 60, ToolTip = "默认延迟（毫秒）" };
+            var playBtn = MakeBtn("播放脚本", fcolor, Brushes.White);
+            var repBox = new TextBox { Text = "0", Width = 64, Margin = new Thickness(4, 0, 0, 0) };
+            var delayBox = new TextBox
+            {
+                Text = $"{WebViewContainer.delay}", Width = 64, Margin = new Thickness(4, 0, 0, 0),
+                ToolTip = "默认延迟（毫秒）"
+            };
+            delayBox.LostFocus += (_, _) =>
+            {
+                if (int.TryParse(delayBox.Text, out int d) && d > 0)
+                    WebViewContainer.delay = d;
+            };
 
-            var headlessCb = new CheckBox { Content = "隐藏页面", Margin = new Thickness(0, 0, 0, 0), Foreground = fcolor };
-            headlessCb.Checked += (s, e) => _container.IsHeadless = true;
-            headlessCb.Unchecked += (s, e) => _container.IsHeadless = false;
+            var headlessCb = new CheckBox
+            {
+                Content = "隐藏页面", Margin = new Thickness(0, 8, 0, 8), Foreground = fcolor
+            };
+            headlessCb.Checked += (_, _) => _container.IsHeadless = true;
+            headlessCb.Unchecked += (_, _) => _container.IsHeadless = false;
 
-            playBtn.Click += async (s, e) =>
+            playBtn.Click += async (_, _) =>
             {
                 if (!_container.IsPlaying)
                 {
                     playBtn.Content = "停止播放";
                     int count = int.TryParse(repBox.Text, out int c) ? c : 1;
-                    if (count <= 0) count = 0;
+                    if (count < 0) count = 0;
                     _container.IsHeadless = headlessCb.IsChecked == true;
                     await _container.PlayScriptsAsync(count);
                     playBtn.Content = "播放脚本";
@@ -1545,113 +1714,144 @@ public string UpdateWebViewDisplay()
                 }
             };
 
-            rightStack.Children.Add(new WrapPanel { Children = { new TextBlock { Text = "重复:" }, repBox } });
-            rightStack.Children.Add(new WrapPanel { Children = { new TextBlock { Text = "延迟:" }, delayBox } });
+            rightStack.Children.Add(new WrapPanel
+            {
+                Children =
+                {
+                    new TextBlock { Text = "重复", VerticalAlignment = VerticalAlignment.Center }, repBox
+                }
+            });
+            rightStack.Children.Add(new WrapPanel
+            {
+                Margin = new Thickness(0, 6, 0, 0),
+                Children =
+                {
+                    new TextBlock { Text = "延迟", VerticalAlignment = VerticalAlignment.Center }, delayBox
+                }
+            });
             rightStack.Children.Add(headlessCb);
             rightStack.Children.Add(recordBtn);
             rightStack.Children.Add(playBtn);
-
-            rightStack.Children.Add(new Separator { Margin = new Thickness(0, 10, 0, 10) });
+            rightStack.Children.Add(new Separator { Margin = new Thickness(0, 12, 0, 12) });
             rightStack.Children.Add(new TextBlock
-                { Text = "文件", FontWeight = FontWeights.Bold, Margin = new Thickness(0, 0, 0, 10) });
+            {
+                Text = "文件", FontWeight = FontWeights.SemiBold, Margin = new Thickness(0, 0, 0, 8), FontSize = 14
+            });
 
-            var saveBtn = new Button { Content = "保存脚本", Margin = new Thickness(0, 0, 0, 5) };
+            var saveBtn = MakeBtn("保存脚本", fcolor, Brushes.White);
             saveBtn.Click += SaveScript_Click;
-            var loadBtn = new Button { Content = "加载脚本", Margin = new Thickness(0, 0, 0, 5) };
+            var loadBtn = MakeBtn("加载脚本", fcolor, Brushes.White);
             loadBtn.Click += LoadScript_Click;
-
             rightStack.Children.Add(saveBtn);
             rightStack.Children.Add(loadBtn);
+            rightStack.Children.Add(new Separator { Margin = new Thickness(0, 12, 0, 12) });
 
-            rightStack.Children.Add(new Separator { Margin = new Thickness(0, 10, 0, 10) });
-            StatusText = new TextBlock { Text = "就绪", Foreground = System.Windows.Media.Brushes.Gray, FontSize = 12 };
+            StatusText = new TextBlock
+            {
+                Text = "就绪",
+                Foreground = new SolidColorBrush(ColorFromHex("#5F6368")),
+                FontSize = 12,
+                TextWrapping = TextWrapping.Wrap
+            };
             rightStack.Children.Add(StatusText);
-
             Grid.SetColumn(rightStack, 2);
 
-            grid.Children.Add(lv);
+            grid.Children.Add(ActionList);
             grid.Children.Add(btnStack);
             grid.Children.Add(rightStack);
-
             Content = grid;
         }
 
-        private TextBlock StatusText;
+        private static Brush TryBrush(string? color, Brush fallback)
+        {
+            if (string.IsNullOrWhiteSpace(color)) return fallback;
+            try
+            {
+                return (Brush)new BrushConverter().ConvertFromString(color)!;
+            }
+            catch
+            {
+                return fallback;
+            }
+        }
 
-        private void LoadActions() => ActionList.ItemsSource = _actions;
-
-        private void AddAction() => EditAction(null);
-
-        private void EditAction(ScriptAction original)
+        private void EditAction(ScriptAction? original)
         {
             var win = new Window
             {
                 Title = original == null ? "添加动作" : "编辑动作",
-                Width = 400, Height = 350,
-                Owner = this, ShowInTaskbar = false,
-                WindowStartupLocation = WindowStartupLocation.CenterOwner
+                Width = 420,
+                Height = 380,
+                Owner = this,
+                ShowInTaskbar = false,
+                WindowStartupLocation = WindowStartupLocation.CenterOwner,
+                Background = Background,
+                Foreground = Foreground
             };
 
-            var stack = new StackPanel { Margin = new Thickness(10) };
-            var typeCb = new ComboBox();
-            typeCb.Items.Add(new { Name = "点击元素", Type = typeof(ClickAction) });
-            typeCb.Items.Add(new { Name = "输入文本", Type = typeof(TypeAction) });
-            typeCb.Items.Add(new { Name = "等待URL", Type = typeof(WaitAction) });
-            typeCb.Items.Add(new { Name = "等待元素", Type = typeof(WaitAction) });
-            typeCb.Items.Add(new { Name = "等待文本", Type = typeof(WaitAction) }); // 新增
-            typeCb.Items.Add(new { Name = "设置变量", Type = typeof(VariableAction) });
-            typeCb.Items.Add(new { Name = "跳转页面", Type = typeof(NavigateAction) });
+            var stack = new StackPanel { Margin = new Thickness(14) };
+            var typeCb = new ComboBox { Margin = new Thickness(0, 0, 0, 6) };
+            typeCb.Items.Add("点击元素");
+            typeCb.Items.Add("输入文本");
+            typeCb.Items.Add("等待URL");
+            typeCb.Items.Add("等待元素");
+            typeCb.Items.Add("等待文本");
+            typeCb.Items.Add("设置变量");
+            typeCb.Items.Add("跳转页面");
 
             if (original != null)
             {
-                switch (original)
+                typeCb.SelectedIndex = original switch
                 {
-                    case ClickAction _: typeCb.SelectedIndex = 0; break;
-                    case TypeAction _: typeCb.SelectedIndex = 1; break;
-                    case WaitAction wa1 when !string.IsNullOrEmpty(wa1.UrlContains): typeCb.SelectedIndex = 2; break;
-                    case WaitAction wa1 when !string.IsNullOrEmpty(wa1.UrlContains): typeCb.SelectedIndex = 3; break;
-                    case WaitAction wa1 when !string.IsNullOrEmpty(wa1.UrlContains): typeCb.SelectedIndex = 4; break;
-                    case VariableAction _: typeCb.SelectedIndex = 5; break;
-                    case NavigateAction _: typeCb.SelectedIndex = 6; break;
-                }
+                    ClickAction => 0,
+                    TypeAction => 1,
+                    WaitAction w1 when !string.IsNullOrEmpty(w1.UrlContains) => 2,
+                    WaitAction w2 when !string.IsNullOrEmpty(w2.ElementExists) => 3,
+                    WaitAction w3 when !string.IsNullOrEmpty(w3.TextExists) => 4,
+                    VariableAction => 5,
+                    NavigateAction => 6,
+                    _ => 0
+                };
             }
-            else
-            {
-                typeCb.SelectedIndex = 0;
-            }
+            else typeCb.SelectedIndex = 0;
 
-            var nameTb = new TextBox { Text = original?.Name ?? "新动作", Margin = new Thickness(0, 0, 0, 2) };
-            var selTb = new TextBox { Margin = new Thickness(0, 0, 0, 2) };
-            var valTb = new TextBox { Margin = new Thickness(0, 0, 0, 2) };
+            var nameTb = new TextBox { Text = original?.Name ?? "新动作", Margin = new Thickness(0, 0, 0, 6) };
+            var selTb = new TextBox { Margin = new Thickness(0, 0, 0, 6) };
+            var valTb = new TextBox { Margin = new Thickness(0, 0, 0, 6) };
             var delayTb = new TextBox
-                { Text = (original?.DelayAfterMs ?? 1000).ToString(), Margin = new Thickness(0, 0, 0, 2) };
-
-            Action update = () =>
             {
-                var sel = typeCb.SelectedItem;
-                var typeName = ((dynamic)sel)?.Name;
-                selTb.Visibility = (typeName.Contains("点击") || typeName.Contains("输入") || typeName == "等待元素")
+                Text = (original?.DelayAfterMs ?? 1000).ToString(), Margin = new Thickness(0, 0, 0, 6)
+            };
+
+            void Update()
+            {
+                var typeName = typeCb.SelectedItem?.ToString() ?? "";
+                selTb.Visibility = (typeName.Contains("点击") || typeName.Contains("输入") || typeName == "等待元素" ||
+                                    typeName == "设置变量")
                     ? Visibility.Visible
                     : Visibility.Collapsed;
-                valTb.Visibility = Visibility.Visible;
+                valTb.Visibility = typeName is "点击元素" ? Visibility.Collapsed : Visibility.Visible;
                 valTb.ToolTip = typeName switch
                 {
                     "等待URL" => "包含的URL片段",
                     "等待文本" => "要等待出现的文本",
                     "设置变量" => "变量值",
                     "跳转页面" => "目标URL",
-                    _ => "输入的文本"
+                    "输入文本" => "输入的文本",
+                    _ => ""
                 };
                 selTb.ToolTip = typeName switch
                 {
                     "输入文本" => "CSS选择器",
                     "等待元素" => "CSS选择器",
                     "点击元素" => "元素显示文本",
+                    "设置变量" => "变量名",
                     _ => ""
                 };
-            };
-            typeCb.SelectionChanged += (s, e) => update();
-            update();
+            }
+
+            typeCb.SelectionChanged += (_, _) => Update();
+            Update();
 
             if (original is ClickAction ca) selTb.Text = ca.Text;
             if (original is TypeAction ta)
@@ -1660,7 +1860,13 @@ public string UpdateWebViewDisplay()
                 valTb.Text = ta.Text;
             }
 
-            if (original is WaitAction wa) valTb.Text = wa.UrlContains ?? wa.ElementExists ?? wa.TextExists;
+            if (original is WaitAction wa)
+            {
+                if (!string.IsNullOrEmpty(wa.UrlContains)) valTb.Text = wa.UrlContains;
+                else if (!string.IsNullOrEmpty(wa.ElementExists)) selTb.Text = wa.ElementExists;
+                else if (!string.IsNullOrEmpty(wa.TextExists)) valTb.Text = wa.TextExists;
+            }
+
             if (original is VariableAction va)
             {
                 selTb.Text = va.Key;
@@ -1669,12 +1875,14 @@ public string UpdateWebViewDisplay()
 
             if (original is NavigateAction na) valTb.Text = na.Url;
 
-            var okBtn = new Button { Content = "确定", IsDefault = true };
-            okBtn.Click += (s, e) =>
+            var okBtn = new Button
             {
-                ScriptAction action = null;
-                var typeName = ((dynamic)typeCb.SelectedItem)?.Name;
-
+                Content = "确定", IsDefault = true, Margin = new Thickness(0, 8, 0, 0), Padding = new Thickness(12, 6, 12, 6)
+            };
+            okBtn.Click += (_, _) =>
+            {
+                ScriptAction? action = null;
+                var typeName = typeCb.SelectedItem?.ToString();
                 switch (typeName)
                 {
                     case "点击元素":
@@ -1704,15 +1912,18 @@ public string UpdateWebViewDisplay()
                 {
                     action.Name = nameTb.Text;
                     action.DelayAfterMs = int.TryParse(delayTb.Text, out int d) ? d : 1000;
-
                     if (original != null)
                     {
                         var index = _actions.IndexOf(original);
-                        _actions[index] = action;
+                        if (index >= 0)
+                        {
+                            action.Id = original.Id;
+                            _actions[index] = action;
+                        }
                     }
                     else
                     {
-                        action.Id = _actions.Count + 1;
+                        action.Id = (_actions.Count == 0 ? 0 : _actions.Max(a => a.Id)) + 1;
                         _actions.Add(action);
                     }
                 }
@@ -1720,15 +1931,15 @@ public string UpdateWebViewDisplay()
                 win.Close();
             };
 
-            stack.Children.Add(new Label { Content = "类型：" });
+            stack.Children.Add(new TextBlock { Text = "类型", Margin = new Thickness(0, 0, 0, 2) });
             stack.Children.Add(typeCb);
-            stack.Children.Add(new Label { Content = "名称：" });
+            stack.Children.Add(new TextBlock { Text = "名称", Margin = new Thickness(0, 4, 0, 2) });
             stack.Children.Add(nameTb);
-            stack.Children.Add(new Label { Content = "参数1：" });
+            stack.Children.Add(new TextBlock { Text = "参数1", Margin = new Thickness(0, 4, 0, 2) });
             stack.Children.Add(selTb);
-            stack.Children.Add(new Label { Content = "参数2：" });
+            stack.Children.Add(new TextBlock { Text = "参数2", Margin = new Thickness(0, 4, 0, 2) });
             stack.Children.Add(valTb);
-            stack.Children.Add(new Label { Content = "延迟(ms)：" });
+            stack.Children.Add(new TextBlock { Text = "延迟(ms)", Margin = new Thickness(0, 4, 0, 2) });
             stack.Children.Add(delayTb);
             stack.Children.Add(okBtn);
 
@@ -1739,57 +1950,49 @@ public string UpdateWebViewDisplay()
         private void SaveScript_Click(object sender, RoutedEventArgs e)
         {
             var sfd = new Microsoft.Win32.SaveFileDialog { Filter = "JSON脚本|*.json" };
-            if (sfd.ShowDialog() == true)
+            if (sfd.ShowDialog() != true) return;
+            try
             {
-                try
-                {
-                    File.WriteAllText(sfd.FileName, ScriptSerializer.Serialize(_actions), Encoding.UTF8);
-                    _scriptFilePath = sfd.FileName;
-                    StatusText.Text = "保存成功";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("保存失败：" + ex.Message);
-                }
+                File.WriteAllText(sfd.FileName, ScriptSerializer.Serialize(_actions), Encoding.UTF8);
+                _scriptFilePath = sfd.FileName;
+                StatusText.Text = "保存成功";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("保存失败：" + ex.Message);
             }
         }
 
         private void LoadScript_Click(object sender, RoutedEventArgs e)
         {
             var ofd = new Microsoft.Win32.OpenFileDialog { Filter = "JSON脚本|*.json" };
-            if (ofd.ShowDialog() == true)
+            if (ofd.ShowDialog() != true) return;
+            try
             {
-                try
-                {
-                    var json = File.ReadAllText(ofd.FileName, Encoding.UTF8);
-                    var acts = ScriptSerializer.Deserialize(json);
-                    _actions.Clear();
-                    foreach (var a in acts) _actions.Add(a);
-                    _scriptFilePath = ofd.FileName;
-                    StatusText.Text = "加载成功";
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show("加载失败：" + ex.Message);
-                }
+                var json = File.ReadAllText(ofd.FileName, Encoding.UTF8);
+                var acts = ScriptSerializer.Deserialize(json);
+                _actions.Clear();
+                foreach (var a in acts) _actions.Add(a);
+                _scriptFilePath = ofd.FileName;
+                StatusText.Text = "加载成功";
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("加载失败：" + ex.Message);
             }
         }
 
         private void SaveToLastPath()
         {
-            if (_scriptFilePath != null)
+            if (_scriptFilePath == null) return;
+            try
             {
-                try
-                {
-                    File.WriteAllText(_scriptFilePath, ScriptSerializer.Serialize(_actions), Encoding.UTF8);
-                }
-                catch
-                {
-                    /* 静默失败 */
-                }
+                File.WriteAllText(_scriptFilePath, ScriptSerializer.Serialize(_actions), Encoding.UTF8);
+            }
+            catch
+            {
+                /* 静默失败 */
             }
         }
-
-        private ListView ActionList => Content is Grid g ? (ListView)g.Children[0] : null;
     }
 }
